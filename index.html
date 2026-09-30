@@ -116,6 +116,21 @@ input:focus,select:focus{outline:2px solid var(--brass);outline-offset:1px;}
 .small-btn:hover{opacity:.88;}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:var(--brass-light);color:var(--brass);font-weight:600;margin-left:6px;}
 
+/* ---------- 12/31 확정 조정 패널 ---------- */
+.adj-section{border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin-top:14px;background:#FCFBF7;}
+.adj-section-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;margin-bottom:10px;}
+table.adj-table{width:100%;border-collapse:collapse;font-size:12px;}
+table.adj-table th{background:#F1ECDD;color:var(--navy);padding:6px 8px;font-weight:700;text-align:center;}
+table.adj-table td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;}
+table.adj-table td:first-child{text-align:left;}
+table.adj-table select{font-size:12px;padding:5px 6px;}
+table.adj-table input.money-input{font-size:12px;padding:5px 6px;text-align:right;margin-bottom:3px;}
+details.raw-detail{margin-top:10px;}
+details.raw-detail summary{cursor:pointer;font-size:12px;color:var(--navy);font-weight:600;}
+table.raw-table{width:100%;border-collapse:collapse;margin-top:8px;}
+table.raw-table th{background:var(--navy);color:#fff;padding:5px 8px;font-size:11.5px;}
+table.raw-table td{padding:4px 8px;font-size:11.5px;border-bottom:1px solid var(--line);}
+
 /* scenario compare */
 .scenario-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .scenario-card{border-radius:9px;padding:18px;border:1px solid var(--line);}
@@ -404,7 +419,7 @@ table.rep-table tr.strong td{font-weight:700;color:var(--navy);background:#F1ECD
   <!-- STEP 2: 업로드 -->
   <div class="card">
     <h2><span class="step-no">2</span>위하고 손익계산서 업로드 - 메인 사업장 (<span id="uploadYearHint">N·N-1·N-2</span>년)</h2>
-    <p class="hint">위하고(SmartA) &gt; 손익계산서(과목별) 다운로드 파일을 그대로 업로드하세요. 한 파일에 당기/전기 2개년이 들어있으니, 파일 2개면 3개년을 모두 커버할 수 있습니다. 결산연도(N)를 위에서 바꾸면 아래 라벨도 자동으로 바뀝니다. (추가 사업장의 손익은 STEP 1에서 직접 입력합니다.)</p>
+    <p class="hint">위하고(SmartA) &gt; 손익계산서(과목별) 다운로드 파일을 그대로 업로드하세요. 한 파일에 당기/전기 2개년이 들어있으니, 파일 2개면 3개년을 모두 커버할 수 있습니다. 결산연도(N)를 위에서 바꾸면 아래 라벨도 자동으로 바뀝니다. (추가 사업장의 손익은 STEP 1에서 직접 입력합니다.) 업로드 후 아래에서 원본 전체 항목을 확인할 수 있고, N년(당기) 반영 시 과목별로 연환산·가감·직접입력을 적용해 12/31 손익을 확정하는 표가 생성됩니다.</p>
     <div class="grid cols-2">
       <div>
         <div class="upload-box" onclick="document.getElementById('file1').click()">
@@ -423,6 +438,7 @@ table.rep-table tr.strong td{font-weight:700;color:var(--navy);background:#F1ECD
         <div id="slot2" class="slot-result"></div>
       </div>
     </div>
+    <div id="adjPanelWrap"></div>
   </div>
 
   <!-- STEP 3: 타소득 자료 입력 -->
@@ -666,8 +682,11 @@ loadScriptFallback([
 });
 
 const state = {
-  years: {},     // 메인 사업장 손익 {2025:{...}, 2024:{...}}
-  extraBiz: []   // 추가 사업장 [{id,name,bizType,bizSize,bizRegion,sales,income}]
+  years: {},       // 메인 사업장 손익 {2025:{...}, 2024:{...}}
+  extraBiz: [],    // 추가 사업장 [{id,name,bizType,bizSize,bizRegion,sales,income}]
+  rawDetail: {},   // 업로드한 위하고 엑셀의 과목별 세부항목 {year: {섹션명:[{name,cur}]}}
+  adj: {},         // 세부항목별 연환산/가감 조정모델 {year: {섹션명:[{name,cur,mode,sign,override,delta}]}}
+  confirmed: {}    // {year: {at: Date}} - "12/31 추정 확정" 눌렀는지 여부(계산에는 영향 없는 확인용 표식)
 };
 let extraBizSeq = 0;
 
@@ -794,7 +813,64 @@ function extractFromRows(rows){
     }
   });
   const years = guessYearsFromSheet(rows);
-  return { cur, pri, curYear: years[0] || null, priYear: years[1] || null };
+  const detail = extractDetailFromRows(rows, cur, pri);
+  return { cur, pri, curYear: years[0] || null, priYear: years[1] || null, detail, rows };
+}
+/* 위하고 손익계산서(과목별)는 리프(말단) 항목은 "당기상세/전기상세"(열 인덱스 1,3)에,
+   Ⅰ~Ⅹ 대과목 및 중간 소계행(예: 상품매출원가)은 "당기소계/전기소계"(열 인덱스 2,4)에 금액이 찍힌다.
+   여기서는 리프 항목만 모아 과목별로 그룹화한다(중간 소계행은 그 아래 리프의 합이므로 제외 -
+   단, 리프가 전혀 없는 과목은 대과목 합계 자체를 1개 항목으로 대체 사용해 누락을 방지한다). */
+function extractDetailFromRows(rows, topCur, topPri){
+  const normLabels = ACCOUNT_LABELS.map(normLabel);
+  const detail = {};
+  ACCOUNT_LABELS.forEach(l=> detail[l]=[]);
+  let section = null;
+  rows.forEach(row=>{
+    const rawName = row[0];
+    const nName = normLabel(rawName);
+    const idx = normLabels.indexOf(nName);
+    if (idx >= 0){ section = ACCOUNT_LABELS[idx]; return; }
+    if (!section) return;
+    if (rawName==null || nName==='') return;
+    const v1 = row[1], v3 = row[3];
+    if (typeof v1 !== 'number' && typeof v3 !== 'number') return; // 리프가 아닌(=중간 소계) 행은 제외
+    detail[section].push({
+      name: rawName.toString().trim(),
+      cur: (typeof v1==='number') ? v1 : 0,
+      pri: (typeof v3==='number') ? v3 : 0
+    });
+  });
+  ACCOUNT_LABELS.forEach(section=>{
+    if (detail[section].length===0){
+      const c = topCur[section]||0, p = topPri[section]||0;
+      if (c || p){
+        detail[section].push({ name: section.replace(/^[Ⅰ-Ⅹ]+\.\s*/,''), cur:c, pri:p });
+      }
+    }
+  });
+  return detail;
+}
+function fullTableHTML(rows){
+  const normLabels = ACCOUNT_LABELS.map(normLabel);
+  const trs = rows.map(row=>{
+    const name = row[0];
+    if (name==null || normLabel(name)==='') return '';
+    const nName = normLabel(name);
+    if (nName==='과목') return '';
+    const isHeader = normLabels.indexOf(nName) >= 0;
+    const v1=row[1], v2=row[2], v3=row[3], v4=row[4];
+    const curVal = (typeof v2==='number') ? v2 : (typeof v1==='number' ? v1 : null);
+    const priVal = (typeof v4==='number') ? v4 : (typeof v3==='number' ? v3 : null);
+    if (curVal===null && priVal===null && !isHeader) return '';
+    const style = isHeader ? 'font-weight:700;background:#F1ECDD;' : '';
+    return `<tr style="${style}"><td style="text-align:left;">${name}</td>
+      <td style="text-align:right;">${curVal!=null?won(curVal)+'원':''}</td>
+      <td style="text-align:right;">${priVal!=null?won(priVal)+'원':''}</td></tr>`;
+  }).join('');
+  return `<table class="raw-table">
+    <tr><th style="text-align:left;">과목</th><th style="text-align:right;">당기</th><th style="text-align:right;">전기</th></tr>
+    ${trs}
+  </table>`;
 }
 function renderSlot(slotEl, parsed, fileLabel){
   const curY = parsed.curYear || '';
@@ -808,7 +884,11 @@ function renderSlot(slotEl, parsed, fileLabel){
       <tr><td>전기</td><td class="yr-input"><input type="number" id="${slotEl.id}_priYear" value="${priY}"></td>
           <td>매출 ${won(parsed.pri['Ⅰ. 매출액']||0)}원</td>
           <td><button class="small-btn" onclick="commitYear('${slotEl.id}','pri')">이 연도로 반영</button></td></tr>
-    </table>`;
+    </table>
+    <details class="raw-detail" open>
+      <summary>📄 업로드한 위하고 손익계산서 원본 그대로 보기 (전체 항목)</summary>
+      ${fullTableHTML(parsed.rows)}
+    </details>`;
   slotEl._parsed = parsed;
   commitYear(slotEl.id, 'cur');
   commitYear(slotEl.id, 'pri');
@@ -822,6 +902,12 @@ function commitYear(slotId, which){
   if (!year) return;
   const data = which==='cur' ? parsed.cur : parsed.pri;
   state.years[year] = Object.assign({}, state.years[year]||{}, data);
+  const detail = {};
+  ACCOUNT_LABELS.forEach(section=>{
+    detail[section] = (parsed.detail[section]||[]).map(it=> ({ name: it.name, cur: which==='cur' ? it.cur : it.pri }));
+  });
+  state.rawDetail[year] = detail;
+  delete state.confirmed[year]; // 재업로드/재반영 시 이전 확정 표식은 초기화(다시 확인 필요)
   renderAll();
 }
 function processExcelArrayBuffer(arrayBuffer, slotId, label){
@@ -919,6 +1005,164 @@ function renderExtraBizList(){
 renderExtraBizList();
 
 /* ============================================================
+   4-1. 12/31 손익 확정 (과목별 연환산 / 그대로 / 직접입력 + 가감)
+   - 기준일 실적을 단순히 12/기준월수 로 곱하는 방식은 매출·매출원가처럼
+     "업체가 예상하는 연말 금액"이 단순 배수와 다르거나(직접입력),
+     재고 증감처럼 부호가 있는 항목(매출원가)을 왜곡시킬 수 있어
+     과목별로 계산방식을 선택하고 가감할 수 있도록 한다.
+============================================================ */
+const ADJ_SECTIONS = ["Ⅰ. 매출액","Ⅱ. 매출원가","Ⅳ. 판매비와 관리비","Ⅵ. 영업외수익","Ⅶ. 영업외비용"];
+
+/* 매출원가의 "기말재고/타계정대체"는 구조적으로 (-) 차감 항목
+   (매출원가 = 기초재고 + 당기매입 - 타계정대체 - 기말재고) */
+function classifyDefaultMode(section, name){
+  const n = normLabel(name);
+  if (section === 'Ⅱ. 매출원가' && (n.includes('기말') || n.includes('타계정'))){
+    return { mode:'annualize', sign:-1 };
+  }
+  return { mode:'annualize', sign:1 };
+}
+function lineFinal(it, mult){
+  let base;
+  if (it.mode === 'override') base = Number(it.override)||0;
+  else if (it.mode === 'asis') base = Number(it.cur)||0;
+  else base = (Number(it.cur)||0) * mult;
+  return base + (Number(it.delta)||0);
+}
+function ensureAdjModel(year){
+  if (!state.rawDetail[year]) return;
+  if (!state.adj[year]) state.adj[year] = {};
+  const baseMonths = num('baseMonths') || 12;
+  const mult = 12/baseMonths;
+  ACCOUNT_LABELS.forEach(section=>{
+    const rawItems = state.rawDetail[year][section] || [];
+    const existing = state.adj[year][section] || [];
+    const existingByName = {};
+    existing.forEach(it=>{ if (!it._custom) existingByName[it.name]=it; });
+    const rebuilt = rawItems.map(ri=>{
+      const prev = existingByName[ri.name];
+      const def = classifyDefaultMode(section, ri.name);
+      if (prev){
+        return Object.assign({}, prev, { cur: ri.cur, sign: def.sign });
+      }
+      return { name: ri.name, cur: ri.cur, mode: def.mode, sign: def.sign, override: Math.round(ri.cur*mult), delta: 0 };
+    });
+    const customItems = existing.filter(it=> it._custom);
+    state.adj[year][section] = rebuilt.concat(customItems);
+  });
+}
+function sectionTotal(year, section, mult){
+  ensureAdjModel(year);
+  const items = (state.adj[year] && state.adj[year][section]) || [];
+  return items.reduce((s,it)=> s + lineFinal(it, mult) * (it.sign||1), 0);
+}
+function updateAdjItem(year, section, idx, field, value, skipRender){
+  ensureAdjModel(year);
+  const arr = state.adj[year] && state.adj[year][section];
+  if (!arr || !arr[idx]) return;
+  arr[idx][field] = value;
+  if (!skipRender) renderAll();
+}
+function addAdjItem(section){
+  const {N} = getYears();
+  ensureAdjModel(N);
+  if (!state.adj[N]) state.adj[N] = {};
+  if (!state.adj[N][section]) state.adj[N][section] = [];
+  state.adj[N][section].push({ name:'새 조정항목', cur:0, mode:'override', sign:1, override:0, delta:0, _custom:true });
+  renderAll();
+}
+function removeAdjItem(year, section, idx){
+  const arr = state.adj[year] && state.adj[year][section];
+  if (!arr) return;
+  arr.splice(idx,1);
+  renderAll();
+}
+function confirmYearEnd(){
+  const {N} = getYears();
+  state.confirmed[N] = { at: new Date().toISOString() };
+  renderAll();
+}
+function renderAdjRow(N, section, it, i, mult){
+  const final = lineFinal(it, mult) * (it.sign||1);
+  const nameCell = it._custom
+    ? `<input type="text" value="${it.name}" style="font-size:12.5px;padding:5px 6px;"
+        oninput="updateAdjItem(${N},'${section}',${i},'name',this.value,true)" onblur="renderAll()">`
+    : `${it.name}`;
+  const signTag = it.sign<0 ? ` <span class="tag" style="background:var(--red-bg);color:var(--red);">차감(−)</span>` : '';
+  const overrideField = it.mode==='override'
+    ? `<input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(it.override)}" placeholder="연말 예상금액"
+        oninput="updateAdjItem(${N},'${section}',${i},'override',unfmtMoney(this.value),true)"
+        onfocus="this.value = unfmtMoney(this.value) ? String(unfmtMoney(this.value)) : '';"
+        onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); renderAll();">`
+    : '';
+  return `<tr>
+    <td>${nameCell}${signTag}</td>
+    <td>${won(it.cur)}원</td>
+    <td>
+      <select onchange="updateAdjItem(${N},'${section}',${i},'mode',this.value)">
+        <option value="annualize" ${it.mode==='annualize'?'selected':''}>연환산(×${mult.toFixed(2)})</option>
+        <option value="asis" ${it.mode==='asis'?'selected':''}>그대로(기준시점 금액)</option>
+        <option value="override" ${it.mode==='override'?'selected':''}>직접입력(연말 예상)</option>
+      </select>
+    </td>
+    <td>
+      ${overrideField}
+      <input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(it.delta)}" placeholder="가감(+/-)"
+        oninput="updateAdjItem(${N},'${section}',${i},'delta',unfmtMoney(this.value),true)"
+        onfocus="this.value = unfmtMoney(this.value) ? String(unfmtMoney(this.value)) : '';"
+        onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); renderAll();">
+    </td>
+    <td style="font-weight:700;color:var(--navy);">${won(final)}원</td>
+    <td>${it._custom ? `<button type="button" class="small-btn ghost" onclick="removeAdjItem(${N},'${section}',${i})">🗑</button>` : ''}</td>
+  </tr>`;
+}
+function renderAdjPanel(){
+  const wrap = document.getElementById('adjPanelWrap');
+  if (!wrap) return;
+  const {N} = getYears();
+  ensureAdjModel(N);
+  const hasDetail = state.rawDetail[N] && ADJ_SECTIONS.some(s=> (state.rawDetail[N][s]||[]).length>0);
+  if (!hasDetail){
+    wrap.innerHTML = `<div class="biz-empty">메인 사업장 ${N}년 손익계산서를 업로드해 "이 연도로 반영"을 누르면, 과목별 세부항목을 12/31 기준으로 연환산·가감·직접입력하여 확정하는 표가 여기에 나타납니다.</div>`;
+    return;
+  }
+  const baseMonths = num('baseMonths') || 12;
+  const mult = 12/baseMonths;
+  const conf = state.confirmed[N];
+  const confBadge = conf
+    ? `<span class="badge-diligent no">✔ ${N}년 12/31 손익 확정됨 (${new Date(conf.at).toLocaleString('ko-KR')})</span>`
+    : `<span class="badge-diligent yes">아직 미확정 · 확인 후 아래 버튼으로 확정해주세요</span>`;
+  const sectionsHtml = ADJ_SECTIONS.map(section=>{
+    const items = state.adj[N][section] || [];
+    const total = sectionTotal(N, section, mult);
+    const rawTotal = items.reduce((s,it)=> s + (Number(it.cur)||0)*(it.sign||1), 0);
+    return `
+      <div class="adj-section">
+        <div class="adj-section-head">
+          <b>${section}</b>
+          <span style="color:var(--sub);">기준시점 ${won(rawTotal)}원 → <b style="color:var(--navy);">12/31 추정 ${won(total)}원</b></span>
+        </div>
+        <table class="adj-table">
+          <tr><th>항목</th><th>기준시점(${baseMonths}개월)</th><th>계산방식</th><th>가감 / 직접입력</th><th>12/31 추정</th><th></th></tr>
+          ${items.map((it,i)=> renderAdjRow(N, section, it, i, mult)).join('')}
+        </table>
+        <button type="button" class="small-btn ghost" style="margin-top:8px;" onclick="addAdjItem('${section}')">+ 조정항목 추가 (예: 4대보험료 회사부담분, 기부금 등)</button>
+      </div>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div style="margin:18px 0 10px;padding-top:16px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="font-weight:700;color:var(--navy);font-size:14px;">📐 ${N}년 12/31 손익 확정 (과목별 연환산·가감 조정)</div>
+      <div>${confBadge}</div>
+    </div>
+    <p class="hint">항목마다 계산방식을 고르세요 - <b>연환산</b>: 기준시점 금액 × 12/기준월수 (매월 고르게 발생하는 항목). <b>그대로</b>: 기준시점 금액을 연간 금액으로 그대로 사용 (이미 연간 확정된 항목). <b>직접입력</b>: 연말 예상 금액을 직접 입력 (매출 목표치, 기말재고 예상액 등 - "업체가 예상하는 매출/재고" 반영). "가감"란에는 감가상각비·4대보험료·기부금처럼 기준시점 실적에 없던 금액을 추가/차감할 수 있습니다. 매출원가의 기말재고·타계정대체는 자동으로 (-) 차감 처리됩니다.</p>
+    ${sectionsHtml}
+    <div class="actions" style="margin-top:10px;">
+      <button type="button" class="btn-primary" onclick="confirmYearEnd()">✔ ${N}년 12/31 손익 추정 확정</button>
+    </div>
+  `;
+}
+
+/* ============================================================
    5. 성실신고확인대상 판정
 ============================================================ */
 function diligentCheck(totalRevenue){
@@ -967,14 +1211,27 @@ function computeScenario(extraExpense){
   const baseMonths = num('baseMonths') || 12;
   const mult = 12/baseMonths;
   const y = state.years[N] || {};
-  const sales = (y['Ⅰ. 매출액']||0)*mult;
-  const cogs = (y['Ⅱ. 매출원가']||0)*mult;
+  ensureAdjModel(N);
+  const hasDetail = state.rawDetail[N] && ADJ_SECTIONS.some(s=> (state.rawDetail[N][s]||[]).length>0);
+  let sales, cogs, sgaBase, nonOpInc, nonOpExp;
+  if (hasDetail){
+    // 과목별 연환산/그대로/직접입력 + 가감 조정을 반영한 12/31 추정치(위 "12/31 손익 확정" 표 기준)
+    sales = sectionTotal(N, 'Ⅰ. 매출액', mult);
+    cogs = sectionTotal(N, 'Ⅱ. 매출원가', mult);
+    sgaBase = sectionTotal(N, 'Ⅳ. 판매비와 관리비', mult);
+    nonOpInc = sectionTotal(N, 'Ⅵ. 영업외수익', mult);
+    nonOpExp = sectionTotal(N, 'Ⅶ. 영업외비용', mult);
+  } else {
+    // 세부항목 데이터가 없는 경우(구버전 호환) - 대과목 합계를 단순 연환산
+    sales = (y['Ⅰ. 매출액']||0)*mult;
+    cogs = (y['Ⅱ. 매출원가']||0)*mult;
+    sgaBase = (y['Ⅳ. 판매비와 관리비']||0)*mult;
+    nonOpInc = (y['Ⅵ. 영업외수익']||0)*mult;
+    nonOpExp = (y['Ⅶ. 영업외비용']||0)*mult;
+  }
   const gross = sales - cogs;
-  const sgaBase = (y['Ⅳ. 판매비와 관리비']||0)*mult;
   const sga = sgaBase + extraExpense;
   const opIncome = gross - sga;
-  const nonOpInc = (y['Ⅵ. 영업외수익']||0)*mult;
-  const nonOpExp = (y['Ⅶ. 영업외비용']||0)*mult;
   const pretax = opIncome + nonOpInc - nonOpExp;
 
   const adjIn = num('adjIn'), adjOut = num('adjOut'), nol = num('nol');
@@ -1089,6 +1346,7 @@ function renderAll(){
     const s1 = computeScenario(0);
     const s2 = computeScenario(num('extraExpense'));
 
+    renderAdjPanel();
     renderDiligentCheck(s1.totalRevenue);
     renderIncomePreview(s1);
     renderScenarioCards(s1,s2);
