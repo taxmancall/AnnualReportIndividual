@@ -1810,6 +1810,54 @@ function axisMoneyFormat(v){
   if (av >= 10000) return Math.round(v/10000).toLocaleString('ko-KR')+'만';
   return v.toLocaleString('ko-KR');
 }
+/* 그래프 위 금액 표시: 1억 이상은 "16.2억", 그 미만은 "7,558만" */
+function labelMoney(v){
+  const av = Math.abs(v);
+  if (av >= 100000000) return (v/100000000).toFixed(1)+'억';
+  if (av >= 10000) return Math.round(v/10000).toLocaleString('ko-KR')+'만';
+  return Math.round(v).toLocaleString('ko-KR');
+}
+/* 막대 위·꺾은선 점 위에 금액을 직접 그리는 플러그인(외부 라이브러리 없이 동작) */
+const valueLabelPlugin = {
+  id: 'valueLabels',
+  afterDatasetsDraw(chart){
+    const ctx = chart.ctx;
+    const fam = "'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
+    chart.data.datasets.forEach((ds, di)=>{
+      const meta = chart.getDatasetMeta(di);
+      if (!meta || meta.hidden || chart.isDatasetVisible && !chart.isDatasetVisible(di)) return;
+      const isLine = (meta.type || ds.type || chart.config.type) === 'line';
+      const dense = chart.data.datasets.length >= 3;
+      meta.data.forEach((el, i)=>{
+        const v = ds.data[i];
+        if (v == null || !isFinite(v)) return;
+        const text = labelMoney(v);
+        ctx.save();
+        ctx.font = `700 ${dense ? 10 : 11.5}px ${fam}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (isLine){
+          // 막대 안쪽에 겹쳐도 읽히도록 흰 바탕 상자 위에 표시
+          const w = ctx.measureText(text).width + 10, h = 17;
+          const x = el.x, y = el.y - 19;
+          ctx.fillStyle = 'rgba(255,255,255,.94)';
+          ctx.strokeStyle = '#1E8A70';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(x - w/2, y - h/2, w, h, 5); else ctx.rect(x - w/2, y - h/2, w, h);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#1E8A70';
+          ctx.fillText(text, x, y + 0.5);
+        } else {
+          ctx.fillStyle = '#132C42';
+          const y = v >= 0 ? el.y - 9 : el.y + 10;
+          ctx.fillText(text, el.x, y);
+        }
+        ctx.restore();
+      });
+    });
+  }
+};
 function applyChartDefaults(){
   if (typeof Chart === 'undefined') return;
   Chart.defaults.font.family = "'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
@@ -1820,6 +1868,7 @@ function applyChartDefaults(){
 }
 function chartConfigTrend(t){
   return {
+    plugins:[valueLabelPlugin],
     data:{ labels:t.labels, datasets:[
       {type:'bar', label:'매출액', data:t.sales, backgroundColor:'#3D82C4', hoverBackgroundColor:'#2660A0',
        borderRadius:6, borderSkipped:false, maxBarThickness:64, order:2, yAxisID:'y'},
@@ -1827,14 +1876,14 @@ function chartConfigTrend(t){
        borderWidth:3, order:1, yAxisID:'y', tension:.3, pointRadius:5, pointBackgroundColor:'#fff',
        pointBorderColor:'#1E8A70', pointBorderWidth:2.5, pointHoverRadius:7}
     ]},
-    options:{ responsive:true,
+    options:{ responsive:true, layout:{ padding:{ top:8 } },
       plugins:{
         legend:{position:'bottom'},
         title:{display:true, text:'3개년 매출·영업이익 추이(메인 사업장)', color:'#132C42', font:{size:14,weight:'700'}, padding:{bottom:14}},
         tooltip:{callbacks:{label:(ctx)=> `${ctx.dataset.label}: ${won(ctx.parsed.y)}원`}}
       },
       scales:{
-        y:{ ticks:{ callback:axisMoneyFormat }, grid:{ color:'#EEE9DC' } },
+        y:{ grace:'8%', ticks:{ callback:axisMoneyFormat }, grid:{ color:'#EEE9DC' } },
         x:{ grid:{ display:false } }
       }
     }
@@ -1844,6 +1893,7 @@ function chartConfigScenario(sc){
   const palette = [['#7C6FC4','#5B4FA3'],['#E0785A','#C65A3E'],['#2FA88F','#1E8A70']];
   return {
     type:'bar',
+    plugins:[valueLabelPlugin],
     data:{ labels:['산출세액','감면·공제','결정세액','총부담세액'],
       datasets: sc.map((x,i)=> ({
         label: x.key+'안', data:[x.s.calcTax, x.s.totalCredit, x.s.decided, x.s.totalBurden],
@@ -1857,7 +1907,7 @@ function chartConfigScenario(sc){
         tooltip:{callbacks:{label:(ctx)=> `${ctx.dataset.label} ${ctx.label}: ${won(ctx.parsed.y)}원`}}
       },
       scales:{
-        y:{ ticks:{ callback:axisMoneyFormat }, grid:{ color:'#EEE9DC' } },
+        y:{ grace:'8%', ticks:{ callback:axisMoneyFormat }, grid:{ color:'#EEE9DC' } },
         x:{ grid:{ display:false } }
       }
     }
