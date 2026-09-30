@@ -545,7 +545,7 @@ table.rep-table.tax td.memo{font-size:10.5px;}
       <div class="field"><label>직전연도 대비 인원감소(명) - 중특감면 한도</label><input type="number" id="decreasedEmp" value="0"></div>
     </div>
     <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:10px 0 0;">
-      <input type="checkbox" id="minTaxOn" style="width:auto;" checked> 최저한세 적용 (조특법 §132② - 중소기업특별세액감면·통합고용세액공제·노란우산공제 대상, 배제된 통합고용세액공제는 다음 연도로 이월)
+      <input type="checkbox" id="minTaxOn" style="width:auto;" checked> 최저한세 적용 (조특법 §132② - 중소기업특별세액감면·통합고용세액공제·사회보험료 세액공제·노란우산공제 대상. 성실신고 확인비용 등 그 밖의 세액공제는 대상 아님. 배제된 통합고용·사회보험료 공제는 다음 연도로 이월)
     </label>
 
     <div class="step-subhead">가산세 · 기납부세액</div>
@@ -1474,13 +1474,13 @@ function fmtMoney(n){
 }
 function num(id){ return unfmtMoney(document.getElementById(id).value); }
 
-/* 세액공제 입력란(사무소 엑셀 "세액예상" 시트의 항목 순서). ④⑤ 통합고용세액공제는 최저한세·농특세 대상이라 별도 처리 */
+/* 세액공제 입력란(사무소 엑셀 "세액예상" 시트의 항목 순서) 중 최저한세 대상이 아닌 공제.
+   ④⑤ 통합고용세액공제(최저한세·농특세 대상)와 ⑦ 사회보험료 세액공제(최저한세 대상, 조특법 §30의4)는 별도 처리 */
 const CREDIT_FIELDS = [
   ['crChild','① 자녀·출산 세액공제'],
   ['crBook','② 기장세액공제'],
   ['crStd','③ 표준세액공제·근로소득세액공제 등'],
   ['crDiligent','⑥ 성실신고 확인비용 세액공제'],
-  ['crSocial','⑦ 사회보험료 세액공제'],
   ['crMedical','⑧ 의료비 세액공제'],
   ['crEdu','⑨ 교육비 세액공제'],
   ['crPension','⑩ 퇴직연금(연금계좌) 세액공제'],
@@ -1597,6 +1597,8 @@ function computeScenario(extraExpense){
   // 통합고용세액공제(당기·이월) - 최저한세·농특세 대상
   const empCredit = num('empCredit'), empCreditCarry = num('empCreditCarry');
   const empTotal = empCredit + empCreditCarry;
+  const socialCredit = num('crSocial');             // 사회보험료 세액공제(조특법 §30의4): 최저한세 대상, 농특세 비과세
+  const carryPool = empTotal + socialCredit;        // 최저한세 대상이면서 이월공제(조특법 §144)가 되는 세액공제
 
   /* 최저한세 (조특법 §132②, 엑셀 "세액예상" 23~28행과 동일한 계산)
      - 기준 산출세액: 노란우산공제(조특법 §86의3)를 빼기 전 과세표준으로 다시 계산한 사업소득분 산출세액
@@ -1609,9 +1611,9 @@ function computeScenario(extraExpense){
   const minTaxCalc = taxWithFin(minTaxBase, finGross).tax * bizShareAll;
   const minTax = Math.min(minTaxCalc,30000000)*0.35 + Math.max(minTaxCalc-30000000,0)*0.45;
   const minTaxRoom = Math.max(calcTax*bizShareAll - minTax, 0);
-  const minTaxSubject = reductionGross + empTotal;
+  const minTaxSubject = reductionGross + carryPool;
   const minTaxExcluded = minTaxOn ? Math.max(minTaxSubject - minTaxRoom, 0) : 0;
-  const exclEmp = Math.min(minTaxExcluded, empTotal);
+  const exclEmp = Math.min(minTaxExcluded, carryPool);
   const exclReduction = minTaxExcluded - exclEmp;
 
   /* 공제 순서(소득세법 §60): 세액감면 → 이월공제가 없는 세액공제 → 이월공제가 있는 세액공제 */
@@ -1620,9 +1622,11 @@ function computeScenario(extraExpense){
   const creditItems = CREDIT_FIELDS.map(([id,label])=> ({ id, label, amt: num(id) }));
   const otherCreditsRaw = creditItems.reduce((s,c)=> s + c.amt, 0);
   const otherCredit = Math.min(otherCreditsRaw, remain); remain -= otherCredit;
-  const empUsed = Math.min(empTotal - exclEmp, remain); remain -= empUsed;
-  const empCarryNext = empTotal - empUsed;          // 다음 연도로 이월되는 통합고용세액공제
-  const totalCredit = reduction + otherCredit + empUsed;
+  const poolUsed = Math.min(carryPool - exclEmp, remain); remain -= poolUsed;
+  const socialUsed = Math.min(socialCredit, poolUsed);   // 농특세가 없는 사회보험료 공제를 먼저 사용
+  const empUsed = poolUsed - socialUsed;
+  const empCarryNext = carryPool - poolUsed;        // 다음 연도로 이월되는 세액공제(통합고용·사회보험료)
+  const totalCredit = reduction + otherCredit + poolUsed;
 
   const penalty = num('penalty');
   const decided = remain + penalty;                 // 결정세액(종합소득세)
@@ -1648,7 +1652,7 @@ function computeScenario(extraExpense){
     dedBasic, dedPension, dedYellow, dedOther, comboDeduction,
     taxBase, calcTax, methodUsed, rate: marginalRate(taxBase),
     reductionGross, reduction, creditItems, otherCreditsRaw, otherCredit,
-    empCredit, empCreditCarry, empTotal, empUsed, empCarryNext, totalCredit,
+    empCredit, empCreditCarry, empTotal, empUsed, socialCredit, socialUsed, poolUsed, empCarryNext, totalCredit,
     minTaxOn, minTaxCalc, minTax, minTaxRoom, minTaxSubject, minTaxExcluded, exclEmp, exclReduction,
     penalty, decided, localDecided, ruralTax, totalBurden,
     midterm, withhold, withholdLocal, prepaid, netPayable, burdenRate,
@@ -1719,7 +1723,7 @@ function scenarioCardHTML(title, desc, s, cls){
     <div class="kv"><span class="l">종합소득 과세표준</span><span class="v">${won(s.taxBase)}원</span></div>
     <div class="kv"><span class="l">산출세액</span><span class="v">${won(s.calcTax)}원</span></div>
     <div class="kv"><span class="l">중소기업특별세액감면</span><span class="v">-${won(s.reduction)}원</span></div>
-    <div class="kv"><span class="l">세액공제 합계</span><span class="v">-${won(s.otherCredit+s.empUsed)}원</span></div>
+    <div class="kv"><span class="l">세액공제 합계</span><span class="v">-${won(s.otherCredit+s.poolUsed)}원</span></div>
     ${minRow}
     <div class="kv"><span class="l">결정세액(종합소득세)</span><span class="v">${won(s.decided)}원</span></div>
     <div class="kv"><span class="l">개인지방소득세</span><span class="v">${won(s.localDecided)}원</span></div>
@@ -2015,11 +2019,12 @@ function buildTaxTable(sc){
   });
   if (any(s=> s.empCredit)) h += row('', '④ 통합고용(고용증대) 세액공제', s=> won(s.empCredit), '조특법 §29의8');
   if (any(s=> s.empCreditCarry)) h += row('', '⑤ 통합고용(고용증대) 세액공제 이월분', s=> won(s.empCreditCarry), '조특법 §144');
+  if (any(s=> s.socialCredit)) h += row('', '⑦ 사회보험료 세액공제', s=> won(s.socialCredit), '조특법 §30의4');
   if (sc[0].s.minTaxOn && any(s=> s.minTaxSubject)){
     h += row('', '최저한세', s=> won(s.minTax), '조특법 §132②');
-    h += row('', '최저한세 반영(감면·공제 배제)', s=> s.minTaxExcluded ? '-'+won(s.minTaxExcluded) : '0', '통합고용 공제부터 배제');
+    h += row('', '최저한세 반영(감면·공제 배제)', s=> s.minTaxExcluded ? '-'+won(s.minTaxExcluded) : '0', '이월 가능한 공제부터 배제');
   }
-  if (any(s=> s.empCarryNext)) h += row('', '다음 연도 이월 통합고용세액공제', s=> won(s.empCarryNext), '당기 미공제분');
+  if (any(s=> s.empCarryNext)) h += row('', '다음 연도 이월 세액공제(통합고용·사회보험료)', s=> won(s.empCarryNext), '당기 미공제분');
   h += row('', '세액감면·공제 적용액 합계', s=> won(s.totalCredit));
   if (any(s=> s.penalty)) h += row('', '가산세·추가납부세액', s=> won(s.penalty));
   h += row('strong', '결정세액(종합소득세)', s=> won(s.decided));
