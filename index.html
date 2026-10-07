@@ -178,6 +178,19 @@ canvas{max-width:100%;}
 .extra-biz-row .row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .extra-biz-row .row-head .idx{font-size:12px;color:var(--brass);font-weight:700;}
 .biz-empty{font-size:12.5px;color:var(--sub);padding:10px 2px;}
+.im-wrap{overflow-x:auto;margin:6px 0 4px;}
+table.income-matrix{width:100%;min-width:760px;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+table.income-matrix th,table.income-matrix td{border:1px solid var(--line);padding:6px 6px;text-align:right;vertical-align:middle;}
+table.income-matrix thead th{background:#F1ECDD;color:var(--navy);text-align:center;font-weight:700;}
+table.income-matrix tbody th{background:#F1ECDD;color:var(--navy);text-align:left;width:112px;font-weight:700;}
+table.income-matrix td.auto{background:#F5F6F4;color:var(--ink);}
+table.income-matrix td.dim{color:var(--sub);text-align:center;}
+table.income-matrix input.money-input{width:100%;box-sizing:border-box;text-align:right;font-size:12.5px;padding:6px 7px;margin:0;}
+table.income-matrix tr.im-total th,table.income-matrix tr.im-total td{background:#E8EEF4;color:var(--navy);font-weight:700;}
+.im-rate{margin-top:4px;font-size:11px;color:var(--sub);text-align:right;}
+.im-rate input{width:44px;padding:2px 4px;font-size:11.5px;text-align:right;display:inline-block;}
+.im-notes{margin-top:8px;font-size:11.5px;color:var(--sub);line-height:1.65;}
+.im-check{display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:10px 0 0;}
 .income-preview{margin-top:14px;padding:14px 16px;background:#F5F6F4;border-radius:9px;font-size:12.5px;}
 .income-preview .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #DDD6C4;}
 .income-preview .row:last-child{border-bottom:none;font-weight:700;color:var(--navy);}
@@ -485,27 +498,47 @@ table.rep-table.tax td.memo{font-size:10.5px;}
     <div id="adjPanelWrap"></div>
   </div>
 
-  <!-- STEP 3: 타소득 자료 입력 -->
+  <!-- STEP 3: 소득별 자료 입력 -->
   <div class="card">
-    <h2><span class="step-no">3</span>타소득 자료 입력 (근로·연금·기타·금융소득)</h2>
-    <p class="hint">사업소득 외에 다른 소득이 있으면 입력하세요. 근로·연금·기타소득은 종합소득에 합산되고, 금융소득(이자+배당)은 연 2천만원을 초과하는 부분만 종합소득에 합산됩니다(2천만원 이하분은 원천징수로 분리과세, 소득세법 §14③6). 없으면 0으로 두세요.</p>
-    <div class="grid cols-2">
-      <div class="field"><label>근로소득 - 총급여액(연간)</label><input type="text" inputmode="decimal" class="money-input" id="wageGross" value="0"></div>
-      <div class="field"><label>연금소득 - 총연금액(연간, 공적연금 기준)</label><input type="text" inputmode="decimal" class="money-input" id="pensionGross" value="0"></div>
+    <h2><span class="step-no">3</span>타소득 자료 입력 (임대·근로·연금·기타·금융소득)</h2>
+    <p class="hint">사업소득 외에 다른 소득이 있으면 <b>흰색 칸</b>에 입력하세요(회색 칸은 자동 계산). 임대·근로·연금·기타소득은 종합소득에 합산되고, 금융소득(이자+배당)은 연 2천만원을 초과하면 종합과세됩니다(2천만원 이하분은 원천징수로 분리과세, 소득세법 §14③6). 없으면 0으로 두세요.</p>
+    <div class="im-wrap">
+    <table class="income-matrix">
+      <thead><tr><th></th><th>사업소득</th><th>임대소득</th><th>근로소득</th><th>연금소득</th><th>기타소득</th><th>금융소득</th></tr></thead>
+      <tbody>
+        <tr><th>총수입</th>
+          <td class="auto" id="imBizRev">0</td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="rentalGross" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="wageGross" value="0" title="총급여액(연간)"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pensionGross" value="0" title="총연금액(연간, 공적연금 기준)"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="otherIncomeGross" value="0" title="총수입금액(연간)"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="finIncomeGross" value="0" title="이자+배당 합계(연간)"></td></tr>
+        <tr><th>필요경비</th>
+          <td class="auto" id="imBizExp">0</td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="rentalExpense" value="0"></td>
+          <td class="auto" id="imWageExp">0</td>
+          <td class="auto" id="imPenExp">0</td>
+          <td class="auto"><span id="imOthExp">0</span><div class="im-rate">필요경비율 <input type="number" id="otherIncomeExpenseRate" value="60" min="0" max="100">%</div></td>
+          <td class="auto dim">-</td></tr>
+        <tr><th>소득금액</th>
+          <td class="auto" id="imBizInc">0</td>
+          <td class="auto" id="imRentInc">0</td>
+          <td class="auto" id="imWageInc">0</td>
+          <td class="auto" id="imPenInc">0</td>
+          <td class="auto" id="imOthInc">0</td>
+          <td class="auto" id="imFinInc">0</td></tr>
+        <tr class="im-total"><th>종합소득 합산분</th>
+          <td id="imBizSum">0</td><td id="imRentSum">0</td><td id="imWageSum">0</td><td id="imPenSum">0</td><td id="imOthSum">0</td><td id="imFinSum">0</td></tr>
+      </tbody>
+    </table>
     </div>
-    <div class="grid cols-3" style="margin-top:12px;">
-      <div class="field"><label>기타소득 - 총수입금액(연간)</label><input type="text" inputmode="decimal" class="money-input" id="otherIncomeGross" value="0"></div>
-      <div class="field"><label>기타소득 필요경비율(%)</label><input type="number" id="otherIncomeExpenseRate" value="60" min="0" max="100"></div>
-      <div class="field" style="display:flex;align-items:flex-end;padding-bottom:8px;">
-        <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:0;">
-          <input type="checkbox" id="otherIncomeSeparate" style="width:auto;"> 기타소득금액 300만원 이하 시 분리과세 선택(소득세법 §14③8)
-        </label>
-      </div>
+    <div class="im-notes">
+      <div>· 사업소득 칸은 STEP 2 손익계산서·STEP 1 추가 사업장과 STEP 4 세무조정을 반영한 ①안 기준 자동 값입니다(필요경비는 총수입 − 소득금액 역산).</div>
+      <div>· 근로·연금소득의 필요경비는 근로소득공제(소득세법 §47)·연금소득공제(§47의2)가 자동 적용됩니다.</div>
+      <div>· 부동산임대업 결손금은 다른 소득과 통산되지 않으므로(소득세법 §45②) 임대소득금액이 음수이면 0으로 합산합니다.</div>
+      <div>· 금융소득이 2천만원을 초과하면 비교과세(소득세법 §62)가 자동 적용되어 세부담이 분리과세(14%)보다 낮아지지 않도록 계산됩니다.</div>
     </div>
-    <div class="grid cols-2" style="margin-top:12px;">
-      <div class="field"><label>금융소득(이자+배당) 합계(연간)</label><input type="text" inputmode="decimal" class="money-input" id="finIncomeGross" value="0"></div>
-      <div style="font-size:11.5px;color:var(--sub);align-self:end;padding-bottom:9px;">2천만원 초과 시 초과분만 종합과세되며, 세부담이 분리과세(14%)보다 낮아지지 않도록 비교과세(소득세법 §62)가 자동 적용됩니다.</div>
-    </div>
+    <label class="im-check"><input type="checkbox" id="otherIncomeSeparate" style="width:auto;"> 기타소득금액 300만원 이하 시 분리과세 선택(소득세법 §14③8)</label>
     <div id="incomePreview" class="income-preview"></div>
   </div>
 
@@ -528,10 +561,7 @@ table.rep-table.tax td.memo{font-size:10.5px;}
       <div class="field"><label>노란우산공제 납입액(연간, 조특법 §86의3)</label><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></div>
       <div class="field"><label>기타공제</label><input type="text" inputmode="decimal" class="money-input" id="otherDeduction" value="0"></div>
     </div>
-    <div class="grid cols-4" style="margin-top:-4px;">
-      <div class="field"><label>(노란우산) 사업소득금액 중 부동산임대업 소득금액</label><input type="text" inputmode="decimal" class="money-input" id="yuRental" value="0"></div>
-      <div class="field" style="grid-column:span 3;align-self:end;"><div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;padding-bottom:6px;"></div></div>
-    </div>
+    <div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:-2px 0 4px;"></div>
 
     <div class="step-subhead">세액공제 · 감면 <span style="font-weight:400;color:var(--sub);font-size:12px;">(중소기업특별세액감면은 STEP 1 정보로 자동 계산)</span></div>
     <div class="grid cols-4">
@@ -1574,7 +1604,12 @@ function computeScenario(extraExpense){
   const finOver = Math.max(finGross-20000000, 0);
   const finIncluded = finGross>20000000 ? finGross : 0;
 
-  const otherIncomeSum = wageIncome + pensionIncome + otherIncomeIncluded;
+  // 임대소득(부동산임대업): 결손금은 다른 소득과 통산 불가(소득세법 §45②) → 0 하한. 중소기업특별세액감면 대상 아님
+  const rentalGross = num('rentalGross'), rentalExpense = num('rentalExpense');
+  const rentalIncomeRaw = rentalGross - rentalExpense;
+  const rentalIncome = Math.max(rentalIncomeRaw, 0);
+
+  const otherIncomeSum = rentalIncome + wageIncome + pensionIncome + otherIncomeIncluded;
   // 타소득합산(엑셀 "타소득합산" 행): 추가 사업장 + 근로·연금·기타 + 종합과세 금융소득
   const otherMerged = extraBizIncomeTotal + otherIncomeSum + finIncluded;
   const incomeTotal = bizIncomeTotal + otherIncomeSum + finIncluded;   // 종합소득금액
@@ -1582,7 +1617,7 @@ function computeScenario(extraExpense){
   // 소득공제 (엑셀 "세액예상" 8~11행)
   /* 노란우산공제 소득공제(조특법 §86의3①): 납입액과 구간별 한도 중 적은 금액, 단 사업소득금액에서
      부동산임대업 소득금액을 뺀 금액을 넘지 못함. 구간은 해당 과세연도 사업소득금액(전 사업장 합산) 기준. */
-  const yu = yellowUmbrellaDeduction(num('yellowUmbrella'), bizIncomeTotal, num('yuRental'));
+  const yu = yellowUmbrellaDeduction(num('yellowUmbrella'), bizIncomeTotal + rentalIncome, rentalIncome);
   const dedBasic = num('comboDeduction'), dedPension = num('pensionContrib'),
         dedYellow = yu.deduction, dedOther = num('otherDeduction');
   const comboDeduction = dedBasic + dedPension + dedYellow + dedOther;
@@ -1669,6 +1704,7 @@ function computeScenario(extraExpense){
     wageGross, wageDeduction, wageIncome,
     pensionGross, pensionDeductionAmt, pensionIncome,
     otherGross, otherIncomeAmt, otherIncomeIncluded,
+    rentalGross, rentalExpense, rentalIncomeRaw, rentalIncome,
     finGross, finOver, otherIncomeSum, otherMerged, incomeTotal,
     dedBasic, dedPension, dedYellow, dedOther, comboDeduction,
     yuPaid: yu.paid, yuLimit: yu.limit, yuCap: yu.cap, yuOver: yu.over,
@@ -1705,7 +1741,7 @@ function renderYuHint(sc){
   const lines = sc.map(x=>{
     const s = x.s;
     const lim = Math.min(s.yuLimit, s.yuCap);
-    return `${x.key}안: 사업소득금액 ${won(s.bizIncomeTotal)}원 → 구간 한도 ${won(s.yuLimit)}원`
+    return `${x.key}안: 사업소득금액 ${won(s.bizIncomeTotal + s.rentalIncome)}원 → 구간 한도 ${won(s.yuLimit)}원`
       + (s.yuCap < s.yuLimit ? ` (임대업 제외 후 ${won(s.yuCap)}원 이내)` : '')
       + ` · <b>공제 ${won(s.dedYellow)}원</b>`
       + (paid>0 && s.yuOver>0 ? ` <span style="color:#b45309;">(납입액 ${won(paid)}원 중 ${won(s.yuOver)}원은 공제 불가)</span>` : '');
@@ -1741,13 +1777,28 @@ function renderAll(){
 }
 
 function renderIncomePreview(s){
-  const box = document.getElementById('incomePreview');
-  box.innerHTML = `
-    <div class="row"><span>근로소득금액 (총급여 ${won(s.wageGross)}원 - 공제 ${won(s.wageDeduction)}원)</span><span>${won(s.wageIncome)}원</span></div>
-    <div class="row"><span>연금소득금액 (총연금 ${won(s.pensionGross)}원 - 공제 ${won(s.pensionDeductionAmt)}원)</span><span>${won(s.pensionIncome)}원</span></div>
-    <div class="row"><span>기타소득금액 (종합과세 반영분)</span><span>${won(s.otherIncomeIncluded)}원${s.otherIncomeAmt>s.otherIncomeIncluded?' (분리과세 선택)':''}</span></div>
-    <div class="row"><span>금융소득 종합과세대상(2천만원 초과분, 전체 ${won(s.finGross)}원)</span><span>${won(s.finOver)}원</span></div>
-    <div class="row"><span>타소득 합계(종합소득 합산분)</span><span>${won(s.otherIncomeSum + (s.finGross>20000000?s.finOver:0))}원</span></div>
+  const set = (id, v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
+  const finIncluded = s.finGross>20000000 ? s.finGross : 0;
+  const bizExp = s.totalRevenue - s.bizIncomeTotal;
+  const othExp = s.otherGross - s.otherIncomeAmt;
+  set('imBizRev', won(s.totalRevenue));        set('imBizExp', won(bizExp));            set('imBizInc', won(s.bizIncomeTotal));
+  set('imRentInc', won(s.rentalIncomeRaw));
+  set('imWageExp', won(s.wageDeduction));      set('imWageInc', won(s.wageIncome));
+  set('imPenExp', won(s.pensionDeductionAmt)); set('imPenInc', won(s.pensionIncome));
+  set('imOthExp', won(othExp));                set('imOthInc', won(s.otherIncomeAmt));
+  set('imFinInc', won(s.finGross));
+  set('imBizSum', won(s.bizIncomeTotal));      set('imRentSum', won(s.rentalIncome));
+  set('imWageSum', won(s.wageIncome));         set('imPenSum', won(s.pensionIncome));
+  set('imOthSum', won(s.otherIncomeIncluded)); set('imFinSum', won(finIncluded));
+  const notes = [];
+  if (s.rentalIncomeRaw<0) notes.push('임대소득 결손금은 통산 불가 → 0원 합산');
+  if (s.otherIncomeAmt>s.otherIncomeIncluded) notes.push('기타소득 분리과세 선택(종합소득 합산 제외)');
+  if (s.finGross>0) notes.push(s.finGross>20000000
+    ? `금융소득 2천만원 초과(초과분 ${won(s.finOver)}원) → 종합과세, 비교과세 적용`
+    : '금융소득 2천만원 이하 → 분리과세(종합소득 합산 제외)');
+  document.getElementById('incomePreview').innerHTML = `
+    <div class="row"><span>종합소득금액 합계 (사업 ${won(s.bizIncomeTotal)} + 타소득 ${won(s.otherIncomeSum + finIncluded)})</span><span>${won(s.incomeTotal)}원</span></div>
+    ${notes.length ? `<div class="row" style="font-weight:400;color:var(--sub);"><span>${notes.join(' · ')}</span><span></span></div>` : ''}
   `;
 }
 
@@ -2191,6 +2242,7 @@ function renderReport(sc){
     <tr><td>사업소득금액(메인 사업장)</td><td>${won(s1.mainBizIncome)}</td><td>연간 추정 손익 + 세무조정 - 이월결손금</td></tr>
     <tr><td>사업소득금액(추가 사업장 ${state.extraBiz.length}곳)</td><td>${won(s1.extraBizIncomeTotal)}</td><td>직접입력</td></tr>
     <tr class="strong"><td>사업소득금액 합계</td><td>${won(s1.bizIncomeTotal)}</td><td></td></tr>
+    ${s1.rentalGross||s1.rentalExpense ? `<tr><td>임대소득금액</td><td>${won(s1.rentalIncome)}</td><td>총수입 ${won(s1.rentalGross)}원 - 필요경비 ${won(s1.rentalExpense)}원${s1.rentalIncomeRaw<0?' (결손금은 통산 불가, 0원 합산)':''}</td></tr>` : ''}
     <tr><td>근로소득금액</td><td>${won(s1.wageIncome)}</td><td>총급여 ${won(s1.wageGross)}원 - 근로소득공제 ${won(s1.wageDeduction)}원</td></tr>
     <tr><td>연금소득금액</td><td>${won(s1.pensionIncome)}</td><td>총연금액 ${won(s1.pensionGross)}원 - 연금소득공제 ${won(s1.pensionDeductionAmt)}원</td></tr>
     <tr><td>기타소득금액(종합과세분)</td><td>${won(s1.otherIncomeIncluded)}</td><td>${s1.otherIncomeAmt>s1.otherIncomeIncluded?'분리과세 선택(300만원 이하)':'-'}</td></tr>
@@ -2229,10 +2281,10 @@ function renderReport(sc){
 ============================================================ */
 ['bizType','bizSize','bizRegion','bizLong','diligentBizCategory','bookkeepingType',
  'baseMonths','baseDate','taxPeriod','ownerName','bizName','targetYear',
- 'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','yuRental','otherDeduction',
+ 'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'wageGross','pensionGross','otherIncomeGross','otherIncomeExpenseRate','finIncomeGross']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpenseRate','finIncomeGross']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
