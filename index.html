@@ -525,8 +525,12 @@ table.rep-table.tax td.memo{font-size:10.5px;}
     <div class="grid cols-4">
       <div class="field"><label>소득공제(인적공제 등)</label><input type="text" inputmode="decimal" class="money-input" id="comboDeduction" value="0"></div>
       <div class="field"><label>국민연금 공제(대표자 본인 납입분)</label><input type="text" inputmode="decimal" class="money-input" id="pensionContrib" value="0"></div>
-      <div class="field"><label>노란우산공제(조특법 §86의3)</label><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></div>
+      <div class="field"><label>노란우산공제 납입액(연간, 조특법 §86의3)</label><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></div>
       <div class="field"><label>기타공제</label><input type="text" inputmode="decimal" class="money-input" id="otherDeduction" value="0"></div>
+    </div>
+    <div class="grid cols-4" style="margin-top:-4px;">
+      <div class="field"><label>(노란우산) 사업소득금액 중 부동산임대업 소득금액</label><input type="text" inputmode="decimal" class="money-input" id="yuRental" value="0"></div>
+      <div class="field" style="grid-column:span 3;align-self:end;"><div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;padding-bottom:6px;"></div></div>
     </div>
 
     <div class="step-subhead">세액공제 · 감면 <span style="font-weight:400;color:var(--sub);font-size:12px;">(중소기업특별세액감면은 STEP 1 정보로 자동 계산)</span></div>
@@ -1501,6 +1505,20 @@ function marginalRate(base){
   return .45;
 }
 
+/* 노란우산공제 구간별 소득공제 한도 (조특법 §86의3①, 2025.3.14. 개정 · 이후 납부하는 공제부금부터 적용) */
+function yellowUmbrellaLimit(bizIncome){
+  if (bizIncome <= 40000000) return 6000000;
+  if (bizIncome <= 60000000) return 5000000;
+  if (bizIncome <= 100000000) return 4000000;
+  return 2000000;
+}
+function yellowUmbrellaDeduction(paid, bizIncome, rental){
+  const limit = yellowUmbrellaLimit(bizIncome);
+  const cap = Math.max(bizIncome - Math.max(rental||0,0), 0);   // 사업소득금액에서 공제(임대업 소득 제외)
+  const deduction = Math.max(Math.min(paid, limit, cap), 0);
+  return { paid, limit, cap, deduction, over: Math.max(paid - deduction, 0) };
+}
+
 function computeScenario(extraExpense){
   const {N} = getYears();
   const mult = adjMult();
@@ -1562,8 +1580,11 @@ function computeScenario(extraExpense){
   const incomeTotal = bizIncomeTotal + otherIncomeSum + finIncluded;   // 종합소득금액
 
   // 소득공제 (엑셀 "세액예상" 8~11행)
+  /* 노란우산공제 소득공제(조특법 §86의3①): 납입액과 구간별 한도 중 적은 금액, 단 사업소득금액에서
+     부동산임대업 소득금액을 뺀 금액을 넘지 못함. 구간은 해당 과세연도 사업소득금액(전 사업장 합산) 기준. */
+  const yu = yellowUmbrellaDeduction(num('yellowUmbrella'), bizIncomeTotal, num('yuRental'));
   const dedBasic = num('comboDeduction'), dedPension = num('pensionContrib'),
-        dedYellow = num('yellowUmbrella'), dedOther = num('otherDeduction');
+        dedYellow = yu.deduction, dedOther = num('otherDeduction');
   const comboDeduction = dedBasic + dedPension + dedYellow + dedOther;
 
   const taxBase = Math.max(incomeTotal - comboDeduction, 0);
@@ -1650,6 +1671,7 @@ function computeScenario(extraExpense){
     otherGross, otherIncomeAmt, otherIncomeIncluded,
     finGross, finOver, otherIncomeSum, otherMerged, incomeTotal,
     dedBasic, dedPension, dedYellow, dedOther, comboDeduction,
+    yuPaid: yu.paid, yuLimit: yu.limit, yuCap: yu.cap, yuOver: yu.over,
     taxBase, calcTax, methodUsed, rate: marginalRate(taxBase),
     reductionGross, reduction, creditItems, otherCreditsRaw, otherCredit,
     empCredit, empCreditCarry, empTotal, empUsed, socialCredit, socialUsed, poolUsed, empCarryNext, totalCredit,
@@ -1675,6 +1697,22 @@ function buildScenarios(){
   return list;
 }
 
+/* 노란우산공제 입력란 아래 안내: 시나리오별 사업소득금액 구간·한도·공제액 */
+function renderYuHint(sc){
+  const el = document.getElementById('yuHint');
+  if (!el) return;
+  const paid = num('yellowUmbrella');
+  const lines = sc.map(x=>{
+    const s = x.s;
+    const lim = Math.min(s.yuLimit, s.yuCap);
+    return `${x.key}안: 사업소득금액 ${won(s.bizIncomeTotal)}원 → 구간 한도 ${won(s.yuLimit)}원`
+      + (s.yuCap < s.yuLimit ? ` (임대업 제외 후 ${won(s.yuCap)}원 이내)` : '')
+      + ` · <b>공제 ${won(s.dedYellow)}원</b>`
+      + (paid>0 && s.yuOver>0 ? ` <span style="color:#b45309;">(납입액 ${won(paid)}원 중 ${won(s.yuOver)}원은 공제 불가)</span>` : '');
+  });
+  el.innerHTML = `공제액 = 납입액과 구간별 한도 중 적은 금액 (조특법 §86의3①, 사업소득 4천만원 이하 600만원 · 6천만원 이하 500만원 · 1억원 이하 400만원 · 초과 200만원)<br>` + lines.join('<br>');
+}
+
 function renderAll(){
   try{
     updateYearLabels();
@@ -1689,6 +1727,7 @@ function renderAll(){
     const sc = buildScenarios();
     const s1 = sc[0].s;
 
+    renderYuHint(sc);
     renderAdjPanel();
     renderDiligentCheck(s1.totalRevenue);
     renderIncomePreview(s1);
@@ -2058,7 +2097,7 @@ function buildTaxTable(sc){
   h += row('strong', '종합소득금액', s=> won(s.incomeTotal));
   h += row('', '소득공제(인적공제 등)', s=> won(s.dedBasic));
   if (any(s=> s.dedPension)) h += row('', '국민연금 공제', s=> won(s.dedPension), '소득세법 §51의3');
-  if (any(s=> s.dedYellow)) h += row('', '노란우산공제', s=> won(s.dedYellow), '조특법 §86의3');
+  if (any(s=> s.yuPaid)) h += row('', '노란우산공제', s=> won(s.dedYellow) + (s.yuOver>0 ? `<br><span style="font-size:11px;color:var(--sub);">(납입 ${won(s.yuPaid)} · 한도 ${won(Math.min(s.yuLimit,s.yuCap))})</span>` : ''), '조특법 §86의3 · 납입액과 구간별 한도 중 적은 금액');
   if (any(s=> s.dedOther)) h += row('', '기타공제', s=> won(s.dedOther));
   h += row('strong', '과세표준', s=> won(s.taxBase), sc[0].s.methodUsed);
   h += row('', '(×) 세율', s=> (s.rate*100).toFixed(0)+'%', '소득세법 §55');
@@ -2157,7 +2196,7 @@ function renderReport(sc){
     <tr><td>기타소득금액(종합과세분)</td><td>${won(s1.otherIncomeIncluded)}</td><td>${s1.otherIncomeAmt>s1.otherIncomeIncluded?'분리과세 선택(300만원 이하)':'-'}</td></tr>
     <tr><td>금융소득 - 종합과세대상(2천만원 초과분)</td><td>${won(s1.finOver)}</td><td>금융소득 합계 ${won(s1.finGross)}원 중 2천만원 이하분은 분리과세</td></tr>
     <tr class="strong"><td>종합소득금액</td><td>${won(s1.incomeTotal)}</td><td>월 평균 ${won(s1.incomeTotal/12)}원</td></tr>
-    <tr><td>소득공제 합계</td><td>-${won(s1.comboDeduction)}</td><td>인적공제 등 ${won(s1.dedBasic)} · 국민연금 ${won(s1.dedPension)} · 노란우산 ${won(s1.dedYellow)} · 기타 ${won(s1.dedOther)}</td></tr>
+    <tr><td>소득공제 합계</td><td>-${won(s1.comboDeduction)}</td><td>인적공제 등 ${won(s1.dedBasic)} · 국민연금 ${won(s1.dedPension)} · 노란우산 ${won(s1.dedYellow)}${s1.yuOver>0?`(납입 ${won(s1.yuPaid)} 중 한도 초과 ${won(s1.yuOver)} 제외)`:''} · 기타 ${won(s1.dedOther)}</td></tr>
     <tr class="strong"><td>종합소득 과세표준</td><td>${won(s1.taxBase)}</td><td>${s1.methodUsed}</td></tr>
   `;
 
@@ -2190,7 +2229,7 @@ function renderReport(sc){
 ============================================================ */
 ['bizType','bizSize','bizRegion','bizLong','diligentBizCategory','bookkeepingType',
  'baseMonths','baseDate','taxPeriod','ownerName','bizName','targetYear',
- 'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
+ 'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','yuRental','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
  'wageGross','pensionGross','otherIncomeGross','otherIncomeExpenseRate','finIncomeGross']
