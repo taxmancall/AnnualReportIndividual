@@ -327,6 +327,14 @@ table.rep-table.wide th.pct{color:#C9D2DC;font-weight:400;}
 table.rep-table.wide td.memo{white-space:normal;font-size:9.5px;min-width:70px;}
 table.rep-table.tax td{padding:6px 10px;}
 table.rep-table.tax td.memo{font-size:10.5px;}
+.loan-sub{font-size:13px;font-weight:700;color:var(--navy);margin:16px 0 6px;}
+.loan-list{margin:0;padding-left:18px;font-size:12px;line-height:1.75;color:var(--ink);}
+.loan-note{font-size:11.5px;color:var(--sub);line-height:1.7;margin-top:6px;}
+.loan-tip{font-size:12px;line-height:1.7;background:#F5F6F4;border-left:3px solid var(--navy);padding:8px 12px;margin-top:8px;border-radius:0 6px 6px 0;}
+.loan-warn{font-size:11.5px;line-height:1.65;color:#9E3B33;margin-top:8px;}
+table.rep-table.loan td,table.rep-table.loan th{text-align:left;vertical-align:top;}
+table.rep-table.loan tr.hit td{background:#FFF6D8!important;font-weight:600;}
+table.rep-table.loan td.num{text-align:right;}
 .rep-unit{font-size:10.5px;color:var(--sub);text-align:right;margin:-8px 0 4px;}
 .foot-note{font-size:10.5px;color:var(--sub);margin-top:26px;border-top:1px solid var(--line);padding-top:12px;line-height:1.6;}
 .rep-stamp-area{display:flex;justify-content:flex-end;margin-top:18px;}
@@ -645,6 +653,15 @@ table.rep-table.tax td.memo{font-size:10.5px;}
     <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:0 auto 0 0;">
       <input type="checkbox" id="showPct" style="width:auto;" checked> 보고서 손익 비교표에 매출 대비 비율 열 표시
     </label>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:0;">
+      <input type="checkbox" id="showLoan" style="width:auto;" checked> 대출·사회보험료 안내 포함
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:0;">
+      대출 예정 시기
+      <select id="loanTiming" style="width:auto;padding:5px 8px;font-size:12.5px;">
+        <option value="">미정</option><option value="before">N+1년 6월 말 이전</option><option value="after">N+1년 7월 이후</option>
+      </select>
+    </label>
     <button class="small-btn ghost" onclick="renderAll()">🔄 보고서 새로고침</button>
     <button class="btn-primary" onclick="window.print()">🖨️ PDF로 다운로드(인쇄)</button>
   </div>
@@ -774,6 +791,8 @@ table.rep-table.tax td.memo{font-size:10.5px;}
         </div>
       </div>
     </div>
+
+    <div class="rep-section" id="repLoanSection"></div>
 
     <div class="rep-stamp-area"><div class="rep-stamp">원제우<br>세무사<br>直印</div></div>
 
@@ -2220,6 +2239,85 @@ function buildTaxTable(sc){
   return h;
 }
 
+
+/* ============================================================
+   대출·사회보험료 안내 (보고서 하단)
+============================================================ */
+function renderLoanSection(sc){
+  const sec = document.getElementById('repLoanSection');
+  if (!sec) return;
+  const show = document.getElementById('showLoan').checked;
+  sec.style.display = show ? '' : 'none';
+  if (!show){ sec.innerHTML = ''; return; }
+  const {N, N1, N2} = getYears();
+  const tSel = document.getElementById('loanTiming');
+  [...tSel.options].forEach(o=>{
+    if (o.value==='before') o.textContent = `${N+1}년 6월 말 이전`;
+    if (o.value==='after') o.textContent = `${N+1}년 7월 이후`;
+  });
+  const timing = tSel.value;
+  const s1 = sc[0].s;
+  const sign = n => (n>0?'+':'') + won(n);
+
+  const timingRows = [
+    { k:'p0', when:`${N}.1.1 ~ ${N}.6.30`, use:`${N2}년 귀속`, memo:`${N1}년 귀속 소득금액증명원은 아직 발급 전입니다.` },
+    { k:'before', when:`${N}.7.1 ~ ${N+1}.6.30`, use:`${N1}년 귀속 (신고·확정 완료)`, memo:`${N}년 소득은 신고 전이라 소득금액증명원에 나타나지 않습니다. 부가세 신고서 등 매출 자료로 보완합니다.` },
+    { k:'after', when:`${N+1}.7.1 이후`, use:`${N}년 귀속 (이 보고서의 추정 소득)`, memo:`${N}년 신고소득이 소득금액증명원에 반영되어 심사 소득에 사용됩니다.` }
+  ];
+  const timingTable = `<table class="rep-table loan">
+    <tr><th style="width:24%">대출 신청 시점</th><th style="width:30%">소득금액증명원에 반영되는 소득</th><th>참고</th></tr>
+    ${timingRows.map(r=>`<tr class="${r.k===timing?'hit':''}"><td>${r.when}</td><td>${r.use}</td><td>${r.memo}</td></tr>`).join('')}
+  </table>`;
+
+  const cmp = `<table class="rep-table loan">
+    <tr><th>구분</th>${sc.map(x=>`<th style="text-align:right;">${x.key}안${x.extra>0?` (부족경비 ${won(x.extra)})`:''}</th>`).join('')}</tr>
+    <tr><td>종합소득금액<br><span style="color:var(--sub);font-size:11px;">(소득금액증명원 반영 예상 소득)</span></td>${sc.map(x=>`<td class="num">${won(x.s.incomeTotal)}</td>`).join('')}</tr>
+    <tr><td>①안 대비 소득 증감</td>${sc.map((x,i)=>`<td class="num">${i===0?'-':sign(x.s.incomeTotal - s1.incomeTotal)}</td>`).join('')}</tr>
+    <tr><td>예상 총부담세액(지방소득세 포함)</td>${sc.map(x=>`<td class="num">${won(x.s.totalBurden)}</td>`).join('')}</tr>
+    <tr><td>①안 대비 세액 증감</td>${sc.map((x,i)=>`<td class="num">${i===0?'-':sign(x.s.totalBurden - s1.totalBurden)}</td>`).join('')}</tr>
+  </table>`;
+
+  const tipBefore = `대출 예정 시점이 ${N+1}년 6월 말 이전이면 ${N}년 신고소득은 소득금액증명원에 반영되지 않으므로, ${N}년 경비 집행(②·③안)이 대출 심사 소득에 미치는 영향은 제한적입니다. 이 경우 심사에는 ${N1}년 귀속 소득금액증명원과 최근 매출 자료가 쓰입니다.`;
+  const tipAfter = `대출 예정 시점이 ${N+1}년 7월 이후이면 ${N}년 귀속 신고소득이 심사 소득으로 반영됩니다. 경비 집행으로 신고소득을 낮추는 ②·③안은 세금은 줄지만 소득 기준 대출 가능액도 줄어들 수 있으므로, 절세액과 대출 조건을 함께 비교해 결정하시기 바랍니다.`;
+  const tips = timing==='before' ? [tipBefore] : timing==='after' ? [tipAfter] : [tipBefore, tipAfter];
+
+  const insTable = `<table class="rep-table loan">
+    <tr><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr>
+    <tr><td>건강보험료<br><span style="color:var(--sub);font-size:11px;">(지역가입자)</span></td>
+      <td>${N+1}년 5~6월 종합소득세 신고로 ${N}년 귀속 소득이 확정되면, ${N+1}년 11월 보험료부터 새 소득이 반영되어 다음 해 10월까지 적용됩니다.</td>
+      <td>확정 소득금액이 낮아지면 향후 납부액이 줄고, 높아지면 늘어납니다. 신고 후 수정신고·경정청구로 소득이 바뀌면 공단의 재산정·정산(추가 고지 또는 환급)이 따를 수 있습니다.</td></tr>
+    <tr><td>국민연금<br><span style="color:var(--sub);font-size:11px;">(지역가입자)</span></td>
+      <td>${N+1}년 5~6월 신고 후 ${N+1}년 7월부터 신고소득월액(연 소득금액 ÷ 12)이 갱신되어 다음 해 6월까지 적용됩니다.</td>
+      <td>소득이 낮아지면 납부액과 장래 연금액이 함께 줄고, 높아지면 함께 늘어납니다(기준소득월액 상·하한 범위 내).</td></tr>
+  </table>`;
+
+  sec.innerHTML = `
+    <h2 class="c-teal"><span class="h2-badge">🏦</span>6. 소득 확정에 따른 대출·사회보험료 점검</h2>
+    <p class="checklist-intro">신고 소득금액은 세금뿐 아니라 대출 심사 소득과 건강보험료·국민연금 납부액에도 연결됩니다. 신고 전에 절세와 아래 항목을 함께 비교해 보시기 바랍니다.</p>
+
+    <div class="loan-sub">① 대출 시 주로 제출하는 서류</div>
+    <ul class="loan-list">
+      <li><b>소득금액증명원</b> — 홈택스·세무서 발급. 종합소득세 신고자는 신고 후 국세청 전산 확정을 거쳐 매년 7월 1일부터 전년도 귀속분을 발급받을 수 있습니다.</li>
+      <li><b>매출 자료</b> — 부가가치세 신고서·과세표준증명, 면세사업자는 사업장현황신고서 등</li>
+      <li><b>국세·지방세 완납(납세)증명서</b> — 체납이 없음을 확인하는 서류</li>
+      <li>그 밖에 사업자등록증명, 재무제표(표준재무제표증명), 4대보험 납부 확인 등 — 금융기관·상품별로 요구 서류가 다르므로 사전 확인이 필요합니다.</li>
+    </ul>
+
+    <div class="loan-sub">② 대출 신청 시점별로 반영되는 소득</div>
+    ${timingTable}
+    <div class="loan-note">※ 소득금액증명원 발급 시기는 신고 후 국세청 전산 확정 일정에 따르며, 대출 시점이 발급 전이면 대체 서류 가능 여부를 금융기관에 확인하시기 바랍니다.</div>
+
+    <div class="loan-sub">③ 안별 신고소득과 세부담 비교 (대출 소득 vs 절세)</div>
+    ${cmp}
+    ${tips.map(t=>`<div class="loan-tip">${t}</div>`).join('')}
+    <div class="loan-warn">※ 소득 조정은 실제 지출과 세법상 인정되는 경비·공제의 선택 등 적법한 범위에서만 가능합니다. 가공경비 계상 등 허위 신고로 소득을 조정하는 것은 세무조사와 금융기관 제출서류 문제로 이어질 수 있습니다.</div>
+
+    <div class="loan-sub">④ 소득금액 확정 후 건강보험료·국민연금 조절</div>
+    ${insTable}
+    <div class="loan-note">※ 개인사업자 본인(지역가입자) 기준이며 직원이 있는 법인 대표 등 직장가입자는 보수월액 기준이라 구조가 다릅니다. 반영 시기·보험료율·기준소득월액 상·하한은 매년 달라지므로 국민건강보험공단·국민연금공단 안내로 최종 확인하시기 바랍니다.</div>
+  `;
+}
+
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
@@ -2271,6 +2369,7 @@ function renderReport(sc){
     </div>`;
 
   document.getElementById('trendTable').innerHTML = buildPLCompare(sc);
+  renderLoanSection(sc);
 
   const detailSec = document.getElementById('repEstimateSection');
   const detailHtml = (state.incEstimateDetail!==false) ? buildEstimateDetail() : '';
@@ -2329,6 +2428,8 @@ function renderReport(sc){
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('otherExpAuto').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
+document.getElementById('showLoan').addEventListener('change', renderAll);
+document.getElementById('loanTiming').addEventListener('change', renderAll);
 document.getElementById('showPct').addEventListener('change', e=>{ state.showPct = e.target.checked; renderAll(); });
 
 document.querySelectorAll('.money-input').forEach(el=>{
