@@ -178,8 +178,18 @@ canvas{max-width:100%;}
 .extra-biz-row .row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .extra-biz-row .row-head .idx{font-size:12px;color:var(--brass);font-weight:700;}
 .biz-empty{font-size:12.5px;color:var(--sub);padding:10px 2px;}
+.im-toolbar{display:flex;align-items:center;gap:12px;margin:2px 0 8px;flex-wrap:wrap;}
+.im-toolbar span{font-size:11.5px;color:var(--sub);}
+table.income-matrix th small{font-weight:400;color:var(--sub);font-size:10.5px;}
+table.income-matrix.ded-matrix,table.income-matrix.cr-matrix{min-width:680px;}
+table.income-matrix input[type=number]{width:100%;box-sizing:border-box;text-align:right;font-size:12.5px;padding:6px 7px;margin:0;}
+table.income-matrix tbody + thead th{border-top:2px solid var(--line);}
+.im-subhead{display:flex;gap:3px;margin-top:4px;align-items:center;}
+.im-subhead input.im-name{width:100%;min-width:0;box-sizing:border-box;font-size:11.5px;padding:3px 5px;margin:0;}
+.im-subhead .im-x{border:1px solid var(--line);background:#fff;color:#a33;border-radius:5px;cursor:pointer;font-size:13px;line-height:1;padding:3px 6px;}
+table.income-matrix td.im-set select{width:100%;font-size:10.5px;padding:3px 2px;margin:0 0 3px;text-overflow:ellipsis;}
 .im-wrap{overflow-x:auto;margin:6px 0 4px;}
-table.income-matrix{width:100%;min-width:760px;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+table.income-matrix{width:100%;min-width:700px;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
 table.income-matrix th,table.income-matrix td{border:1px solid var(--line);padding:6px 6px;text-align:right;vertical-align:middle;}
 table.income-matrix thead th{background:#F1ECDD;color:var(--navy);text-align:center;font-weight:700;}
 table.income-matrix tbody th{background:#F1ECDD;color:var(--navy);text-align:left;width:112px;font-weight:700;}
@@ -188,7 +198,11 @@ table.income-matrix td.dim{color:var(--sub);text-align:center;}
 table.income-matrix input.money-input{width:100%;box-sizing:border-box;text-align:right;font-size:12.5px;padding:6px 7px;margin:0;}
 table.income-matrix tr.im-total th,table.income-matrix tr.im-total td{background:#E8EEF4;color:var(--navy);font-weight:700;}
 .im-rate{margin-top:4px;font-size:11px;color:var(--sub);text-align:right;}
-.im-rate input{width:44px;padding:2px 4px;font-size:11.5px;text-align:right;display:inline-block;}
+.im-rate{display:block;margin-bottom:0;}
+table.income-matrix .im-rate input[type=number]{width:48px;padding:2px 4px;font-size:11.5px;text-align:right;display:inline-block;}
+table.income-matrix .im-rate input[type=checkbox]{width:auto;vertical-align:middle;margin:0 2px 0 0;}
+.im-rate .im-sub{display:block;font-size:10.5px;opacity:.85;}
+table.income-matrix input.money-input:disabled{background:#F5F6F4;color:var(--ink);opacity:1;border-color:transparent;}
 .im-notes{margin-top:8px;font-size:11.5px;color:var(--sub);line-height:1.65;}
 .im-check{display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:10px 0 0;}
 .income-preview{margin-top:14px;padding:14px 16px;background:#F5F6F4;border-radius:9px;font-size:12.5px;}
@@ -413,7 +427,7 @@ table.rep-table.tax td.memo{font-size:10.5px;}
   <!-- STEP 1: 사업자 정보 -->
   <div class="card">
     <h2><span class="step-no">1</span>사업자 정보</h2>
-    <p class="hint">보고서 상단과 세액 계산 기준이 됩니다. 사업장이 2곳 이상이면 아래 "추가 사업장"에서 등록해 주세요.</p>
+    <p class="hint">보고서 상단과 세액 계산 기준이 됩니다. 사업장이 2곳 이상이면 STEP 3 표의 "+ 사업소득 추가"에서 등록해 주세요.</p>
     <div class="grid cols-4">
       <div class="field"><label>대표자 성명</label><input type="text" id="ownerName" placeholder="홍길동"></div>
       <div class="field"><label>상호(메인 사업장명)</label><input type="text" id="bizName" placeholder="OO상회"></div>
@@ -463,20 +477,12 @@ table.rep-table.tax td.memo{font-size:10.5px;}
     <div style="margin-top:10px;font-size:12px;color:var(--sub);">자동조회 감면율(메인 사업장): <b id="rateDisplay" style="color:var(--brass);">-</b> <span style="color:#999;">(조특법 §7①, 2025.1.1. 개정 반영)</span></div>
     <div id="diligentBadgeWrap"></div>
 
-    <div style="margin-top:20px;padding-top:16px;border-top:1px dashed var(--line);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-weight:700;color:var(--navy);font-size:14px;">➕ 추가 사업장 (2곳 이상인 경우)</div>
-        <button type="button" class="small-btn" onclick="addExtraBiz()">+ 사업장 추가</button>
-      </div>
-      <p class="hint" style="margin-bottom:10px;">메인 사업장(위 정보 + STEP 2 손익계산서)을 제외한 다른 사업장의 연간 추정 매출액·사업소득금액을 입력하세요. 사업장별 업종에 따라 중소기업특별세액감면율이 각각 적용되어 합산 계산됩니다.</p>
-      <div id="extraBizList"></div>
-    </div>
   </div>
 
   <!-- STEP 2: 업로드 -->
   <div class="card">
     <h2><span class="step-no">2</span>위하고 손익계산서 업로드 - 메인 사업장 (<span id="uploadYearHint">N·N-1·N-2</span>년)</h2>
-    <p class="hint">위하고(SmartA) &gt; 손익계산서(과목별) 다운로드 파일을 그대로 업로드하세요. 한 파일에 당기/전기 2개년이 들어있으니, 파일 2개면 3개년을 모두 커버할 수 있습니다. 결산연도(N)를 위에서 바꾸면 아래 라벨도 자동으로 바뀝니다. (추가 사업장의 손익은 STEP 1에서 직접 입력합니다.) 업로드 후 아래에서 원본 전체 항목을 확인할 수 있고, N년(당기) 반영 시 사무소 엑셀 양식과 같은 <b>실적 → 수정·가감 → 연간 추정</b> 워크시트가 생성됩니다. 기준월수·기준일자는 파일 머리글의 기간에서 자동으로 채워집니다.</p>
+    <p class="hint">위하고(SmartA) &gt; 손익계산서(과목별) 다운로드 파일을 그대로 업로드하세요. 한 파일에 당기/전기 2개년이 들어있으니, 파일 2개면 3개년을 모두 커버할 수 있습니다. 결산연도(N)를 위에서 바꾸면 아래 라벨도 자동으로 바뀝니다. (서브 사업장의 손익은 STEP 3 표에서 직접 입력합니다.) 업로드 후 아래에서 원본 전체 항목을 확인할 수 있고, N년(당기) 반영 시 사무소 엑셀 양식과 같은 <b>실적 → 수정·가감 → 연간 추정</b> 워크시트가 생성됩니다. 기준월수·기준일자는 파일 머리글의 기간에서 자동으로 채워집니다.</p>
     <div class="grid cols-2">
       <div>
         <div class="upload-box" onclick="document.getElementById('file1').click()">
@@ -500,40 +506,42 @@ table.rep-table.tax td.memo{font-size:10.5px;}
 
   <!-- STEP 3: 소득별 자료 입력 -->
   <div class="card">
-    <h2><span class="step-no">3</span>타소득 자료 입력 (임대·근로·연금·기타·금융소득)</h2>
-    <p class="hint">사업소득 외에 다른 소득이 있으면 <b>흰색 칸</b>에 입력하세요(회색 칸은 자동 계산). 임대·근로·연금·기타소득은 종합소득에 합산되고, 금융소득(이자+배당)은 연 2천만원을 초과하면 종합과세됩니다(2천만원 이하분은 원천징수로 분리과세, 소득세법 §14③6). 없으면 0으로 두세요.</p>
+    <h2><span class="step-no">3</span>소득 자료 입력 (사업·임대·근로·연금·기타·금융소득)</h2>
+    <p class="hint">사업장이 2곳 이상이거나 다른 소득이 있으면 <b>흰색 칸</b>에 입력하세요(회색 칸은 자동 계산). 임대·근로·연금·기타소득은 종합소득에 합산되고, 금융소득(이자+배당)은 연 2천만원을 초과하면 종합과세됩니다(2천만원 이하분은 원천징수로 분리과세, 소득세법 §14③6). 없으면 0으로 두세요.</p>
+    <div class="im-toolbar"><button type="button" class="small-btn" onclick="addExtraBiz()">+ 사업소득 추가 (서브 사업장)</button><span>메인은 STEP 2 손익계산서로 자동 정리, 서브 사업장은 총수입·필요경비를 직접 입력합니다.</span></div>
     <div class="im-wrap">
-    <table class="income-matrix">
-      <thead><tr><th></th><th>사업소득</th><th>임대소득</th><th>근로소득</th><th>연금소득</th><th>기타소득</th><th>금융소득</th></tr></thead>
+    <table class="income-matrix" id="incomeMatrix">
+      <thead><tr id="imRowHead"><th></th><th>사업소득<br>(메인)</th><th>임대소득</th><th>근로소득</th><th>연금소득</th><th>기타소득</th><th>금융소득</th></tr></thead>
       <tbody>
-        <tr><th>총수입</th>
+        <tr id="imRowRev"><th>총수입</th>
           <td class="auto" id="imBizRev">0</td>
           <td><input type="text" inputmode="decimal" class="money-input" id="rentalGross" value="0"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="wageGross" value="0" title="총급여액(연간)"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pensionGross" value="0" title="총연금액(연간, 공적연금 기준)"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="otherIncomeGross" value="0" title="총수입금액(연간)"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="finIncomeGross" value="0" title="이자+배당 합계(연간)"></td></tr>
-        <tr><th>필요경비</th>
+        <tr id="imRowExp"><th>필요경비</th>
           <td class="auto" id="imBizExp">0</td>
           <td><input type="text" inputmode="decimal" class="money-input" id="rentalExpense" value="0"></td>
           <td class="auto" id="imWageExp">0</td>
           <td class="auto" id="imPenExp">0</td>
-          <td class="auto"><span id="imOthExp">0</span><div class="im-rate">필요경비율 <input type="number" id="otherIncomeExpenseRate" value="60" min="0" max="100">%</div></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="otherIncomeExpense" value="0" disabled><label class="im-rate"><input type="checkbox" id="otherExpAuto" checked> 필요경비율 <input type="number" id="otherIncomeExpenseRate" value="60" min="0" max="100">% 적용 <span class="im-sub">(해제 시 금액 직접입력)</span></label></td>
           <td class="auto dim">-</td></tr>
-        <tr><th>소득금액</th>
+        <tr id="imRowInc"><th>소득금액</th>
           <td class="auto" id="imBizInc">0</td>
           <td class="auto" id="imRentInc">0</td>
           <td class="auto" id="imWageInc">0</td>
           <td class="auto" id="imPenInc">0</td>
           <td class="auto" id="imOthInc">0</td>
           <td class="auto" id="imFinInc">0</td></tr>
-        <tr class="im-total"><th>종합소득 합산분</th>
+        <tr class="im-total" id="imRowSum"><th>종합소득 합산분</th>
           <td id="imBizSum">0</td><td id="imRentSum">0</td><td id="imWageSum">0</td><td id="imPenSum">0</td><td id="imOthSum">0</td><td id="imFinSum">0</td></tr>
+        <tr id="imRowSet"><th>감면 설정<br><small>(조특법 §7)</small></th><td class="auto dim" id="imBizSet">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
       </tbody>
     </table>
     </div>
     <div class="im-notes">
-      <div>· 사업소득 칸은 STEP 2 손익계산서·STEP 1 추가 사업장과 STEP 4 세무조정을 반영한 ①안 기준 자동 값입니다(필요경비는 총수입 − 소득금액 역산).</div>
+      <div>· 사업소득(메인) 칸은 STEP 2 손익계산서와 STEP 4 세무조정을 반영한 ①안 기준 자동 값입니다(필요경비는 총수입 − 소득금액 역산). 서브 사업장은 업종·규모·소재지에 따라 중소기업특별세액감면율이 각각 적용됩니다.</div>
       <div>· 근로·연금소득의 필요경비는 근로소득공제(소득세법 §47)·연금소득공제(§47의2)가 자동 적용됩니다.</div>
       <div>· 부동산임대업 결손금은 다른 소득과 통산되지 않으므로(소득세법 §45②) 임대소득금액이 음수이면 0으로 합산합니다.</div>
       <div>· 금융소득이 2천만원을 초과하면 비교과세(소득세법 §62)가 자동 적용되어 세부담이 분리과세(14%)보다 낮아지지 않도록 계산됩니다.</div>
@@ -555,28 +563,31 @@ table.rep-table.tax td.memo{font-size:10.5px;}
     </div>
 
     <div class="step-subhead">소득공제</div>
-    <div class="grid cols-4">
-      <div class="field"><label>소득공제(인적공제 등)</label><input type="text" inputmode="decimal" class="money-input" id="comboDeduction" value="0"></div>
-      <div class="field"><label>국민연금 공제(대표자 본인 납입분)</label><input type="text" inputmode="decimal" class="money-input" id="pensionContrib" value="0"></div>
-      <div class="field"><label>노란우산공제 납입액(연간, 조특법 §86의3)</label><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></div>
-      <div class="field"><label>기타공제</label><input type="text" inputmode="decimal" class="money-input" id="otherDeduction" value="0"></div>
+    <div class="im-wrap">
+    <table class="income-matrix ded-matrix">
+      <thead><tr><th></th><th>소득공제<br>(인적공제 등)</th><th>국민연금 공제<br><small>(대표자 본인 납입분)</small></th><th>노란우산공제<br><small>(조특법 §86의3)</small></th><th>기타공제</th><th>합계</th></tr></thead>
+      <tbody>
+        <tr><th>입력액<br><small>(노란우산은 납입액)</small></th>
+          <td><input type="text" inputmode="decimal" class="money-input" id="comboDeduction" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pensionContrib" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="otherDeduction" value="0"></td>
+          <td class="auto dim">-</td></tr>
+        <tr><th>공제 한도</th><td class="auto dim">-</td><td class="auto dim">-</td><td class="auto" id="dmYuLimit">0</td><td class="auto dim">-</td><td class="auto dim">-</td></tr>
+        <tr class="im-total"><th>공제액</th><td id="dmCombo">0</td><td id="dmPension">0</td><td id="dmYu">0</td><td id="dmOther">0</td><td id="dmTotal">0</td></tr>
+      </tbody>
+    </table>
     </div>
-    <div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:-2px 0 4px;"></div>
+    <div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:6px 0 4px;"></div>
 
     <div class="step-subhead">세액공제 · 감면 <span style="font-weight:400;color:var(--sub);font-size:12px;">(중소기업특별세액감면은 STEP 1 정보로 자동 계산)</span></div>
-    <div class="grid cols-4">
-      <div class="field"><label>① 자녀·출산 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crChild" value="0"></div>
-      <div class="field"><label>② 기장세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crBook" value="0"></div>
-      <div class="field"><label>③ 표준세액공제·근로소득세액공제 등</label><input type="text" inputmode="decimal" class="money-input" id="crStd" value="0"></div>
-      <div class="field"><label>④ 통합고용(고용증대) 세액공제 - 당기분</label><input type="text" inputmode="decimal" class="money-input" id="empCredit" value="0"></div>
-      <div class="field"><label>⑤ 통합고용(고용증대) 세액공제 - 이월분</label><input type="text" inputmode="decimal" class="money-input" id="empCreditCarry" value="0"></div>
-      <div class="field"><label>⑥ 성실신고 확인비용 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crDiligent" value="0"></div>
-      <div class="field"><label>⑦ 사회보험료 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crSocial" value="0"></div>
-      <div class="field"><label>⑧ 의료비 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crMedical" value="0"></div>
-      <div class="field"><label>⑨ 교육비 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crEdu" value="0"></div>
-      <div class="field"><label>⑩ 퇴직연금(연금계좌) 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="crPension" value="0"></div>
-      <div class="field"><label>기타 세액공제</label><input type="text" inputmode="decimal" class="money-input" id="otherCredit" value="0"></div>
-      <div class="field"><label>직전연도 대비 인원감소(명) - 중특감면 한도</label><input type="number" id="decreasedEmp" value="0"></div>
+    <div class="im-wrap">
+    <table class="income-matrix cr-matrix">
+      <thead><tr><th></th><th>① 자녀·출산</th><th>② 기장</th><th>③ 표준·근로소득<br>세액공제 등</th><th>④ 통합고용(고용증대)<br>당기분</th><th>⑤ 통합고용(고용증대)<br>이월분</th><th>⑥ 성실신고<br>확인비용</th></tr></thead>
+      <tbody><tr><th>세액공제액</th><td><input type="text" inputmode="decimal" class="money-input" id="crChild" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crBook" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crStd" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="empCredit" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="empCreditCarry" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crDiligent" value="0"></td></tr></tbody>
+      <thead><tr><th></th><th>⑦ 사회보험료</th><th>⑧ 의료비</th><th>⑨ 교육비</th><th>⑩ 퇴직연금<br>(연금계좌)</th><th>기타 세액공제</th><th>직전연도 대비 인원감소(명)<br><small>중특감면 한도</small></th></tr></thead>
+      <tbody><tr><th>세액공제액</th><td><input type="text" inputmode="decimal" class="money-input" id="crSocial" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crMedical" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crEdu" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crPension" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="otherCredit" value="0"></td><td><input type="number" id="decreasedEmp" value="0"></td></tr></tbody>
+    </table>
     </div>
     <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:10px 0 0;">
       <input type="checkbox" id="minTaxOn" style="width:auto;" checked> 최저한세 적용 (조특법 §132② - 중소기업특별세액감면·통합고용세액공제·사회보험료 세액공제·노란우산공제 대상. 성실신고 확인비용 등 그 밖의 세액공제는 대상 아님. 배제된 통합고용·사회보험료 공제는 다음 연도로 이월)
@@ -1119,7 +1130,7 @@ function addExtraBiz(){
   state.extraBiz.push({
     id:'biz'+extraBizSeq, name:'',
     bizType: BIZ_TYPE_OPTIONS[1], bizSize:'소기업', bizRegion:'수도권 외',
-    sales:0, income:0
+    sales:0, expense:0, income:0
   });
   renderExtraBizList();
   renderAll();
@@ -1135,53 +1146,40 @@ function updateExtraBiz(id, field, value, skipRender){
   b[field] = value;
   if (!skipRender) renderAll();
 }
+/* 서브 사업장 금액 입력: 소득금액 = 총수입 - 필요경비 */
+function updateXbAmount(id, field, el){
+  const b = state.extraBiz.find(x=>x.id===id);
+  if (!b) return;
+  b[field] = unfmtMoney(el.value);
+  b.income = (b.sales||0) - (b.expense||0);
+  renderAll();
+}
+function xbFocus(el){ const v = unfmtMoney(el.value); el.value = v ? String(v) : ''; }
+function xbBlur(el){ el.value = el.value.trim()==='' ? '' : fmtMoney(unfmtMoney(el.value)); }
+function escAttr(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/* STEP 3 표의 사업소득(메인) 열 오른쪽에 서브 사업장 열을 그린다 */
 function renderExtraBizList(){
-  const wrap = document.getElementById('extraBizList');
-  if (state.extraBiz.length===0){
-    wrap.innerHTML = `<div class="biz-empty">등록된 추가 사업장이 없습니다. 사업장이 1곳뿐이면 그대로 두세요.</div>`;
-    return;
-  }
-  wrap.innerHTML = state.extraBiz.map((b,i)=>`
-    <div class="extra-biz-row" data-id="${b.id}">
-      <div class="row-head"><span class="idx">추가 사업장 ${i+1}</span>
-        <button type="button" class="small-btn ghost" onclick="removeExtraBiz('${b.id}')">🗑 삭제</button>
-      </div>
-      <div class="grid cols-4" style="margin-bottom:8px;">
-        <div class="field"><label>사업장명</label><input type="text" value="${b.name}" oninput="updateExtraBiz('${b.id}','name',this.value,true)" placeholder="예: OO점"></div>
-        <div class="field"><label>업종구분</label>
-          <select onchange="updateExtraBiz('${b.id}','bizType',this.value)">
-            ${BIZ_TYPE_OPTIONS.map(o=>`<option ${o===b.bizType?'selected':''}>${o}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field"><label>기업규모</label>
-          <select onchange="updateExtraBiz('${b.id}','bizSize',this.value)">
-            <option ${b.bizSize==='소기업'?'selected':''}>소기업</option>
-            <option ${b.bizSize==='중기업'?'selected':''}>중기업</option>
-          </select>
-        </div>
-        <div class="field"><label>소재지</label>
-          <select onchange="updateExtraBiz('${b.id}','bizRegion',this.value)">
-            <option ${b.bizRegion==='수도권(서울/인천/경기)'?'selected':''}>수도권(서울/인천/경기)</option>
-            <option ${b.bizRegion==='수도권 외'?'selected':''}>수도권 외</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid cols-2">
-        <div class="field"><label>연간 추정 매출액(참고용)</label>
-          <input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(b.sales)}"
-            oninput="updateExtraBiz('${b.id}','sales',unfmtMoney(this.value),true)"
-            onfocus="this.value = unfmtMoney(this.value) ? String(unfmtMoney(this.value)) : '';"
-            onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); renderAll();">
-        </div>
-        <div class="field"><label>연간 추정 사업소득금액(계산 반영)</label>
-          <input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(b.income)}"
-            oninput="updateExtraBiz('${b.id}','income',unfmtMoney(this.value),true)"
-            onfocus="this.value = unfmtMoney(this.value) ? String(unfmtMoney(this.value)) : '';"
-            onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); renderAll();">
-        </div>
-      </div>
-    </div>
-  `).join('');
+  const tbl = document.getElementById('incomeMatrix');
+  if (!tbl) return;
+  tbl.querySelectorAll('.sub-col').forEach(e=> e.remove());
+  const list = state.extraBiz;
+  tbl.style.minWidth = (700 + list.length*140) + 'px';
+  if (!list.length) return;
+  const money = (id, field, val)=> `<input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(val)}" oninput="updateXbAmount('${id}','${field}',this)" onfocus="xbFocus(this)" onblur="xbBlur(this); renderAll();">`;
+  const sel = (id, field, opts, cur)=> `<select onchange="updateExtraBiz('${id}','${field}',this.value)">${opts.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</select>`;
+  const cells = {
+    imRowHead: list.map((b,i)=> `<th class="sub-col">사업소득<br>(서브${i+1})<div class="im-subhead"><input type="text" class="im-name" value="${escAttr(b.name)}" placeholder="상호" oninput="updateExtraBiz('${b.id}','name',this.value,true)"><button type="button" class="im-x" onclick="removeExtraBiz('${b.id}')" title="이 사업소득 삭제">×</button></div></th>`),
+    imRowRev: list.map(b=> `<td class="sub-col">${money(b.id,'sales',b.sales)}</td>`),
+    imRowExp: list.map(b=> `<td class="sub-col">${money(b.id,'expense',b.expense)}</td>`),
+    imRowInc: list.map(b=> `<td class="sub-col auto" id="xbInc_${b.id}">${won(b.income)}</td>`),
+    imRowSum: list.map(b=> `<td class="sub-col" id="xbSum_${b.id}">${won(b.income)}</td>`),
+    imRowSet: list.map(b=> `<td class="sub-col im-set">${sel(b.id,'bizType',BIZ_TYPE_OPTIONS,b.bizType)}${sel(b.id,'bizSize',['소기업','중기업'],b.bizSize)}${sel(b.id,'bizRegion',['수도권(서울/인천/경기)','수도권 외'],b.bizRegion)}</td>`)
+  };
+  Object.keys(cells).forEach(rid=>{
+    const row = document.getElementById(rid);
+    if (row && row.cells[1]) row.cells[1].insertAdjacentHTML('afterend', cells[rid].join(''));
+  });
 }
 renderExtraBizList();
 
@@ -1596,7 +1594,12 @@ function computeScenario(extraExpense){
   const otherGross = num('otherIncomeGross');
   const otherRateInput = num('otherIncomeExpenseRate');
   const otherRate = Math.min(Math.max(isFinite(otherRateInput)?otherRateInput:60, 0), 100)/100;
-  const otherIncomeAmt = Math.max(Math.round(otherGross*(1-otherRate)), 0);
+  // 기타소득 필요경비: 필요경비율(의제) 적용 또는 금액 직접입력(총수입 한도)
+  const otherExpAuto = document.getElementById('otherExpAuto').checked;
+  const otherExpense = otherExpAuto
+    ? Math.round(otherGross*otherRate)
+    : Math.min(Math.max(num('otherIncomeExpense'),0), Math.max(otherGross,0));
+  const otherIncomeAmt = Math.max(otherGross - otherExpense, 0);
   const otherSeparate = document.getElementById('otherIncomeSeparate').checked;
   const otherIncomeIncluded = (otherSeparate && otherIncomeAmt<=3000000) ? 0 : otherIncomeAmt;
 
@@ -1703,7 +1706,7 @@ function computeScenario(extraExpense){
     mainBizIncome, extraBizIncomeTotal, bizIncomeTotal, totalRevenue,
     wageGross, wageDeduction, wageIncome,
     pensionGross, pensionDeductionAmt, pensionIncome,
-    otherGross, otherIncomeAmt, otherIncomeIncluded,
+    otherGross, otherExpense, otherIncomeAmt, otherIncomeIncluded,
     rentalGross, rentalExpense, rentalIncomeRaw, rentalIncome,
     finGross, finOver, otherIncomeSum, otherMerged, incomeTotal,
     dedBasic, dedPension, dedYellow, dedOther, comboDeduction,
@@ -1737,6 +1740,10 @@ function buildScenarios(){
 function renderYuHint(sc){
   const el = document.getElementById('yuHint');
   if (!el) return;
+  const s1 = sc[0].s, setT = (id,v)=>{ const e=document.getElementById(id); if (e) e.textContent = v; };
+  setT('dmCombo', won(s1.dedBasic)); setT('dmPension', won(s1.dedPension)); setT('dmYu', won(s1.dedYellow));
+  setT('dmOther', won(s1.dedOther)); setT('dmTotal', won(s1.comboDeduction));
+  setT('dmYuLimit', won(Math.min(s1.yuLimit, s1.yuCap)));
   const paid = num('yellowUmbrella');
   const lines = sc.map(x=>{
     const s = x.s;
@@ -1779,15 +1786,20 @@ function renderAll(){
 function renderIncomePreview(s){
   const set = (id, v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
   const finIncluded = s.finGross>20000000 ? s.finGross : 0;
-  const bizExp = s.totalRevenue - s.bizIncomeTotal;
-  const othExp = s.otherGross - s.otherIncomeAmt;
-  set('imBizRev', won(s.totalRevenue));        set('imBizExp', won(bizExp));            set('imBizInc', won(s.bizIncomeTotal));
+  const othExp = s.otherExpense;
+  const othAuto = document.getElementById('otherExpAuto').checked;
+  const othInput = document.getElementById('otherIncomeExpense');
+  othInput.disabled = othAuto;
+  if (othAuto) othInput.value = fmtMoney(othExp);
+  set('imBizRev', won(s.sales));               set('imBizExp', won(s.sales - s.mainBizIncome)); set('imBizInc', won(s.mainBizIncome));
+  set('imBizSet', '메인 설정(STEP 1) · 감면율 ' + document.getElementById('rateDisplay').textContent);
+  state.extraBiz.forEach(b=>{ set('xbInc_'+b.id, won(b.income)); set('xbSum_'+b.id, won(b.income)); });
   set('imRentInc', won(s.rentalIncomeRaw));
   set('imWageExp', won(s.wageDeduction));      set('imWageInc', won(s.wageIncome));
   set('imPenExp', won(s.pensionDeductionAmt)); set('imPenInc', won(s.pensionIncome));
-  set('imOthExp', won(othExp));                set('imOthInc', won(s.otherIncomeAmt));
+  set('imOthInc', won(s.otherIncomeAmt));
   set('imFinInc', won(s.finGross));
-  set('imBizSum', won(s.bizIncomeTotal));      set('imRentSum', won(s.rentalIncome));
+  set('imBizSum', won(s.mainBizIncome));      set('imRentSum', won(s.rentalIncome));
   set('imWageSum', won(s.wageIncome));         set('imPenSum', won(s.pensionIncome));
   set('imOthSum', won(s.otherIncomeIncluded)); set('imFinSum', won(finIncluded));
   const notes = [];
@@ -2284,9 +2296,10 @@ function renderReport(sc){
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpenseRate','finIncomeGross']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
+document.getElementById('otherExpAuto').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
 document.getElementById('showPct').addEventListener('change', e=>{ state.showPct = e.target.checked; renderAll(); });
 
