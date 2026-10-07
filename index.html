@@ -401,6 +401,10 @@ table.rep-table.loan td.num{text-align:right;}
   .rep-title{text-align:left;}
   .rep-kpi-grid{grid-template-columns:1fr 1fr;}
 }
+#toTopBtn{position:fixed;right:18px;bottom:22px;width:44px;height:44px;border-radius:50%;border:0;background:#12283f;color:#fff;font-size:20px;line-height:1;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.28);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;z-index:999}
+#toTopBtn.show{opacity:.9;visibility:visible}
+#toTopBtn:hover{opacity:1}
+@media print{#toTopBtn{display:none!important}}
 </style>
 </head>
 <body>
@@ -2552,6 +2556,13 @@ window.addEventListener('load', ()=> setTimeout(()=>{
     document.body.insertBefore(bar, document.body.firstChild);
   }
 }, 1500));
+</script>
+<button type="button" id="toTopBtn" aria-label="맨 위로" title="맨 위로">▲</button>
+<script>
+(function(){var b=document.getElementById('toTopBtn');
+function t(){b.classList.toggle('show',(window.pageYOffset||document.documentElement.scrollTop)>300);}
+window.addEventListener('scroll',t,{passive:true});t();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
 </script>
 </body>
 </html>
