@@ -667,6 +667,9 @@ table.rep-table.loan td.num{text-align:right;}
       </select>
     </label>
     <button class="small-btn ghost" onclick="renderAll()">🔄 보고서 새로고침</button>
+    <button class="small-btn ghost" onclick="saveWork()" title="입력값·업로드한 손익·연간 추정 워크시트를 파일로 저장합니다">💾 작업 저장(.json)</button>
+    <button class="small-btn ghost" onclick="document.getElementById('workFile').click()" title="저장해 둔 작업 파일을 불러와 이어서 수정합니다">📂 작업 불러오기</button>
+    <input type="file" id="workFile" accept=".json,application/json" style="display:none">
     <button class="btn-primary" onclick="window.print()">🖨️ PDF로 다운로드(인쇄)</button>
   </div>
 
@@ -2329,7 +2332,7 @@ function renderReport(sc){
   const bizName = document.getElementById('bizName').value || '개인사업자';
   document.getElementById('repCompanyName').textContent = `${bizName} (대표자 ${ownerName})`;
   document.getElementById('repMeta').textContent =
-    `기준일자: ${document.getElementById('baseDate').value||'-'} · 귀속연도: ${document.getElementById('taxPeriod').value} · 사업장 수: ${1+state.extraBiz.length}개`;
+    `기준일자: ${document.getElementById('baseDate').value||'-'} · 귀속연도: ${document.getElementById('taxPeriod').value}`;
 
   const t = buildTrendData(s1);
   const {N,N1,N2} = getYears();
@@ -2543,6 +2546,75 @@ document.querySelectorAll('.drive-select-btn').forEach(btn=>{
   });
 });
 
+
+/* ============================================================
+   작업 저장 / 불러오기 (.json) — 입력값 + 손익 자료 + 연간 추정 워크시트 + 서브 사업소득
+============================================================ */
+const WORK_SKIP = new Set(['gClientId','gApiKey','driveSearchTerm','file1','file2','workFile']);
+const WORK_VERSION = 1;
+function saveWork(){
+  const fields = {};
+  document.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    if (WORK_SKIP.has(el.id) || el.id==='incEstimateDetail' || el.type==='file' || /_(cur|pri)Year$/.test(el.id)) return;
+    fields[el.id] = (el.type==='checkbox') ? el.checked : el.value;
+  });
+  const touched = ['taxPeriod','baseMonths','baseDate'].filter(id=> document.getElementById(id).dataset.touched);
+  const data = {
+    app:'AnnualReportIndividual', version:WORK_VERSION, savedAt:new Date().toISOString(),
+    fields, touched, extraBizSeq,
+    state:{ years:state.years, extraBiz:state.extraBiz, rawDetail:state.rawDetail, adj:state.adj,
+            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct }
+  };
+  const safe = s=> String(s||'').replace(/[\\/:*?"<>|]/g,'').trim();
+  const name = [safe(document.getElementById('bizName').value)||safe(document.getElementById('ownerName').value)||'작업',
+                getYears().N+'년', '작업파일'].join('_') + '.json';
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function loadWork(data){
+  if (!data || data.app!=='AnnualReportIndividual' || !data.state || !data.fields) throw new Error('이 도구에서 저장한 작업 파일이 아닙니다.');
+  const st = data.state;
+  state.years = st.years || {};
+  state.extraBiz = Array.isArray(st.extraBiz) ? st.extraBiz : [];
+  state.rawDetail = st.rawDetail || {};
+  state.adj = st.adj || {};
+  state.confirmed = st.confirmed || {};
+  state.incEstimateDetail = st.incEstimateDetail !== false;
+  state.showPct = st.showPct !== false;
+  extraBizSeq = Math.max(parseInt(data.extraBizSeq,10)||0, ...state.extraBiz.map(b=> parseInt(String(b.id).replace(/\D/g,''),10)||0), 0);
+  ['taxPeriod','baseMonths','baseDate'].forEach(id=> delete document.getElementById(id).dataset.touched);
+  (data.touched||[]).forEach(id=>{ const el=document.getElementById(id); if (el) el.dataset.touched='1'; });
+  // 결산연도를 먼저 맞춘 뒤 나머지 입력값 복원
+  const ty = document.getElementById('targetYear');
+  if (data.fields.targetYear!=null) ty.value = data.fields.targetYear;
+  Object.keys(data.fields).forEach(id=>{
+    if (WORK_SKIP.has(id) || id==='targetYear' || id==='incEstimateDetail') return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type==='checkbox') el.checked = !!data.fields[id]; else el.value = data.fields[id];
+  });
+  document.getElementById('showPct').checked = state.showPct;
+  document.querySelectorAll('.money-input').forEach(el=>{ if (el.value!=='') el.value = fmtMoney(unfmtMoney(el.value)); });
+  // 업로드 미리보기 슬롯은 파일 원본이 없으므로 안내만 표시
+  ['slot1','slot2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el._parsed=null; el.innerHTML=''; } });
+  const s1=document.getElementById('slot1');
+  if (s1 && Object.keys(state.years).length) s1.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0;">※ 저장된 작업 파일의 손익 자료가 반영되어 있습니다. 엑셀을 다시 올리면 해당 연도 자료가 교체됩니다.</div>';
+  renderExtraBizList();
+  renderAll();
+}
+document.getElementById('workFile').addEventListener('change', e=>{
+  const file = e.target.files[0]; e.target.value='';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try { loadWork(JSON.parse(evt.target.result)); alert('작업 파일을 불러왔습니다. 이어서 수정하세요.'); }
+    catch(err){ alert('불러오기 실패: '+err.message); }
+  };
+  reader.readAsText(file, 'utf-8');
+});
 renderAll();
 window.addEventListener('load', ()=> setTimeout(renderAll, 300));
 window.addEventListener('load', ()=> setTimeout(()=>{
