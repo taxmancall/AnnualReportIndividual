@@ -178,6 +178,13 @@ canvas{max-width:100%;}
 .extra-biz-row .row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .extra-biz-row .row-head .idx{font-size:12px;color:var(--brass);font-weight:700;}
 .biz-empty{font-size:12.5px;color:var(--sub);padding:10px 2px;}
+.dil-legend{margin-top:10px;padding:10px 12px;background:#F5F6F4;border-radius:8px;font-size:11.5px;line-height:1.65;color:var(--ink);}
+.dil-legend .dil-title{font-weight:700;color:var(--navy);margin-bottom:4px;}
+.dil-legend .dil-sub{margin-top:4px;color:var(--sub);}
+.dil-table{border-collapse:collapse;font-size:11.5px;margin-top:8px;width:100%;}
+.dil-table th,.dil-table td{border:1px solid var(--line);padding:4px 8px;text-align:right;}
+.dil-table th{background:#F1ECDD;color:var(--navy);text-align:center;}
+.dil-table td:first-child{text-align:left;}
 .im-toolbar{display:flex;align-items:center;gap:12px;margin:2px 0 8px;flex-wrap:wrap;}
 .im-toolbar span{font-size:11.5px;color:var(--sub);}
 table.income-matrix th small{font-weight:400;color:var(--sub);font-size:10.5px;}
@@ -461,22 +468,12 @@ table.rep-table.tax td.memo{font-size:10.5px;}
         <label>장수성실중소기업</label>
         <select id="bizLong"><option selected>아니오</option><option>예(감면율 1.1배)</option></select>
       </div>
-      <div class="field">
-        <label>성실신고확인 판정 기준업종</label>
-        <select id="diligentBizCategory">
-          <option value="1500000000">1호: 농업·임업·어업·광업·도소매업 등 (기준 15억원)</option>
-          <option value="750000000" selected>2호: 제조업·숙박음식업·건설업·운수업 등 (기준 7.5억원)</option>
-          <option value="500000000">3호: 부동산임대업·서비스업·교육/보건업 등 (기준 5억원)</option>
-        </select>
-      </div>
       <div class="field" style="display:flex;flex-direction:column;justify-content:flex-end;">
         <label>기장의무 구분</label>
         <select id="bookkeepingType"><option selected>복식부기의무자</option><option>간편장부대상자</option></select>
       </div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sub);">자동조회 감면율(메인 사업장): <b id="rateDisplay" style="color:var(--brass);">-</b> <span style="color:#999;">(조특법 §7①, 2025.1.1. 개정 반영)</span></div>
-    <div id="diligentBadgeWrap"></div>
-
   </div>
 
   <!-- STEP 2: 업로드 -->
@@ -537,9 +534,23 @@ table.rep-table.tax td.memo{font-size:10.5px;}
         <tr class="im-total" id="imRowSum"><th>종합소득 합산분</th>
           <td id="imBizSum">0</td><td id="imRentSum">0</td><td id="imWageSum">0</td><td id="imPenSum">0</td><td id="imOthSum">0</td><td id="imFinSum">0</td></tr>
         <tr id="imRowSet"><th>감면 설정<br><small>(조특법 §7)</small></th><td class="auto dim" id="imBizSet">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
+        <tr id="imRowDil"><th>성실신고확인<br>업종<br><small>(1호·2호·3호)</small></th>
+          <td class="im-set"><select id="diligentBizCategory">
+            <option value="1500000000">1호 · 15억원</option>
+            <option value="750000000" selected>2호 · 7.5억원</option>
+            <option value="500000000">3호 · 5억원</option></select></td>
+          <td class="auto dim">3호 · 5억원<br><small>(임대업)</small></td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
       </tbody>
     </table>
     </div>
+    <div class="dil-legend">
+      <div class="dil-title">성실신고확인 업종 분류 — 업종별 수입금액이 기준금액 이상이면 대상 (소득세법 §70의2, 시행령 §133①)</div>
+      <div><b>1호 · 15억원</b> 농업·임업·어업, 광업, 도매 및 소매업(상품중개업 제외), 부동산매매업, 그 밖에 2호·3호에 해당하지 않는 사업</div>
+      <div><b>2호 · 7.5억원</b> 제조업, 숙박 및 음식점업, 전기·가스·증기·수도사업, 하수·폐기물처리·원료재생·환경복원업, 건설업(비주거용 건물 건설업 제외, 주거용 건물 개발·공급업 포함), 운수업, 출판·영상·방송통신 및 정보서비스업, 금융 및 보험업, 상품중개업</div>
+      <div><b>3호 · 5억원</b> 부동산 임대업·부동산업(매매업 제외), 전문·과학·기술서비스업, 사업시설관리·사업지원 및 임대서비스업, 교육서비스업, 보건업 및 사회복지서비스업, 예술·스포츠·여가 관련 서비스업, 협회·단체·수리 및 기타 개인서비스업, 가구 내 고용활동</div>
+      <div class="dil-sub">사업소득 열마다 해당 호수를 선택하세요. 2개 이상 업종이면 수입금액이 가장 큰 업종(주업종) 기준으로 환산해 판정합니다.</div>
+    </div>
+    <div id="diligentBadgeWrap"></div>
     <div class="im-notes">
       <div>· 사업소득(메인) 칸은 STEP 2 손익계산서와 STEP 4 세무조정을 반영한 ①안 기준 자동 값입니다(필요경비는 총수입 − 소득금액 역산). 서브 사업장은 업종·규모·소재지에 따라 중소기업특별세액감면율이 각각 적용됩니다.</div>
       <div>· 근로·연금소득의 필요경비는 근로소득공제(소득세법 §47)·연금소득공제(§47의2)가 자동 적용됩니다.</div>
@@ -1130,7 +1141,7 @@ function addExtraBiz(){
   state.extraBiz.push({
     id:'biz'+extraBizSeq, name:'',
     bizType: BIZ_TYPE_OPTIONS[1], bizSize:'소기업', bizRegion:'수도권 외',
-    sales:0, expense:0, income:0
+    sales:0, expense:0, income:0, dilCat:750000000
   });
   renderExtraBizList();
   renderAll();
@@ -1174,6 +1185,7 @@ function renderExtraBizList(){
     imRowExp: list.map(b=> `<td class="sub-col">${money(b.id,'expense',b.expense)}</td>`),
     imRowInc: list.map(b=> `<td class="sub-col auto" id="xbInc_${b.id}">${won(b.income)}</td>`),
     imRowSum: list.map(b=> `<td class="sub-col" id="xbSum_${b.id}">${won(b.income)}</td>`),
+    imRowDil: list.map(b=> `<td class="sub-col im-set"><select onchange="updateExtraBiz('${b.id}','dilCat',Number(this.value))"><option value="1500000000" ${b.dilCat===1500000000?'selected':''}>1호 · 15억원</option><option value="750000000" ${b.dilCat===750000000?'selected':''}>2호 · 7.5억원</option><option value="500000000" ${b.dilCat===500000000?'selected':''}>3호 · 5억원</option></select></td>`),
     imRowSet: list.map(b=> `<td class="sub-col im-set">${sel(b.id,'bizType',BIZ_TYPE_OPTIONS,b.bizType)}${sel(b.id,'bizSize',['소기업','중기업'],b.bizSize)}${sel(b.id,'bizRegion',['수도권(서울/인천/경기)','수도권 외'],b.bizRegion)}</td>`)
   };
   Object.keys(cells).forEach(rid=>{
@@ -1465,26 +1477,42 @@ function deferRender(){
 /* ============================================================
    5. 성실신고확인대상 판정
 ============================================================ */
-function diligentCheck(totalRevenue){
+const DIL_NAME = {1500000000:'1호(15억원)', 750000000:'2호(7.5억원)', 500000000:'3호(5억원)'};
+/* 성실신고확인대상 판정 (소득세법 §70의2, 시행령 §133): 업종별 수입금액이 기준금액 이상이면 대상.
+   업종이 2개 이상이면 수입금액이 가장 큰 업종(주업종) 기준금액으로 나머지 업종 수입금액을 환산해 합산 */
+function diligentCheck(s){
   const sel = document.getElementById('diligentBizCategory');
-  const threshold = parseInt(sel.value,10);
-  const label = sel.options[sel.selectedIndex].text;
-  const isTarget = totalRevenue >= threshold;
-  return { threshold, label, isTarget, totalRevenue };
+  const entries = [];
+  const add = (label, amount, thr)=>{ if (amount>0) entries.push({label, amount, thr}); };
+  add('사업소득(메인)', s.sales, parseInt(sel.value,10));
+  state.extraBiz.forEach((b,i)=> add(b.name || `사업소득(서브${i+1})`, Number(b.sales)||0, b.dilCat||750000000));
+  add('임대소득', s.rentalGross, 500000000);
+  entries.sort((a,b)=> b.amount - a.amount);
+  const main = entries[0] || { label:'-', amount:0, thr:parseInt(sel.value,10) };
+  let total = 0;
+  const rows = entries.map((e,i)=>{
+    const converted = i===0 ? e.amount : Math.round(e.amount * main.thr / e.thr);
+    total += converted;
+    return { ...e, converted, isMain:i===0 };
+  });
+  return { threshold:main.thr, label:DIL_NAME[main.thr]||'', isTarget: total>=main.thr, total, rows, mainLabel:main.label };
 }
-function renderDiligentCheck(totalRevenue){
-  const d = diligentCheck(totalRevenue);
+function renderDiligentCheck(s){
+  const d = diligentCheck(s);
   const wrap = document.getElementById('diligentBadgeWrap');
+  const multi = d.rows.length>1;
   wrap.innerHTML = `<div class="badge-diligent ${d.isTarget?'yes':'no'}">
     ${d.isTarget ? '⚠ 성실신고확인대상 해당' : '✓ 성실신고확인대상 아님'} ·
-    추정 총수입금액 ${won(d.totalRevenue)}원 / 기준 ${won(d.threshold)}원
-  </div>`;
+    ${multi?'환산 합계':'추정 수입금액'} ${won(d.total)}원 / 주업종(${d.mainLabel}) 기준 ${won(d.threshold)}원 (${d.label})
+  </div>` + (multi ? `<table class="dil-table"><tr><th>업종</th><th>구분</th><th>수입금액</th><th>환산금액</th></tr>${
+      d.rows.map(r=>`<tr><td>${r.label}${r.isMain?' (주업종)':''}</td><td>${DIL_NAME[r.thr]}</td><td>${won(r.amount)}</td><td>${won(r.converted)}</td></tr>`).join('')
+    }<tr><td colspan="3" style="text-align:right;font-weight:700;">환산 합계</td><td style="font-weight:700;">${won(d.total)}</td></tr></table>` : '');
   const ul = document.getElementById('diligentChecklist');
   if (ul){
     const {N} = getYears();
     ul.innerHTML = `
-      <li>선택 기준업종: ${d.label}</li>
-      <li>${N}년 추정 총수입금액(전 사업장 합계) <b>${won(d.totalRevenue)}원</b> 기준 판정 결과:
+      <li>업종 구분: ${d.rows.map(r=>`${r.label} ${DIL_NAME[r.thr]}`).join(' · ') || '입력된 수입금액 없음'}</li>
+      <li>${N}년 ${multi?`겸업 환산 합계(주업종 ${d.mainLabel} 기준) `:'추정 총수입금액 '}<b>${won(d.total)}원</b> / 기준 <b>${won(d.threshold)}원</b> 판정 결과:
         <b style="color:${d.isTarget?'#9E3B33':'#2E6B4F'};">${d.isTarget?'성실신고확인대상 해당':'성실신고확인대상 아님'}</b></li>
       <li>대상자는 종합소득세 신고 시 세무사 등이 작성한 성실신고확인서를 함께 제출해야 하며, 미제출 시 산출세액의 5% 가산세가 부과됩니다</li>
       <li>성실신고확인비용의 60%(한도 120만원)를 세액공제 받을 수 있습니다</li>`;
@@ -1772,7 +1800,7 @@ function renderAll(){
 
     renderYuHint(sc);
     renderAdjPanel();
-    renderDiligentCheck(s1.totalRevenue);
+    renderDiligentCheck(s1);
     renderIncomePreview(s1);
     renderScenarioCards(sc);
     renderSavings(sc);
