@@ -326,6 +326,8 @@ table.rep-table td.memo{overflow-wrap:anywhere;}
 #incomeTable th:nth-child(2){width:17%;}
 #incomeTable th:nth-child(3){text-align:left;}
 table.rep-table.yearcmp td:first-child{color:var(--navy);font-weight:600;}
+table.rep-table.yearcmp{font-size:12px;}
+table.rep-table.yearcmp td:nth-child(n+5){font-size:11.5px;white-space:nowrap;}
 table.rep-table.wide{font-size:10.5px;}
 table.rep-table.wide th{padding:6px 6px;white-space:nowrap;}
 table.rep-table.wide td{padding:4px 6px;white-space:nowrap;}
@@ -494,9 +496,9 @@ table.rep-table.loan td.num{text-align:right;}
       </div>
     </div>
     <div style="margin-top:14px;">
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 신고서 기준으로 입력)</span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 메인 사업장 기준, 신고서 기준으로 입력)</span></div>
       <table class="income-matrix" style="min-width:0;">
-        <tr><th>귀속연도</th><th>총 매출(전 사업장 합계)</th><th>종합소득금액</th><th>실부담 세금<br><span style="font-weight:400;font-size:11px;">(국세+지방세 포함)</span></th></tr>
+        <tr><th>귀속연도</th><th>메인 사업장 매출</th><th>메인 사업소득금액<br><span style="font-weight:400;font-size:11px;">(신고서 기준)</span></th><th>실부담 세금<br><span style="font-weight:400;font-size:11px;">(국세+지방세 포함)</span></th></tr>
         <tr><th><span class="yN2">N-2</span>년</th>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastSales2" placeholder="미입력 시 메인 손익 매출"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome2"></td>
@@ -2352,12 +2354,11 @@ function renderLoanSection(sc){
 function buildYearCompare(s1){
   const {N,N1,N2} = getYears();
   const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
-  const extraSales = state.extraBiz.reduce((a,b)=> a+(Number(b.sales)||0), 0);
   const mainSale = y=> (state.years[y] && state.years[y]['Ⅰ. 매출액']) || null;
   const d = {
     [N2]: { sales: val('pastSales2')!==null ? val('pastSales2') : mainSale(N2), income: val('pastIncome2'), tax: val('pastTax2') },
     [N1]: { sales: val('pastSales1')!==null ? val('pastSales1') : mainSale(N1), income: val('pastIncome1'), tax: val('pastTax1') },
-    [N]:  { sales: s1.sales + extraSales, income: s1.incomeTotal, tax: s1.totalBurden }
+    [N]:  { sales: s1.sales, income: s1.mainBizIncome, tax: s1.totalBurden }
   };
   Object.values(d).forEach(o=>{ o.margin = (o.sales>0 && o.income!==null) ? o.income/o.sales*100 : null; });
   const money = v=> v===null ? '-' : won(v);
@@ -2365,17 +2366,21 @@ function buildYearCompare(s1){
   const diff = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+won(Math.abs(a-b)));
   const rate = (a,b)=> (a===null||b===null||b===0) ? '' : ` <span style="color:#8A909A;font-size:.85em;">(${(a-b>=0?'+':'-')+Math.abs((a-b)/Math.abs(b)*100).toFixed(1)}%)</span>`;
   const pp = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+Math.abs(a-b).toFixed(1)+'%p');
-  const row=(label,key,fmt,delta)=> `<tr><td>${label}</td><td>${fmt(d[N2][key])}</td><td>${fmt(d[N1][key])}</td><td><b>${fmt(d[N][key])}</b></td><td>${delta}</td></tr>`;
-  const sM = d[N].sales>0 && d[N1].sales>0;
-  return `<div style="margin:22px 0 8px;font-size:15px;font-weight:800;color:var(--navy);">📅 ${N2}·${N1}년 종합소득세 신고 결과와 ${N}년(①안) 비교</div>
+  const dl = (key,fmt)=>{
+    const a=d[N][key], b=d[N1][key], c=d[N2][key];
+    if (key==='margin') return [pp(b,c), pp(a,b)];
+    return [diff(b,c)+rate(b,c), diff(a,b)+rate(a,b)];
+  };
+  const row=(label,key,fmt)=>{ const [x,y]=dl(key,fmt); return `<tr><td>${label}</td><td>${fmt(d[N2][key])}</td><td>${fmt(d[N1][key])}</td><td><b>${fmt(d[N][key])}</b></td><td>${x}</td><td>${y}</td></tr>`; };
+  return `<div style="margin:22px 0 8px;font-size:15px;font-weight:800;color:var(--navy);">📅 ${N2}·${N1}·${N}년 3개년 비교 (${N2}·${N1}년 신고 결과 / ${N}년 ①안 추정)</div>
   <table class="rep-table yearcmp">
-    <tr><th>구분</th><th>${N2}년 신고</th><th>${N1}년 신고</th><th>${N}년 추정(①안)</th><th>전년(${N1}) 대비 증감</th></tr>
-    ${row('총 매출','sales',money, diff(d[N].sales,d[N1].sales)+rate(d[N].sales,d[N1].sales))}
-    ${row('종합소득금액','income',money, diff(d[N].income,d[N1].income)+rate(d[N].income,d[N1].income))}
-    ${row('마진율(종합소득금액÷총 매출)','margin',pct, pp(d[N].margin,d[N1].margin))}
-    ${row('실부담 세금(국세+지방세 포함)','tax',money, diff(d[N].tax,d[N1].tax)+rate(d[N].tax,d[N1].tax))}
+    <tr><th>구분</th><th>${N2}년 신고</th><th>${N1}년 신고</th><th>${N}년 추정(①안)</th><th>${N1}년 vs ${N2}년</th><th>${N}년 vs ${N1}년</th></tr>
+    ${row('메인 사업장 매출','sales',money)}
+    ${row('메인 사업소득금액','income',money)}
+    ${row('마진율(메인 사업소득금액÷매출)','margin',pct)}
+    ${row('실부담 세금(국세+지방세 포함)','tax',money)}
   </table>
-  <p style="font-size:11px;color:var(--sub);margin:4px 0 0;">※ ${N}년은 ①안(연간 추정 그대로) 기준이며 총 매출은 메인+추가 사업장 합계(임대 제외)입니다. 과거 연도 총 매출을 입력하지 않으면 메인 사업장 손익계산서 매출로 표시됩니다.</p>`;
+  <p style="font-size:11px;color:var(--sub);margin:4px 0 0;">※ ${N}년은 ①안(연간 추정 그대로) 기준이며 매출·사업소득금액은 메인 사업장만 비교합니다(추가 사업장·임대·근로 등 제외). 세금은 사업장별 구분이 불가해 종합소득세 전체 기준입니다. 과거 연도 매출을 입력하지 않으면 메인 사업장 손익계산서 매출로 표시됩니다. 마진율 증감은 %p입니다.</p>`;
 }
 
 function renderReport(sc){
