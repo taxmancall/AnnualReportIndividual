@@ -2247,9 +2247,12 @@ function buildTaxTable(sc){
   const row = (cls, label, fn, note)=> `<tr class="${cls}"><td>${label}</td>${sc.map(x=> `<td>${fn(x.s, x)}</td>`).join('')}<td class="memo">${note||''}</td></tr>`;
   const any = (fn)=> sc.some(x=> fn(x.s));
   let h = `<tr><th>구분</th>${sc.map(x=> `<th>${x.key}안${x.extra>0?` (부족경비 ${won(x.extra)})`:''}</th>`).join('')}<th style="text-align:left;">비고</th></tr>`;
+  h += row('', '매출(메인 사업장)', s=> won(s.sales), '연간 추정 매출');
+  h += row('', '경비(메인 사업장)', s=> won(s.sales - s.pretax), '매출 − 당기순이익 (매출원가·판관비 등, 부족경비 포함)');
   h += row('', '당기순이익(메인 사업장)', s=> won(s.pretax), '연간 추정 손익 − 부족경비');
   h += row('', '가감금액', s=> won(s.taxAdj + s.otherMerged), '세무조정 + 타소득합산');
   h += row('strong', '종합소득금액', s=> won(s.incomeTotal));
+  h += row('', '마진율', s=> s.sales>0 ? (s.incomeTotal/s.sales*100).toFixed(1)+'%' : '-', '종합소득금액 ÷ 매출');
   h += row('', '소득공제(인적공제 등)', s=> won(s.dedBasic));
   if (any(s=> s.dedPension)) h += row('', '국민연금 공제', s=> won(s.dedPension), '소득세법 §51의3');
   if (any(s=> s.yuPaid)) h += row('', '노란우산공제', s=> won(s.dedYellow) + (s.yuOver>0 ? `<br><span style="font-size:11px;color:var(--sub);">(납입 ${won(s.yuPaid)} · 한도 ${won(Math.min(s.yuLimit,s.yuCap))})</span>` : ''), '조특법 §86의3 · 납입액과 구간별 한도 중 적은 금액');
