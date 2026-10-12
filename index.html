@@ -325,6 +325,7 @@ table.rep-table td.memo{overflow-wrap:anywhere;}
 #incomeTable th:nth-child(1){width:30%;}
 #incomeTable th:nth-child(2){width:17%;}
 #incomeTable th:nth-child(3){text-align:left;}
+table.rep-table.yearcmp td:first-child{color:var(--navy);font-weight:600;}
 table.rep-table.wide{font-size:10.5px;}
 table.rep-table.wide th{padding:6px 6px;white-space:nowrap;}
 table.rep-table.wide td{padding:4px 6px;white-space:nowrap;}
@@ -491,6 +492,20 @@ table.rep-table.loan td.num{text-align:right;}
         <label>기장의무 구분</label>
         <select id="bookkeepingType"><option selected>복식부기의무자</option><option>간편장부대상자</option></select>
       </div>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 신고서 기준으로 입력)</span></div>
+      <table class="income-matrix" style="min-width:0;">
+        <tr><th>귀속연도</th><th>총 매출(전 사업장 합계)</th><th>종합소득금액</th><th>실부담 세금<br><span style="font-weight:400;font-size:11px;">(국세+지방세 포함)</span></th></tr>
+        <tr><th><span class="yN2">N-2</span>년</th>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastSales2" placeholder="미입력 시 메인 손익 매출"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome2"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastTax2"></td></tr>
+        <tr><th><span class="yN1">N-1</span>년</th>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastSales1" placeholder="미입력 시 메인 손익 매출"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome1"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastTax1"></td></tr>
+      </table>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sub);">자동조회 감면율(메인 사업장): <b id="rateDisplay" style="color:var(--brass);">-</b> <span style="color:#999;">(조특법 §7①, 2025.1.1. 개정 반영)</span></div>
   </div>
@@ -2332,6 +2347,37 @@ function renderLoanSection(sc){
   `;
 }
 
+
+/* 보고서 첫 장: 과거 2개년 신고 결과 vs 당해연도(①안) 비교 */
+function buildYearCompare(s1){
+  const {N,N1,N2} = getYears();
+  const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
+  const extraSales = state.extraBiz.reduce((a,b)=> a+(Number(b.sales)||0), 0);
+  const mainSale = y=> (state.years[y] && state.years[y]['Ⅰ. 매출액']) || null;
+  const d = {
+    [N2]: { sales: val('pastSales2')!==null ? val('pastSales2') : mainSale(N2), income: val('pastIncome2'), tax: val('pastTax2') },
+    [N1]: { sales: val('pastSales1')!==null ? val('pastSales1') : mainSale(N1), income: val('pastIncome1'), tax: val('pastTax1') },
+    [N]:  { sales: s1.sales + extraSales, income: s1.incomeTotal, tax: s1.totalBurden }
+  };
+  Object.values(d).forEach(o=>{ o.margin = (o.sales>0 && o.income!==null) ? o.income/o.sales*100 : null; });
+  const money = v=> v===null ? '-' : won(v);
+  const pct = v=> v===null ? '-' : v.toFixed(1)+'%';
+  const diff = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+won(Math.abs(a-b)));
+  const rate = (a,b)=> (a===null||b===null||b===0) ? '' : ` <span style="color:#8A909A;font-size:.85em;">(${(a-b>=0?'+':'-')+Math.abs((a-b)/Math.abs(b)*100).toFixed(1)}%)</span>`;
+  const pp = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+Math.abs(a-b).toFixed(1)+'%p');
+  const row=(label,key,fmt,delta)=> `<tr><td>${label}</td><td>${fmt(d[N2][key])}</td><td>${fmt(d[N1][key])}</td><td><b>${fmt(d[N][key])}</b></td><td>${delta}</td></tr>`;
+  const sM = d[N].sales>0 && d[N1].sales>0;
+  return `<div style="margin:22px 0 8px;font-size:15px;font-weight:800;color:var(--navy);">📅 ${N2}·${N1}년 종합소득세 신고 결과와 ${N}년(①안) 비교</div>
+  <table class="rep-table yearcmp">
+    <tr><th>구분</th><th>${N2}년 신고</th><th>${N1}년 신고</th><th>${N}년 추정(①안)</th><th>전년(${N1}) 대비 증감</th></tr>
+    ${row('총 매출','sales',money, diff(d[N].sales,d[N1].sales)+rate(d[N].sales,d[N1].sales))}
+    ${row('종합소득금액','income',money, diff(d[N].income,d[N1].income)+rate(d[N].income,d[N1].income))}
+    ${row('마진율(종합소득금액÷총 매출)','margin',pct, pp(d[N].margin,d[N1].margin))}
+    ${row('실부담 세금(국세+지방세 포함)','tax',money, diff(d[N].tax,d[N1].tax)+rate(d[N].tax,d[N1].tax))}
+  </table>
+  <p style="font-size:11px;color:var(--sub);margin:4px 0 0;">※ ${N}년은 ①안(연간 추정 그대로) 기준이며 총 매출은 메인+추가 사업장 합계(임대 제외)입니다. 과거 연도 총 매출을 입력하지 않으면 메인 사업장 손익계산서 매출로 표시됩니다.</p>`;
+}
+
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
@@ -2380,7 +2426,7 @@ function renderReport(sc){
       종합소득금액은 <span class="hl-teal">${won(s1.incomeTotal)}원</span>(월 평균 ${won(s1.incomeTotal/12)}원), 과세표준은 <span class="hl-teal">${won(s1.taxBase)}원</span>이며,
       현재 시점 기준 예상 총부담세액은 <span class="hl-coral">${won(s1.totalBurden)}원</span>입니다.
       남은 기간 경비 집행 계획에 따라 최대 <span class="hl-purple">${won(savingAmt)}원</span>까지 절세가 가능할 것으로 예상됩니다.
-    </div>`;
+    </div>` + buildYearCompare(s1);
 
   document.getElementById('trendTable').innerHTML = buildPLCompare(sc);
   renderLoanSection(sc);
@@ -2445,6 +2491,7 @@ document.getElementById('otherExpAuto').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
 document.getElementById('showLoan').addEventListener('change', renderAll);
 document.getElementById('loanTiming').addEventListener('change', renderAll);
+['pastSales1','pastIncome1','pastTax1','pastSales2','pastIncome2','pastTax2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.addEventListener('input', renderAll); el.addEventListener('blur', renderAll);} });
 document.getElementById('showPct').addEventListener('change', e=>{ state.showPct = e.target.checked; renderAll(); });
 
 document.querySelectorAll('.money-input').forEach(el=>{
