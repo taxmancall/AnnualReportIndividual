@@ -327,6 +327,20 @@ table.rep-table td.memo{overflow-wrap:anywhere;}
 #incomeTable th:nth-child(3){text-align:left;}
 table.rep-table.yearcmp td:first-child{color:var(--navy);font-weight:600;}
 table.rep-table.yearcmp{font-size:12px;}
+table.rep-table.yearcmp th{white-space:nowrap;font-size:11.5px;padding:8px 6px;}
+.yc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 12px;}
+.yc-panel{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;background:#fff;break-inside:avoid;}
+.yc-title{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;text-align:center;}
+.yc-bars{display:flex;align-items:flex-end;justify-content:space-around;gap:6px;height:150px;border-bottom:1px solid var(--line);padding-bottom:0;}
+.yc-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;min-width:0;}
+.yc-val{font-size:11px;font-weight:700;color:#33414f;margin-bottom:3px;white-space:nowrap;}
+.yc-bar{width:70%;max-width:44px;border-radius:4px 4px 0 0;}
+.yc-yrs{display:flex;justify-content:space-around;gap:6px;margin-top:4px;}
+.yc-yrs span{flex:1;text-align:center;font-size:10px;color:var(--sub);white-space:nowrap;}
+.yc-badge{margin-top:8px;text-align:center;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 6px;}
+.yc-badge.up{background:#e3f3ec;color:#2E6B4F;}
+.yc-badge.down{background:#fbeceb;color:#9E3B33;}
+@media (max-width:820px){.yc-grid{grid-template-columns:1fr 1fr;}}
 table.rep-table.yearcmp td:nth-child(n+5){font-size:11.5px;white-space:nowrap;}
 table.rep-table.wide{font-size:10.5px;}
 table.rep-table.wide th{padding:6px 6px;white-space:nowrap;}
@@ -390,7 +404,7 @@ table.rep-table.loan td.num{text-align:right;}
   .checklist-grid{break-inside:auto;}
   .rep-section h2{break-after:avoid;}
   table.rep-table{break-inside:auto;}
-  table.rep-table.loan,#scenarioTable{break-inside:avoid;}
+  table.rep-table.loan,#scenarioTable,table.rep-table.yearcmp{break-inside:avoid;}
   table.rep-table.wide{break-inside:auto;font-size:7.6px;}
   table.rep-table.wide th{padding:4px 2px;}
   table.rep-table.wide td{padding:2.5px 2px;}
@@ -2372,6 +2386,25 @@ function buildYearCompare(s1){
   const diff = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+won(Math.abs(a-b)));
   const rate = (a,b)=> (a===null||b===null||b===0) ? '' : ` <span style="color:#8A909A;font-size:.85em;">(${(a-b>=0?'+':'-')+Math.abs((a-b)/Math.abs(b)*100).toFixed(1)}%)</span>`;
   const pp = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+Math.abs(a-b).toFixed(1)+'%p');
+  const short = v=> v===null ? '-' : (Math.abs(v)>=1e8 ? (v/1e8).toFixed(2).replace(/\.?0+$/,'')+'억' : Math.round(v/1e4).toLocaleString('ko-KR')+'만');
+  const panel = (title,key,fmt,isPct)=>{
+    const vals=[d[N2][key],d[N1][key],d[N][key]], yrs=[N2,N1,N], mx=Math.max(...vals.map(v=> v===null?0:Math.abs(v)),1);
+    const cols=['#9DB2C8','#6F8FB0','#C89B3C'];
+    const bars=vals.map((v,i)=>{
+      const h = v===null ? 0 : Math.max(Math.abs(v)/mx*100,2);
+      const lab = v===null ? '-' : (isPct ? v.toFixed(1)+'%' : short(v));
+      return `<div class="yc-col"><div class="yc-val">${lab}</div><div class="yc-bar" style="height:${h}px;background:${cols[i]};"></div></div>`;
+    }).join('');
+    const a=vals[2], b=vals[1];
+    let badge='';
+    if (a!==null && b!==null){
+      const up = a-b>=0;
+      const txt = isPct ? `${up?'▲':'▼'} ${Math.abs(a-b).toFixed(1)}%p` : (b!==0 ? `${up?'▲':'▼'} ${Math.abs((a-b)/Math.abs(b)*100).toFixed(1)}%` : '');
+      badge = txt ? `<div class="yc-badge ${key==='tax' ? (up?'down':'up') : (up?'up':'down')}">${N}년 전년대비 ${txt}</div>` : '';
+    }
+    return `<div class="yc-panel"><div class="yc-title">${title}</div><div class="yc-bars">${bars}</div><div class="yc-yrs">${yrs.map((y,i)=>`<span>${y}${i===2?'(추정)':''}</span>`).join('')}</div>${badge}</div>`;
+  };
+  const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false)}${panel('메인 사업소득금액','income',money,false)}${panel('마진율','margin',pct,true)}${panel('실부담 세금(국세+지방세)','tax',money,false)}</div>`;
   const dl = (key,fmt)=>{
     const a=d[N][key], b=d[N1][key], c=d[N2][key];
     if (key==='margin') return [pp(b,c), pp(a,b)];
@@ -2379,6 +2412,7 @@ function buildYearCompare(s1){
   };
   const row=(label,key,fmt)=>{ const [x,y]=dl(key,fmt); return `<tr><td>${label}</td><td>${fmt(d[N2][key])}</td><td>${fmt(d[N1][key])}</td><td><b>${fmt(d[N][key])}</b></td><td>${x}</td><td>${y}</td></tr>`; };
   return `<div style="margin:22px 0 8px;font-size:15px;font-weight:800;color:var(--navy);">📅 ${N2}·${N1}·${N}년 3개년 비교 (${N2}·${N1}년 신고 결과 / ${N}년 ①안 추정)</div>
+  ${graph}
   <table class="rep-table yearcmp">
     <tr><th>구분</th><th>${N2}년 신고</th><th>${N1}년 신고</th><th>${N}년 추정(①안)</th><th>${N1}년 vs ${N2}년</th><th>${N}년 vs ${N1}년</th></tr>
     ${row('메인 사업장 매출','sales',money)}
@@ -2431,13 +2465,14 @@ function renderReport(sc){
         <div class="kpi-sub">추가경비 ${won(best.extra)}원 반영 시</div>
       </div>
     </div>
+    ${buildYearCompare(s1)}
     <div class="rep-narrative">
       <b>${N}년 사업실적은</b> 메인 사업장 매출 <span class="hl-blue">${won(t.sales[2])}원</span>(전년대비 <span class="${salesYoY>=0?'hl-up':'hl-down'}">${salesWord} ${Math.abs(salesYoY).toFixed(1)}%</span>),
       전체 사업소득금액 <span class="hl-teal">${won(s1.bizIncomeTotal)}원</span>(사업장 ${1+state.extraBiz.length}곳 합계)으로 추정됩니다.<br>
       종합소득금액은 <span class="hl-teal">${won(s1.incomeTotal)}원</span>(월 평균 ${won(s1.incomeTotal/12)}원), 과세표준은 <span class="hl-teal">${won(s1.taxBase)}원</span>이며,
       현재 시점 기준 예상 총부담세액은 <span class="hl-coral">${won(s1.totalBurden)}원</span>입니다.
       남은 기간 경비 집행 계획에 따라 최대 <span class="hl-purple">${won(savingAmt)}원</span>까지 절세가 가능할 것으로 예상됩니다.
-    </div>` + buildYearCompare(s1);
+    </div>`;
 
   document.getElementById('trendTable').innerHTML = buildPLCompare(sc);
   renderLoanSection(sc);
