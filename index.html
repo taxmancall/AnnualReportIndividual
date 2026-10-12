@@ -356,6 +356,9 @@ table.rep-table.tax td.memo{font-size:10.5px;}
 .loan-tip{font-size:12px;line-height:1.7;background:#F5F6F4;border-left:3px solid var(--navy);padding:8px 12px;margin-top:8px;border-radius:0 6px 6px 0;}
 .loan-warn{font-size:11.5px;line-height:1.65;color:#9E3B33;margin-top:8px;}
 table.rep-table.loan td,table.rep-table.loan th{text-align:left;vertical-align:top;}
+table.rep-table.loan th{text-align:center;vertical-align:middle;}
+table.rep-table.loan.ins td.ins-k{text-align:center;vertical-align:middle;font-weight:700;color:var(--navy);}
+table.rep-table.loan.ins td:not(.ins-k){text-align:left;color:#333;}
 table.rep-table.loan tr.hit td{background:#FFF6D8!important;font-weight:600;}
 table.rep-table.loan td.num{text-align:right;}
 .rep-unit{font-size:10.5px;color:var(--sub);text-align:right;margin:-8px 0 4px;}
@@ -2329,14 +2332,19 @@ function renderLoanSection(sc){
   const tipAfter = `대출 예정 시점이 ${N+1}년 7월 이후이면 ${N}년 귀속 신고소득이 심사 소득으로 반영됩니다. 경비 집행으로 신고소득을 낮추는 ②·③안은 세금은 줄지만 소득 기준 대출 가능액도 줄어들 수 있으므로, 절세액과 대출 조건을 함께 비교해 결정하시기 바랍니다.`;
   const tips = timing==='before' ? [tipBefore] : timing==='after' ? [tipAfter] : [tipBefore, tipAfter];
 
-  const insTable = `<table class="rep-table loan">
+  const lab = n=> n;
+  const insTable = `<table class="rep-table loan ins">
     <tr><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr>
-    <tr><td>건강보험료<br><span style="color:var(--sub);font-size:11px;">(지역가입자)</span></td>
-      <td>${N+1}년 5~6월 종합소득세 신고로 ${N}년 귀속 소득이 확정되면, ${N+1}년 11월 보험료부터 새 소득이 반영되어 다음 해 10월까지 적용됩니다.</td>
-      <td>확정 소득금액이 낮아지면 향후 납부액이 줄고, 높아지면 늘어납니다. 신고 후 수정신고·경정청구로 소득이 바뀌면 공단의 재산정·정산(추가 고지 또는 환급)이 따를 수 있습니다.</td></tr>
-    <tr><td>국민연금<br><span style="color:var(--sub);font-size:11px;">(지역가입자)</span></td>
-      <td>${N+1}년 5~6월 신고 후 ${N+1}년 7월부터 신고소득월액(연 소득금액 ÷ 12)이 갱신되어 다음 해 6월까지 적용됩니다.</td>
+    <tr><td rowspan="2" class="ins-k">${lab('건강보험료')}</td>
+      <td><b>지역가입자</b>(개인사업자 본인 등)<br>${N+1}년 5~6월 종합소득세 신고로 ${N}년 귀속 소득이 확정되면, ${N+1}년 11월 보험료부터 새 소득이 반영되어 다음 해 10월까지 적용됩니다.</td>
+      <td>사업·임대 등 종합소득금액에 재산·자동차를 더해 부과되므로, 확정 소득금액이 낮아지면 향후 납부액이 줄고 높아지면 늘어납니다. 신고 후 수정신고·경정청구로 소득이 바뀌면 공단의 재산정·정산(추가 고지 또는 환급)이 따를 수 있습니다.</td></tr>
+    <tr><td><b>직장가입자</b>(법인 대표·임직원 등)<br>보수월액(근로소득) 기준으로 부과되며, 전년도 보수총액 신고 후 매년 정산·변경됩니다(통상 ${N+1}년 3~4월).</td>
+      <td>대표 급여(보수)를 조정하면 보수월액과 보험료가 함께 달라집니다. 보수 외 소득(사업·임대·이자·배당 등)이 연 2,000만원을 넘으면 초과분에 대해 소득월액보험료가 따로 부과될 수 있습니다.</td></tr>
+    <tr><td rowspan="2" class="ins-k">${lab('국민연금')}</td>
+      <td><b>지역가입자</b>(개인사업자 본인 등)<br>${N+1}년 5~6월 신고 후 ${N+1}년 7월부터 신고소득월액(연 소득금액 ÷ 12)이 갱신되어 다음 해 6월까지 적용됩니다.</td>
       <td>소득이 낮아지면 납부액과 장래 연금액이 함께 줄고, 높아지면 함께 늘어납니다(기준소득월액 상·하한 범위 내).</td></tr>
+    <tr><td><b>사업장가입자</b>(법인 대표·임직원 등)<br>기준소득월액은 보수 신고에 따라 정해지며, 통상 매년 7월에 정기결정되어 다음 해 6월까지 적용됩니다.</td>
+      <td>보수(급여)를 올리거나 내리면 기준소득월액이 달라져 납부액과 장래 연금액이 함께 변합니다(상·하한 범위 내). 보험료는 사업장과 가입자가 나누어 부담합니다.</td></tr>
   </table>`;
 
   sec.innerHTML = `
@@ -2362,7 +2370,7 @@ function renderLoanSection(sc){
 
     <div class="loan-sub">④ 소득금액 확정 후 건강보험료·국민연금 조절</div>
     ${insTable}
-    <div class="loan-note">※ 개인사업자 본인(지역가입자) 기준이며 직원이 있는 법인 대표 등 직장가입자는 보수월액 기준이라 구조가 다릅니다. 반영 시기·보험료율·기준소득월액 상·하한은 매년 달라지므로 국민건강보험공단·국민연금공단 안내로 최종 확인하시기 바랍니다.</div>
+    <div class="loan-note">※ 개인사업자 본인은 직원이 있어도 지역가입자이고(직원은 직장가입자), 법인 대표는 보수를 받는 직장(사업장)가입자입니다. 반영 시기·보험료율·기준소득월액 상·하한은 매년 달라지므로 국민건강보험공단·국민연금공단 안내로 최종 확인하시기 바랍니다.</div>
   `;
 }
 
