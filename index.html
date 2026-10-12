@@ -320,6 +320,11 @@ table.rep-table tr.strong td{font-weight:700;color:var(--navy);background:#F1ECD
 table.rep-table td.memo{text-align:left;color:var(--sub);font-size:11px;}
 table.rep-table tr.sub td{font-weight:600;color:var(--navy);background:#F7F5EF!important;}
 table.rep-table tr.item td:first-child{padding-left:20px;}
+table.rep-table td.memo{overflow-wrap:anywhere;}
+#incomeTable{table-layout:fixed;}
+#incomeTable th:nth-child(1){width:30%;}
+#incomeTable th:nth-child(2){width:17%;}
+#incomeTable th:nth-child(3){text-align:left;}
 table.rep-table.wide{font-size:10.5px;}
 table.rep-table.wide th{padding:6px 6px;white-space:nowrap;}
 table.rep-table.wide td{padding:4px 6px;white-space:nowrap;}
@@ -381,7 +386,8 @@ table.rep-table.loan td.num{text-align:right;}
   .checklist-card{break-inside:avoid;}
   .checklist-grid{break-inside:auto;}
   .rep-section h2{break-after:avoid;}
-  table.rep-table{break-inside:avoid;}
+  table.rep-table{break-inside:auto;}
+  table.rep-table.loan,#scenarioTable{break-inside:avoid;}
   table.rep-table.wide{break-inside:auto;font-size:7.6px;}
   table.rep-table.wide th{padding:4px 2px;}
   table.rep-table.wide td{padding:2.5px 2px;}
@@ -2399,6 +2405,7 @@ function renderReport(sc){
     <tr class="strong"><td>종합소득 과세표준</td><td>${won(s1.taxBase)}</td><td>${s1.methodUsed}</td></tr>
   `;
 
+  document.querySelectorAll('#incomeTable tr').forEach(tr=>{ if (tr.cells[2] && tr.cells[2].tagName==='TD') tr.cells[2].classList.add('memo'); });
   document.getElementById('scenarioTable').innerHTML = buildTaxTable(sc);
 
   const extras = sc.slice(1).filter(x=> x.extra>0);
