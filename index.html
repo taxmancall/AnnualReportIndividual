@@ -363,6 +363,9 @@ table.rep-table.wide th.g-est{background:var(--navy);}
 table.rep-table.wide td.g-est{background:rgba(200,155,60,.07);}
 table.rep-table.wide tr.strong td.g-est{background:rgba(200,155,60,.16);}
 table.rep-table.wide td.g-act,table.rep-table.wide th.g-act,table.rep-table.wide td.g-est:first-of-type{border-left:1px solid var(--line);}
+table.rep-table tr.extra td{background:#FDECEC!important;color:#B4232C;font-weight:700;}
+table.rep-table tr.extra td:first-child{color:#B4232C;}
+table.rep-table tr.extra td.memo{color:#B4232C;font-weight:400;}
 table.rep-table.wide{font-size:10.5px;}
 #estimateTable{font-size:12px;}
 #estimateTable th{padding:8px 10px;}
@@ -2250,7 +2253,7 @@ function buildPLCompare(sc){
   pushItems('Ⅳ. 판매비와 관리비', insur);
   if (insur.length>1) push('sub', '4대보험료 합계', sumVals('Ⅳ. 판매비와 관리비', insur));
   pushItems('Ⅳ. 판매비와 관리비', etc);
-  if (sc.some(x=> x.extra>0)) push('item', '부족경비(추가 집행 예정)', estOnly(x=> x.extra), '남은 기간 추가 집행 가정액');
+  if (sc.some(x=> x.extra>0)) push('item extra', '부족경비(추가 집행 예정)', estOnly(x=> x.extra), '남은 기간 추가 집행 가정액');
   push('strong', '영업이익', totalVals('Ⅴ. 영업이익','op','opIncome'));
   push('strong', '영업외수익', totalVals('Ⅵ. 영업외수익','nonOpInc','nonOpInc'));
   pushItems('Ⅵ. 영업외수익', namesOf('Ⅵ. 영업외수익'));
