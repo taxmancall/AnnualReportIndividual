@@ -685,15 +685,17 @@ table.rep-table.loan td.num{text-align:right;}
     <div style="margin-top:14px;">
       <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 메인 사업장 기준, 신고서 기준으로 입력)</span></div>
       <table class="income-matrix" style="min-width:0;">
-        <tr><th>귀속연도</th><th>메인 사업장 매출</th><th>메인 사업소득금액<br><span style="font-weight:400;font-size:11px;">(신고서 기준)</span></th><th>국세(종합소득세 결정세액)<br><span style="font-weight:400;font-size:11px;">입력 시 지방소득세 10%를 더해 표시</span></th></tr>
+        <tr><th>귀속연도</th><th>메인 사업장 매출</th><th>메인 사업소득금액<br><span style="font-weight:400;font-size:11px;">(신고서 기준)</span></th><th>국세(종합소득세 결정세액)<br><span style="font-weight:400;font-size:11px;">입력 시 지방소득세 10%를 더해 표시</span></th><th>농어촌특별세<br><span style="font-weight:400;font-size:11px;">(감면·공제분 20%, 있으면 입력)</span></th></tr>
         <tr><th><span class="yN2">N-2</span>년</th>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastSales2" placeholder="미입력 시 메인 손익 매출"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome2"></td>
-          <td><input type="text" inputmode="decimal" class="money-input" id="pastTax2"> <span id="pastTaxHint2" style="font-size:11px;color:var(--sub);"></span></td></tr>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastTax2"> <span id="pastTaxHint2" style="font-size:11px;color:var(--sub);"></span></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastRural2" placeholder="0"></td></tr>
         <tr><th><span class="yN1">N-1</span>년</th>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastSales1" placeholder="미입력 시 메인 손익 매출"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome1"></td>
-          <td><input type="text" inputmode="decimal" class="money-input" id="pastTax1"> <span id="pastTaxHint1" style="font-size:11px;color:var(--sub);"></span></td></tr>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastTax1"> <span id="pastTaxHint1" style="font-size:11px;color:var(--sub);"></span></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pastRural1" placeholder="0"></td></tr>
       </table>
       <div id="pastTaxCoop" style="display:none;"></div>
     </div>
@@ -2906,20 +2908,20 @@ function renderLoanSection(sc){
 
 /* 보고서 첫 장: 과거 2개년 신고 결과 vs 당해연도(①안) 비교 */
 /* 국세(결정세액) → 지방소득세 10%(10원 미만 절사)를 더한 총 세금 */
-function natToTotal(nat){ return nat===null ? null : nat + Math.floor(nat*0.1/10)*10; }
+function natToTotal(nat, rural){ return nat===null ? null : nat + Math.floor(nat*0.1/10)*10 + (Number(rural)||0); }
 function buildYearCompare(sc){
   const s1 = sc[0].s;
   const {N,N1,N2} = getYears();
   const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
   const mainSale = y=> (state.years[y] && state.years[y]['Ⅰ. 매출액']) || null;
   const d = {
-    [N2]: { sales: val('pastSales2')!==null ? val('pastSales2') : mainSale(N2), income: val('pastIncome2'), tax: natToTotal(val('pastTax2')) },
-    [N1]: { sales: val('pastSales1')!==null ? val('pastSales1') : mainSale(N1), income: val('pastIncome1'), tax: natToTotal(val('pastTax1')) },
+    [N2]: { sales: val('pastSales2')!==null ? val('pastSales2') : mainSale(N2), income: val('pastIncome2'), tax: natToTotal(val('pastTax2'), val('pastRural2')) },
+    [N1]: { sales: val('pastSales1')!==null ? val('pastSales1') : mainSale(N1), income: val('pastIncome1'), tax: natToTotal(val('pastTax1'), val('pastRural1')) },
     [N]:  { sales: s1.sales, income: s1.mainBizIncome, tax: s1.totalBurden }
   };
   [[1,'pastTax1'],[2,'pastTax2']].forEach(([i,id])=>{
-    const nat = val(id), h = document.getElementById('pastTaxHint'+i);
-    if (h) h.textContent = nat===null ? '' : `+ 지방세 ${won(Math.floor(nat*0.1/10)*10)} = ${won(natToTotal(nat))}`;
+    const nat = val(id), rural = val('pastRural'+i)||0, h = document.getElementById('pastTaxHint'+i);
+    if (h) h.textContent = nat===null ? '' : `+ 지방세 ${won(Math.floor(nat*0.1/10)*10)}${rural?` + 농특세 ${won(rural)}`:''} = ${won(natToTotal(nat, rural))}`;
   });
   Object.values(d).forEach(o=>{ o.margin = (o.sales>0 && o.income!==null) ? o.income/o.sales*100 : null; });
   const money = v=> v===null ? '-' : won(v);
@@ -2953,7 +2955,7 @@ function buildYearCompare(sc){
     return `<div class="yc-panel"><div class="yc-title">${title}</div><div class="yc-bars">${bars}</div><div class="yc-yrs">${all.map(x=>`<span>${x.lab}</span>`).join('')}</div><div class="yc-badges">${badges}</div></div>`;
   };
   const multi = scen.length>1;
-  const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false,false)}${panel('메인 사업소득금액','income',money,false,multi)}${panel('마진율','margin',pct,true,multi)}${panel('실부담 세금(국세+지방세)','tax',money,false,multi)}</div>`
+  const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false,false)}${panel('메인 사업소득금액','income',money,false,multi)}${panel('마진율','margin',pct,true,multi)}${panel('실부담 세금(국세+지방세+농특세)','tax',money,false,multi)}</div>`
 ;
   const dl = (key,fmt)=>{
     const a=d[N][key], b=d[N1][key], c=d[N2][key];
@@ -2968,9 +2970,9 @@ function buildYearCompare(sc){
     ${row('메인 사업장 매출','sales',money)}
     ${row('메인 사업소득금액','income',money)}
     ${row('마진율(메인 사업소득금액÷매출)','margin',pct)}
-    ${row('실부담 세금(국세+지방소득세)','tax',money)}
+    ${row('실부담 세금(국세+지방소득세+농특세)','tax',money)}
   </table>
-  <p style="font-size:11px;color:var(--sub);margin:4px 0 0;">※ ${N}년은 ①안(연간 추정 그대로) 기준이며 매출·사업소득금액은 메인 사업장만 비교합니다(추가 사업장·임대·근로 등 제외). 세금은 사업장별 구분이 불가해 종합소득세 전체 기준이며, 과거 연도는 입력한 국세(결정세액)에 지방소득세 10%를 더한 금액입니다. 과거 연도 매출을 입력하지 않으면 메인 사업장 손익계산서 매출로 표시됩니다. 마진율 증감은 %p입니다.</p>`;
+  <p style="font-size:11px;color:var(--sub);margin:4px 0 0;">※ ${N}년은 ①안(연간 추정 그대로) 기준이며 매출·사업소득금액은 메인 사업장만 비교합니다(추가 사업장·임대·근로 등 제외). 세금은 사업장별 구분이 불가해 종합소득세 전체 기준이며, 과거 연도는 입력한 국세(결정세액)에 지방소득세 10%와 농어촌특별세를 더한 금액입니다. 과거 연도 매출을 입력하지 않으면 메인 사업장 손익계산서 매출로 표시됩니다. 마진율 증감은 %p입니다.</p>`;
 }
 
 
@@ -3422,7 +3424,7 @@ document.getElementById('otherExpAuto').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
 document.getElementById('showLoan').addEventListener('change', renderAll);
 document.getElementById('loanTiming').addEventListener('change', renderAll);
-['pastSales1','pastIncome1','pastTax1','pastSales2','pastIncome2','pastTax2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.addEventListener('input', renderAll); el.addEventListener('blur', renderAll);} });
+['pastSales1','pastIncome1','pastTax1','pastRural1','pastSales2','pastIncome2','pastTax2','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.addEventListener('input', renderAll); el.addEventListener('blur', renderAll);} });
 document.getElementById('showPct').addEventListener('change', e=>{ state.showPct = e.target.checked; renderAll(); });
 
 document.querySelectorAll('.money-input').forEach(el=>{
