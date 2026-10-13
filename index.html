@@ -165,6 +165,16 @@ table.raw-table td{padding:4px 8px;font-size:11.5px;border-bottom:1px solid var(
 canvas{max-width:100%;}
 .chart-box{background:#fff;border:1px solid var(--line);border-radius:9px;padding:14px;}
 
+.coop-select{display:flex;gap:18px;align-items:center;margin:4px 0 10px;font-size:13.5px;font-weight:600;color:var(--navy);}
+.coop-select label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.coop-select input{width:auto;}
+.ptabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 2px;padding:8px 10px;background:#EEF3FA;border-radius:8px;}
+.ptab-label{font-size:12.5px;font-weight:700;color:var(--navy);}
+.ptab{padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font:inherit;font-size:12.5px;color:var(--ink);}
+.ptab.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.ptab small{opacity:.8;margin-left:3px;}
+.ptab-note{font-size:11.5px;color:var(--sub);flex-basis:100%;}
+input.ro{background:#f1f3f6;color:#555;}
 .actions{display:flex;justify-content:flex-end;gap:10px;margin:6px 0 26px;flex-wrap:wrap;align-items:center;}
 .actions label,.actions .small-btn,.actions .btn-primary{white-space:nowrap;}
 .btn-primary{
@@ -389,6 +399,11 @@ table.plr-tbl td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:
 table.plr-tbl td:first-child{text-align:left;color:#444;}
 table.plr-tbl tr.sum td{font-weight:700;color:var(--navy);background:#F7F5EF;}
 @media (max-width:820px){.plr-grid{grid-template-columns:1fr;}}
+.pb-title{font-size:12px;color:var(--sub);margin:14px 0 8px;}
+.pb-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+table.rep-table.pb{font-size:11.5px;break-inside:avoid;}
+table.rep-table.pb td{padding:5px 9px;}
+@media (min-width:821px){.pb-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));}}
 table.rep-table.wide{font-size:10.5px;}
 #estimateTable{font-size:12px;}
 #estimateTable th{padding:8px 10px;}
@@ -563,6 +578,22 @@ table.rep-table.loan td.num{text-align:right;}
   <div class="card">
     <h2><span class="step-no">1</span>사업자 정보</h2>
     <p class="hint">보고서 상단과 세액 계산 기준이 됩니다. 사업장이 2곳 이상이면 STEP 3 표의 "+ 사업소득 추가"에서 등록해 주세요.</p>
+    <div class="coop-select">
+      <label><input type="radio" name="bizMode" value="single" checked onchange="setCoopMode(false)"> 단독사업자</label>
+      <label><input type="radio" name="bizMode" value="coop" onchange="setCoopMode(true)"> 공동사업자 <span style="font-weight:400;color:var(--sub);font-size:12px;">(종합소득금액까지 동일 산출 → 지분율로 안분 → 구성원별 공제·세액 계산 → 합산)</span></label>
+    </div>
+    <div id="coopBox" style="display:none;margin:8px 0 14px;padding:12px 14px;background:var(--brass-light);border-radius:9px;">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px;">공동사업 구성원 · 손익분배비율(지분율)</div>
+      <table class="income-matrix" style="min-width:0;max-width:640px;">
+        <thead><tr><th style="width:120px;">구분</th><th>성명</th><th style="width:140px;">지분율</th><th style="width:40px;"></th></tr></thead>
+        <tbody id="partnerRows"></tbody>
+      </table>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
+        <button type="button" class="small-btn ghost" onclick="addPartner()">+ 구성원 추가</button>
+        <span id="shareHint" style="font-size:12px;"></span>
+      </div>
+      <div style="font-size:11.5px;color:var(--sub);margin-top:6px;">※ 사업소득금액은 손익분배비율로 배분됩니다(소득세법 §43). 임대·근로·연금·기타·금융소득도 같은 비율로 안분하므로, 특정 구성원만의 소득은 보고서에서 조정이 필요합니다.</div>
+    </div>
     <div class="grid cols-4">
       <div class="field"><label>대표자 성명</label><input type="text" id="ownerName" placeholder="홍길동"></div>
       <div class="field"><label>상호(메인 사업장명)</label><input type="text" id="bizName" placeholder="OO상회"></div>
@@ -621,6 +652,7 @@ table.rep-table.loan td.num{text-align:right;}
           <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome1"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastTax1"> <span id="pastTaxHint1" style="font-size:11px;color:var(--sub);"></span></td></tr>
       </table>
+      <div id="pastTaxCoop" style="display:none;"></div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sub);">자동조회 감면율(메인 사업장): <b id="rateDisplay" style="color:var(--brass);">-</b> <span style="color:#999;">(조특법 §7①, 2025.1.1. 개정 반영)</span></div>
   </div>
@@ -719,6 +751,7 @@ table.rep-table.loan td.num{text-align:right;}
       <div class="field"><label>이월결손금 공제(사업소득, §45)</label><input type="text" inputmode="decimal" class="money-input" id="nol" value="0"></div>
     </div>
 
+    <div id="partnerTabs" class="ptabs" style="display:none;"></div>
     <div class="step-subhead">소득공제</div>
     <div class="im-wrap">
     <table class="income-matrix ded-matrix">
@@ -850,6 +883,7 @@ table.rep-table.loan td.num{text-align:right;}
     <div class="rep-section">
       <h2 class="c-amber"><span class="h2-badge">🧮</span>3. <span class="yN">N</span>년 예상 종합소득세 - ①안(연간 추정) vs ②·③안(부족경비 반영)</h2>
       <table class="rep-table tax" id="scenarioTable"></table>
+      <div id="partnerBreak"></div>
     </div>
 
     <div class="rep-section">
@@ -1737,7 +1771,7 @@ function yellowUmbrellaDeduction(paid, bizIncome, rental){
   return { paid, limit, cap, deduction, over: Math.max(paid - deduction, 0) };
 }
 
-function computeScenario(extraExpense){
+function computeIncome(extraExpense){
   const {N} = getYears();
   const mult = adjMult();
   const y = state.years[N] || {};
@@ -1807,12 +1841,38 @@ function computeScenario(extraExpense){
   const otherMerged = extraBizIncomeTotal + otherIncomeSum + finIncluded;
   const incomeTotal = bizIncomeTotal + otherIncomeSum + finIncluded;   // 종합소득금액
 
+  return { sales, cogs, gross, sga, sgaBase, extraExpense, opIncome, nonOpInc, nonOpExp, pretax,
+    adjIn, adjOut, nol, taxAdj,
+    mainBizIncome, extraBizIncomeTotal, bizIncomeTotal, totalRevenue,
+    extraBizIncomes: state.extraBiz.map(b=> Number(b.income)||0),
+    wageGross, wageDeduction, wageIncome,
+    pensionGross, pensionDeductionAmt, pensionIncome,
+    otherGross, otherExpense, otherIncomeAmt, otherIncomeIncluded,
+    rentalGross, rentalExpense, rentalIncomeRaw, rentalIncome,
+    finGross, finOver, finIncluded, otherIncomeSum, otherMerged, incomeTotal, share: 1 };
+}
+
+/* 공동사업: 소득 항목을 지분율로 안분 (소득세법 §43 공동사업장 소득금액 손익분배비율 배분) */
+const INCOME_SCALE_KEYS = ['sales','cogs','gross','sga','sgaBase','extraExpense','opIncome','nonOpInc','nonOpExp','pretax','adjIn','adjOut','nol','taxAdj',
+  'mainBizIncome','extraBizIncomeTotal','bizIncomeTotal','totalRevenue','wageGross','wageDeduction','wageIncome','pensionGross','pensionDeductionAmt','pensionIncome',
+  'otherGross','otherExpense','otherIncomeAmt','otherIncomeIncluded','rentalGross','rentalExpense','rentalIncomeRaw','rentalIncome','finGross','finOver','finIncluded','otherIncomeSum','otherMerged','incomeTotal'];
+function scaleIncome(inc, share){
+  const o = Object.assign({}, inc);
+  INCOME_SCALE_KEYS.forEach(k=>{ if (typeof o[k]==='number') o[k] = inc[k]*share; });
+  o.extraBizIncomes = inc.extraBizIncomes.map(v=> v*share);
+  o.share = share;
+  return o;
+}
+
+/* 세액 계산: inc(소득 집계) + 입력값 조회 함수 get(id) → 소득공제·산출세액·감면·공제·결정세액 */
+function computeTax(inc, get){
+  const { bizIncomeTotal, rentalIncome, incomeTotal, finGross, finOver, mainBizIncome, otherIncomeSum } = inc;
   // 소득공제 (엑셀 "세액예상" 8~11행)
   /* 노란우산공제 소득공제(조특법 §86의3①): 납입액과 구간별 한도 중 적은 금액, 단 사업소득금액에서
      부동산임대업 소득금액을 뺀 금액을 넘지 못함. 구간은 해당 과세연도 사업소득금액(전 사업장 합산) 기준. */
-  const yu = yellowUmbrellaDeduction(num('yellowUmbrella'), bizIncomeTotal + rentalIncome, rentalIncome);
-  const dedBasic = num('comboDeduction'), dedPension = num('pensionContrib'),
-        dedYellow = yu.deduction, dedOther = num('otherDeduction');
+  const yu = yellowUmbrellaDeduction(get('yellowUmbrella'), bizIncomeTotal + rentalIncome, rentalIncome);
+  const dedBasic = get('comboDeduction'), dedPension = get('pensionContrib'),
+        dedYellow = yu.deduction, dedOther = get('otherDeduction');
   const comboDeduction = dedBasic + dedPension + dedYellow + dedOther;
 
   const taxBase = Math.max(incomeTotal - comboDeduction, 0);
@@ -1827,8 +1887,8 @@ function computeScenario(extraExpense){
     bizType: document.getElementById('bizType').value,
     bizSize: document.getElementById('bizSize').value,
     bizRegion: document.getElementById('bizRegion').value
-  }].concat(state.extraBiz.map(b=>({
-    income: Number(b.income)||0, bizType:b.bizType, bizSize:b.bizSize, bizRegion:b.bizRegion
+  }].concat(state.extraBiz.map((b,i)=>({
+    income: inc.extraBizIncomes[i]||0, bizType:b.bizType, bizSize:b.bizSize, bizRegion:b.bizRegion
   })));
   const long = bizLongOn();
   let reductionRaw = 0;
@@ -1840,13 +1900,13 @@ function computeScenario(extraExpense){
     reductionRaw += amt;
     bizReductionDetail.push({...b, share, rate, amt});
   });
-  const cap = Math.max(100000000 - num('decreasedEmp')*5000000, 0);
+  const cap = Math.max(100000000 - get('decreasedEmp')*5000000, 0);
   const reductionGross = Math.min(reductionRaw, cap);
 
   // 통합고용세액공제(당기·이월) - 최저한세·농특세 대상
-  const empCredit = num('empCredit'), empCreditCarry = num('empCreditCarry');
+  const empCredit = get('empCredit'), empCreditCarry = get('empCreditCarry');
   const empTotal = empCredit + empCreditCarry;
-  const socialCredit = num('crSocial');             // 사회보험료 세액공제(조특법 §30의4): 최저한세 대상, 농특세 비과세
+  const socialCredit = get('crSocial');             // 사회보험료 세액공제(조특법 §30의4): 최저한세 대상, 농특세 비과세
   const carryPool = empTotal + socialCredit;        // 최저한세 대상이면서 이월공제(조특법 §144)가 되는 세액공제
 
   /* 최저한세 (조특법 §132②, 엑셀 "세액예상" 23~28행과 동일한 계산)
@@ -1868,7 +1928,7 @@ function computeScenario(extraExpense){
   /* 공제 순서(소득세법 §60): 세액감면 → 이월공제가 없는 세액공제 → 이월공제가 있는 세액공제 */
   let remain = calcTax;
   const reduction = Math.min(reductionGross - exclReduction, remain); remain -= reduction;
-  const creditItems = CREDIT_FIELDS.map(([id,label])=> ({ id, label, amt: num(id) }));
+  const creditItems = CREDIT_FIELDS.map(([id,label])=> ({ id, label, amt: get(id) }));
   const otherCreditsRaw = creditItems.reduce((s,c)=> s + c.amt, 0);
   const otherCredit = Math.min(otherCreditsRaw, remain); remain -= otherCredit;
   const poolUsed = Math.min(carryPool - exclEmp, remain); remain -= poolUsed;
@@ -1877,7 +1937,7 @@ function computeScenario(extraExpense){
   const empCarryNext = carryPool - poolUsed;        // 다음 연도로 이월되는 세액공제(통합고용·사회보험료)
   const totalCredit = reduction + otherCredit + poolUsed;
 
-  const penalty = num('penalty');
+  const penalty = get('penalty');
   const decided = remain + penalty;                 // 결정세액(종합소득세)
 
   // 개인지방소득세: 결정세액의 10% (지방세법 §92·§93, 엑셀 "세액예상" 40행)
@@ -1886,20 +1946,12 @@ function computeScenario(extraExpense){
   const ruralTax = empUsed * 0.2;
 
   const totalBurden = decided + localDecided + ruralTax;
-  const midterm = num('midterm'), withhold = num('withhold'), withholdLocal = num('withholdLocal');
+  const midterm = get('midterm'), withhold = get('withhold'), withholdLocal = get('withholdLocal');
   const prepaid = midterm + withhold + withholdLocal;
   const netPayable = totalBurden - prepaid;
   const burdenRate = incomeTotal>0 ? totalBurden/incomeTotal : 0;
 
-  return { sales, cogs, gross, sga, sgaBase, extraExpense, opIncome, nonOpInc, nonOpExp, pretax,
-    adjIn, adjOut, nol, taxAdj,
-    mainBizIncome, extraBizIncomeTotal, bizIncomeTotal, totalRevenue,
-    wageGross, wageDeduction, wageIncome,
-    pensionGross, pensionDeductionAmt, pensionIncome,
-    otherGross, otherExpense, otherIncomeAmt, otherIncomeIncluded,
-    rentalGross, rentalExpense, rentalIncomeRaw, rentalIncome,
-    finGross, finOver, otherIncomeSum, otherMerged, incomeTotal,
-    dedBasic, dedPension, dedYellow, dedOther, comboDeduction,
+  return { dedBasic, dedPension, dedYellow, dedOther, comboDeduction,
     yuPaid: yu.paid, yuLimit: yu.limit, yuCap: yu.cap, yuOver: yu.over,
     taxBase, calcTax, methodUsed, rate: marginalRate(taxBase),
     reductionGross, reduction, creditItems, otherCreditsRaw, otherCredit,
@@ -1910,6 +1962,146 @@ function computeScenario(extraExpense){
     bizReductionDetail };
 }
 
+/* 공동사업: 구성원별 세액 결과를 합산 */
+const TAX_SUM_KEYS = ['dedBasic','dedPension','dedYellow','dedOther','comboDeduction','yuPaid','yuLimit','yuCap','yuOver','taxBase','calcTax',
+  'reductionGross','reduction','otherCreditsRaw','otherCredit','empCredit','empCreditCarry','empTotal','empUsed','socialCredit','socialUsed','poolUsed','empCarryNext','totalCredit',
+  'minTaxCalc','minTax','minTaxRoom','minTaxSubject','minTaxExcluded','exclEmp','exclReduction','penalty','decided','localDecided','ruralTax','totalBurden',
+  'midterm','withhold','withholdLocal','prepaid','netPayable'];
+function mergeTax(results, inc){
+  const m = {};
+  TAX_SUM_KEYS.forEach(k=> m[k] = results.reduce((a,r)=> a + (Number(r[k])||0), 0));
+  m.creditItems = CREDIT_FIELDS.map(([id,label],i)=> ({ id, label, amt: results.reduce((a,r)=> a + r.creditItems[i].amt, 0) }));
+  m.methodUsed = '공동사업 구성원별 계산 합계';
+  m.rate = null;
+  m.minTaxOn = results[0].minTaxOn;
+  m.bizReductionDetail = [].concat(...results.map(r=> r.bizReductionDetail));
+  m.burdenRate = inc.incomeTotal>0 ? m.totalBurden/inc.incomeTotal : 0;
+  return m;
+}
+
+/* ============================================================
+   공동사업자: 상태·입력 동기화
+   - state.coop.on: 단독(false)/공동(true)
+   - state.coop.partners: [{id,name,share(%),inputs:{세액 입력 id: 값}, pastTax1, pastTax2}]
+   - STEP 4의 세액 입력란은 '선택된 구성원'의 값을 보여주며, 바뀔 때마다 state에 저장
+============================================================ */
+const PARTNER_TAX_IDS = ['comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
+  'crChild','crBook','crStd','empCredit','empCreditCarry','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit','decreasedEmp',
+  'penalty','midterm','withhold','withholdLocal'];
+state.coop = { on:false, active:0, partners:[] };
+let partnerSeq = 0;
+function coopOn(){ return !!(state.coop && state.coop.on && state.coop.partners.length>=2); }
+function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, pastTax1:'', pastTax2:'' }; }
+function partnerVal(p, id){ const v = p.inputs ? p.inputs[id] : undefined; return v==null ? 0 : (Number(v)||0); }
+function activePartner(){ return state.coop.partners[state.coop.active] || null; }
+function syncPartnerInputsFromDom(){
+  const p = activePartner(); if (!p) return;
+  PARTNER_TAX_IDS.forEach(id=>{ const el=document.getElementById(id); if (el) p.inputs[id] = unfmtMoney(el.value); });
+}
+function loadPartnerInputsToDom(){
+  const p = activePartner(); if (!p) return;
+  PARTNER_TAX_IDS.forEach(id=>{ const el=document.getElementById(id); if (!el) return; const v = partnerVal(p,id); el.value = v ? fmtMoney(v) : (el.classList.contains('money-input') ? '0' : '0'); });
+}
+function setCoopMode(on){
+  if (on && state.coop.partners.length<2){
+    // 기존 단독 입력값은 대표(첫 구성원)에게 승계
+    const owner = document.getElementById('ownerName').value || '대표';
+    if (!state.coop.partners.length){
+      const p0 = newPartner(owner, 50);
+      PARTNER_TAX_IDS.forEach(id=>{ const el=document.getElementById(id); if (el) p0.inputs[id] = unfmtMoney(el.value); });
+      p0.pastTax1 = document.getElementById('pastTax1').value; p0.pastTax2 = document.getElementById('pastTax2').value;
+      state.coop.partners.push(p0);
+    }
+    while (state.coop.partners.length<2) state.coop.partners.push(newPartner('', 50));
+  }
+  state.coop.on = on;
+  state.coop.active = 0;
+  document.getElementById('coopBox').style.display = on ? '' : 'none';
+  document.getElementById('partnerTabs').style.display = on ? '' : 'none';
+  document.getElementById('pastTaxCoop').style.display = on ? '' : 'none';
+  ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly = on; el.classList.toggle('ro', on); });
+  if (on){ loadPartnerInputsToDom(); }
+  renderPartnerTable(); renderPartnerTabs(); renderPastTaxCoop();
+  renderAll();
+}
+function addPartner(){ state.coop.partners.push(newPartner('', 0)); renderPartnerTable(); renderPartnerTabs(); renderPastTaxCoop(); renderAll(); }
+function removePartner(id){
+  if (state.coop.partners.length<=2) return;
+  const idx = state.coop.partners.findIndex(p=> p.id===id);
+  if (idx<0) return;
+  state.coop.partners.splice(idx,1);
+  if (state.coop.active >= state.coop.partners.length) state.coop.active = 0;
+  loadPartnerInputsToDom(); renderPartnerTable(); renderPartnerTabs(); renderPastTaxCoop(); renderAll();
+}
+function updatePartner(id, field, val){
+  const p = state.coop.partners.find(x=> x.id===id); if (!p) return;
+  if (field==='share') p.share = Math.max(Math.min(parseFloat(String(val).replace(/[^0-9.]/g,''))||0, 100), 0);
+  else p[field] = val;
+  if (field==='name'){ renderPartnerTabs(); }
+  renderShareHint(); renderPastTaxCoop(); renderAll();
+}
+function selectPartner(idx){
+  syncPartnerInputsFromDom();
+  state.coop.active = idx;
+  loadPartnerInputsToDom();
+  renderPartnerTabs(); renderAll();
+}
+function shareTotal(){ return state.coop.partners.reduce((a,p)=> a + (Number(p.share)||0), 0); }
+function renderShareHint(){
+  const el = document.getElementById('shareHint'); if (!el) return;
+  const t = shareTotal();
+  el.innerHTML = Math.abs(t-100)<0.01 ? '<span style="color:#2E6B4F;">지분율 합계 100%</span>' : `<span style="color:#9E3B33;font-weight:700;">지분율 합계 ${t.toFixed(1)}% — 100%가 되도록 입력하세요</span>`;
+}
+function renderPartnerTable(){
+  const tb = document.getElementById('partnerRows'); if (!tb) return;
+  tb.innerHTML = state.coop.partners.map((p,i)=> `<tr>
+    <td style="color:var(--sub);">${i===0?'대표(메인)':'공동사업자 '+i}</td>
+    <td><input type="text" value="${escAttr(p.name)}" placeholder="성명" oninput="updatePartner('${p.id}','name',this.value)"></td>
+    <td><input type="text" inputmode="decimal" value="${p.share}" style="text-align:right;" oninput="updatePartner('${p.id}','share',this.value)"> %</td>
+    <td>${i>=2?`<button type="button" class="im-x" onclick="removePartner('${p.id}')" title="삭제">×</button>`:''}</td></tr>`).join('');
+  renderShareHint();
+}
+function renderPartnerTabs(){
+  const el = document.getElementById('partnerTabs'); if (!el) return;
+  if (!coopOn()){ el.style.display='none'; return; }
+  el.style.display='';
+  el.innerHTML = `<span class="ptab-label">입력 대상 구성원:</span>` + state.coop.partners.map((p,i)=>
+    `<button type="button" class="ptab ${i===state.coop.active?'on':''}" onclick="selectPartner(${i})">${escAttr(p.name||('구성원'+(i+1)))} <small>${p.share}%</small></button>`).join('')
+    + `<span class="ptab-note">소득공제·세액공제·기납부세액은 구성원별로 입력합니다. 탭을 바꿔 각자 금액을 넣어 주세요.</span>`;
+}
+function renderPastTaxCoop(){
+  const el = document.getElementById('pastTaxCoop'); if (!el) return;
+  if (!coopOn()){ el.style.display='none'; return; }
+  el.style.display='';
+  const {N1,N2} = getYears();
+  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 국세(결정세액) — 위 표의 국세 칸은 합계로 자동 계산됩니다</div>
+    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세</th><th>${N1}년 국세</th></tr>${
+    state.coop.partners.map(p=> `<tr><th>${escAttr(p.name||'-')}</th>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax2||'')}" oninput="updatePartner('${p.id}','pastTax2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax1||'')}" oninput="updatePartner('${p.id}','pastTax1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td></tr>`).join('')}</table>`;
+  // 합계를 pastTax1/2에 반영
+  [['pastTax1','pastTax1'],['pastTax2','pastTax2']].forEach(([id,f])=>{
+    const any = state.coop.partners.some(p=> p[f]!=='' && p[f]!=null);
+    const sum = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p[f]||''), 0);
+    document.getElementById(id).value = any ? fmtMoney(sum) : '';
+  });
+}
+
+/* 단독/공동 공통 진입점 */
+function computeScenario(extraExpense){
+  const inc = computeIncome(extraExpense);
+  if (!coopOn()){
+    return Object.assign(inc, computeTax(inc, id=> num(id)), { coop:false });
+  }
+  syncPartnerInputsFromDom();
+  const parts = state.coop.partners;
+  const results = parts.map(p=>{
+    const pi = scaleIncome(inc, (Number(p.share)||0)/100);
+    const t = computeTax(pi, id=> partnerVal(p, id));
+    return Object.assign({ partner: p }, pi, t);
+  });
+  return Object.assign(inc, mergeTax(results, inc), { coop:true, partners: results });
+}
 /* ============================================================
    7. 렌더링
 ============================================================ */
@@ -2367,7 +2559,7 @@ function buildTaxTable(sc){
   if (any(s=> s.yuPaid)) h += row('', '노란우산공제', s=> won(s.dedYellow) + (s.yuOver>0 ? `<br><span style="font-size:11px;color:var(--sub);">(납입 ${won(s.yuPaid)} · 한도 ${won(Math.min(s.yuLimit,s.yuCap))})</span>` : ''), '조특법 §86의3 · 납입액과 구간별 한도 중 적은 금액');
   if (any(s=> s.dedOther)) h += row('', '기타공제', s=> won(s.dedOther));
   h += row('strong', '과세표준', s=> won(s.taxBase), sc[0].s.methodUsed);
-  h += row('', '(×) 세율', s=> (s.rate*100).toFixed(0)+'%', '소득세법 §55');
+  h += row('', '(×) 세율', s=> s.rate==null ? '구성원별' : (s.rate*100).toFixed(0)+'%', '소득세법 §55');
   h += row('strong', '산출세액', s=> won(s.calcTax));
   h += row('', '중소기업특별세액감면', s=> won(s.reduction), '조특법 §7');
   sc[0].s.creditItems.forEach((c,i)=>{
@@ -2723,12 +2915,50 @@ function renderPLReview(sc){
   </div>`;
 }
 
+/* 보고서 3 하단: 공동사업 구성원별 세액 안분표 (안별) */
+function renderPartnerBreak(sc){
+  const box = document.getElementById('partnerBreak'); if (!box) return;
+  if (!sc[0].s.coop){ box.innerHTML=''; return; }
+  const {N} = getYears();
+  const rows = [
+    ['지분율', r=> (r.partner.share)+'%', true],
+    ['종합소득금액(안분)', r=> won(r.incomeTotal)],
+    ['소득공제 합계', r=> won(r.comboDeduction)],
+    ['과세표준', r=> won(r.taxBase), true],
+    ['(×) 세율', r=> (r.rate*100).toFixed(0)+'%'],
+    ['산출세액', r=> won(r.calcTax), true],
+    ['세액감면·공제 합계', r=> won(r.totalCredit)],
+    ['결정세액(종합소득세)', r=> won(r.decided), true],
+    ['개인지방소득세', r=> won(r.localDecided)],
+    ['농어촌특별세', r=> won(r.ruralTax)],
+    ['총부담세액', r=> won(r.totalBurden), true],
+    ['기납부세액', r=> won(r.prepaid)],
+    ['납부할 세액', r=> won(r.netPayable), true],
+  ];
+  const tbl = (x)=>{
+    const s = x.s, ps = s.partners;
+    const head = `<thead><tr><th>${x.key}안 ${x.extra>0?'(부족경비 '+won(x.extra)+')':''}</th>${ps.map(r=> `<th>${esc(r.partner.name||'-')}</th>`).join('')}<th>합계</th></tr></thead>`;
+    const body = rows.map(([label,fn,strong])=>{
+      const cells = ps.map(r=> `<td>${fn(r)}</td>`).join('');
+      let tot = '';
+      if (label==='지분율') tot = shareTotal()+'%';
+      else if (label==='(×) 세율') tot = '-';
+      else { const k = {'종합소득금액(안분)':'incomeTotal','소득공제 합계':'comboDeduction','과세표준':'taxBase','산출세액':'calcTax','세액감면·공제 합계':'totalCredit','결정세액(종합소득세)':'decided','개인지방소득세':'localDecided','농어촌특별세':'ruralTax','총부담세액':'totalBurden','기납부세액':'prepaid','납부할 세액':'netPayable'}[label]; tot = won(s[k]); }
+      return `<tr class="${strong?'strong':''}"><td>${label}</td>${cells}<td>${tot}</td></tr>`;
+    }).join('');
+    return `<table class="rep-table tax pb">${head}<tbody>${body}</tbody></table>`;
+  };
+  box.innerHTML = `<div class="pb-title">공동사업 구성원별 세액 안분 — 종합소득금액을 지분율로 배분한 뒤 각자 소득공제·세액공제를 적용하고 합산합니다 (소득세법 §43)</div>
+    <div class="pb-grid">${sc.map(tbl).join('')}</div>`;
+}
+
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
   const ownerName = document.getElementById('ownerName').value || '대표자';
   const bizName = document.getElementById('bizName').value || '개인사업자';
-  document.getElementById('repCompanyName').textContent = `${bizName} (대표자 ${ownerName})`;
+  const coopTag = coopOn() ? ` · 공동사업 ${state.coop.partners.map(p=> `${p.name||'-'} ${p.share}%`).join(' / ')}` : '';
+  document.getElementById('repCompanyName').textContent = `${bizName} (대표자 ${ownerName}${coopTag})`;
   document.getElementById('repMeta').textContent =
     `기준일자: ${document.getElementById('baseDate').value||'-'} · 귀속연도: ${document.getElementById('taxPeriod').value}`;
 
@@ -2801,6 +3031,7 @@ function renderReport(sc){
 
   document.querySelectorAll('#incomeTable tr').forEach(tr=>{ if (tr.cells[2] && tr.cells[2].tagName==='TD') tr.cells[2].classList.add('memo'); });
   setTableWithCaption('scenarioTable', buildTaxTable(sc), 3);
+  renderPartnerBreak(sc);
 
   const extras = sc.slice(1).filter(x=> x.extra>0);
   document.getElementById('repSavingsSection').innerHTML = extras.length ? `
@@ -2956,6 +3187,7 @@ document.querySelectorAll('.drive-select-btn').forEach(btn=>{
 const WORK_SKIP = new Set(['gClientId','gApiKey','driveSearchTerm','file1','file2','workFile']);
 const WORK_VERSION = 1;
 function saveWork(){
+  if (coopOn()) syncPartnerInputsFromDom();
   const fields = {};
   document.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
     if (WORK_SKIP.has(el.id) || el.id==='incEstimateDetail' || el.type==='file' || /_(cur|pri)Year$/.test(el.id)) return;
@@ -2966,7 +3198,7 @@ function saveWork(){
     app:'AnnualReportIndividual', version:WORK_VERSION, savedAt:new Date().toISOString(),
     fields, touched, extraBizSeq,
     state:{ years:state.years, extraBiz:state.extraBiz, rawDetail:state.rawDetail, adj:state.adj,
-            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct }
+            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct, coop:state.coop }
   };
   const safe = s=> String(s||'').replace(/[\\/:*?"<>|]/g,'').trim();
   const name = [safe(document.getElementById('bizName').value)||safe(document.getElementById('ownerName').value)||'작업',
@@ -2991,6 +3223,8 @@ function loadWork(data){
   state.confirmed = st.confirmed || {};
   state.incEstimateDetail = st.incEstimateDetail !== false;
   state.showPct = st.showPct !== false;
+  state.coop = st.coop && Array.isArray(st.coop.partners) ? { on:!!st.coop.on, active:0, partners: st.coop.partners } : { on:false, active:0, partners:[] };
+  partnerSeq = Math.max(partnerSeq, ...state.coop.partners.map(p=> parseInt(String(p.id).replace(/\D/g,''),10)||0), 0);
   extraBizSeq = Math.max(parseInt(data.extraBizSeq,10)||0, ...state.extraBiz.map(b=> parseInt(String(b.id).replace(/\D/g,''),10)||0), 0);
   ['taxPeriod','baseMonths','baseDate'].forEach(id=> delete document.getElementById(id).dataset.touched);
   (data.touched||[]).forEach(id=>{ const el=document.getElementById(id); if (el) el.dataset.touched='1'; });
@@ -3010,6 +3244,9 @@ function loadWork(data){
   const s1=document.getElementById('slot1');
   if (s1 && Object.keys(state.years).length) s1.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0;">※ 저장된 작업 파일의 손익 자료가 반영되어 있습니다. 엑셀을 다시 올리면 해당 연도 자료가 교체됩니다.</div>';
   renderExtraBizList();
+  const coopRadio = document.querySelector(`input[name=bizMode][value=${state.coop.on?'coop':'single'}]`); if (coopRadio) coopRadio.checked = true;
+  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly=true; el.classList.add('ro'); }); loadPartnerInputsToDom(); }
+  renderPartnerTable(); renderPartnerTabs(); renderPastTaxCoop();
   renderAll();
 }
 document.getElementById('workFile').addEventListener('change', e=>{
