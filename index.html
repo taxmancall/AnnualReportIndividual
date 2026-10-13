@@ -424,7 +424,7 @@ table.plr-tbl tr.sum td{font-weight:700;color:var(--navy);background:#F7F5EF;}
 .pb-share{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:var(--brass);border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:middle;}
 .coop-tag{font-size:12px;color:var(--brass);margin-left:6px;}
 .pb-grid{display:grid;grid-template-columns:1fr;gap:12px;}
-table.rep-table.pb{font-size:11.5px;break-inside:avoid;}
+table.rep-table.pb{font-size:11.5px;}
 table.rep-table.pb td{padding:5px 9px;}
 @media (min-width:821px){.pb-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));}}
 table.rep-table.wide{font-size:10.5px;}
@@ -3086,11 +3086,10 @@ function renderPartnerBreak(sc){
   for (let i=0;i<n;i++){
     const p = sc[0].s.partners[i].partner;
     const psc = sc.map(x=> Object.assign({}, x, { s: x.s.partners[i] }));
-    h += `<div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div>
-      <table class="rep-table tax pb">${buildTaxTable(psc)}</table>`;
+    h += `<table class="rep-table tax pb"><caption><div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div></caption>${buildTaxTable(psc)}</table>`;
   }
   box.innerHTML = h;
-  // 인쇄용: 제목·머리글·첫 행 묶음
+  // 인쇄용: 구성원 제목·머리글·첫 행을 한 묶음으로(제목만 쪽 끝에 남지 않게)
   box.querySelectorAll('table.pb').forEach(t=> groupHeadForPrint(t, 3, null));
 }
 
@@ -3366,8 +3365,6 @@ function printWithWork(){
   document.title = reportFileBase();            // PDF 저장 시 기본 파일명 = 상호_N년도_연간추정보고서
   const restore = ()=>{ document.title = prev; window.removeEventListener('afterprint', restore); };
   window.addEventListener('afterprint', restore);
-  setTimeout(()=> window.print(), 600);
-}
   setTimeout(()=> window.print(), 600);
 }
 function loadWork(data){
