@@ -238,6 +238,7 @@ table.income-matrix input.money-input:disabled{background:#F5F6F4;color:var(--in
 #report caption{caption-side:top;text-align:left;padding:0;}
 #report thead.thead-repeat{display:none;}
 #report tr.cap-row,#report tr.hdr-row,#report tbody.tb-head tr:not(:last-child){break-after:avoid;}
+#report tbody.grp{break-inside:avoid;}
 #report tr.cap-row td{padding:0 0 8px!important;border:0!important;background:#fff!important;text-align:left!important;color:inherit;}
 #report tr.cap-row:hover td{background:#fff!important;}
 #report tr.hdr-row th{background:var(--navy);}
@@ -396,6 +397,11 @@ table.rep-table.loan td.num{text-align:right;}
 .rep-stamp-area{display:flex;justify-content:flex-end;margin-top:18px;}
 .checklist-intro{font-size:12.5px;color:var(--sub);margin-bottom:14px;line-height:1.7;}
 .checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+#smeCard{grid-column:1 / -1;}
+.sme-tbl{width:100%;border-collapse:collapse;margin:6px 0 2px;font-size:11.5px;}
+.sme-tbl th{background:#EEF1F5;color:var(--navy);font-weight:600;padding:4px 8px;text-align:left;}
+.sme-tbl td{padding:4px 8px;border-bottom:1px solid var(--line);}
+.sme-tbl td:nth-child(2),.sme-tbl td:nth-child(4){font-weight:700;color:var(--navy);white-space:nowrap;}
 .checklist-card{border:1px solid var(--line);border-radius:9px;padding:14px 16px;background:#FCFBF7;break-inside:avoid;}
 .checklist-card h3{margin:0 0 8px;font-size:13px;color:var(--navy);display:flex;align-items:center;gap:7px;}
 .checklist-card h3 .ico{width:34px;height:34px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15);}
@@ -899,7 +905,7 @@ table.rep-table.loan td.num{text-align:right;}
         <div class="checklist-card" id="smeCard">
           <h3><span class="ico c6">🏷️</span>중소기업특별세액감면 · 소기업 기준과 장수성실중소기업</h3>
           <ul id="smeChecklist"></ul>
-          <div class="law">근거: 조특법 §7, 같은 법 시행령 §6⑤(중소기업기본법 시행령 별표 3 준용). 장수성실중소기업 요건은 원문 확인 필요.</div>
+          <div class="law">근거: 조특법 §7, 같은 법 시행령 §6⑤, 중소기업기본법 시행령 별표 3</div>
         </div>
       </div>
     </div>
@@ -2403,19 +2409,22 @@ function renderLoanSection(sc){
   const tips = timing==='before' ? [tipBefore] : timing==='after' ? [tipAfter] : [tipBefore, tipAfter];
 
   const lab = n=> n;
-  const insTable = `<table class="rep-table loan ins"><caption><div class="loan-sub">④ 소득금액 확정 후 건강보험료·국민연금 조절</div></caption>
-    <thead><tr><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr></thead><tbody>
+  const insTable = `<table class="rep-table loan ins">
+    <tbody class="tb-head grp"><tr class="cap-row"><td colspan="3"><div class="loan-sub">④ 소득금액 확정 후 건강보험료·국민연금 조절</div></td></tr>
+    <tr class="hdr-row"><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr>
     <tr><td rowspan="2" class="ins-k">건강보험료</td>
       <td><b>지역가입자</b>(4대보험 가입 직원이 없는 개인사업자 대표)<br>${N+1}년 5월 종합소득세 신고 → 국세청 자료가 ${N+1}년 10월 말경 공단에 전달 → <b>${N+1}년 11월 보험료부터 ${N}년 귀속 소득이 반영</b>되어 ${N+2}년 10월까지 적용됩니다.</td>
       <td>소득(사업·임대 등 종합소득)과 재산·자동차를 합산해 부과하므로, 확정 소득금액이 낮아지면 ${N+1}년 11월부터 납부액이 줄고 높아지면 늘어납니다. 휴·폐업 등으로 사업소득이 중단·감소하면 공단에 소득 조정을 신청할 수 있고, 조정받은 해의 보험료는 다음 해 11월에 국세청 확정 소득으로 정산(추가 부과 또는 환급)됩니다.</td></tr>
     <tr><td><b>직장가입자</b>(4대보험 가입 직원이 있는 개인사업자 대표)<br>대표 본인의 보수월액은 해당 사업장 사업소득 기준입니다. ${N}년 귀속 보수총액(사업소득)을 <b>${N+1}년 5월 31일까지</b> 공단에 신고하면 <b>${N+1}년 6월 보험료부터</b>, 성실신고확인대상자는 <b>6월 30일까지</b> 신고하면 <b>${N+1}년 7월부터</b> 정산·변경된 보수월액이 적용됩니다.</td>
       <td>사업소득금액이 낮아지면 보수월액과 보험료가 줄고 높아지면 늘어납니다. 재산·자동차는 반영되지 않습니다. 정산 추가보험료는 일시납 고지되며 당월 보험료 이상이면 12회 이내 분할납부 신청이 가능합니다. 보수 외 소득(임대·이자·배당·기타 등)이 연 2,000만원을 넘으면 초과분에 소득월액보험료가 별도 부과되며(국민건강보험법 §71①, 시행령 §41④), 이 소득은 ${N+1}년 11월부터 ${N}년 귀속 자료가 반영됩니다(시행령 §41③).</td></tr>
+    </tbody>
+    <tbody class="grp">
     <tr><td rowspan="2" class="ins-k">국민연금</td>
       <td><b>지역가입자</b>(4대보험 가입 직원이 없는 개인사업자 대표)<br>${N+1}년 5~6월 신고 후 ${N+1}년 7월부터 신고소득월액(연 소득금액 ÷ 12)이 갱신되어 ${N+2}년 6월까지 적용됩니다.</td>
       <td>소득이 낮아지면 납부액과 장래 연금액이 함께 줄고, 높아지면 함께 늘어납니다(기준소득월액 상·하한 범위 내 · 2025.7~2026.6 기준 하한 40만원·상한 637만원).</td></tr>
     <tr><td><b>사업장가입자</b>(4대보험 가입 직원이 있는 개인사업자 대표 — 1인 이상 근로자를 고용한 사업장의 사업주는 사업장가입자)<br>대표 본인은 ${N}년 귀속 사업소득금액(총수입금액 − 필요경비, 이월결손금 공제 전, 부동산임대소득 포함)을 ${N+1}년 5월 말까지(성실신고확인대상자는 6월 말까지) 공단에 소득총액 신고 → 6월 중순 결정 통지 → <b>${N+1}년 7월부터 ${N+2}년 6월까지 적용</b>됩니다.</td>
       <td>기준소득월액 = 전년도 소득총액 ÷ 전년도 근무일수 × 30. 소득금액이 낮아지면 기준소득월액·납부액·장래 연금액이 함께 줄고, 높아지면 함께 늘어납니다(상·하한 범위 내). 직원분 보험료는 사업주와 직원이 나누어 부담합니다.</td></tr>
-  </tbody></table>`;
+    </tbody></table>`;
 
   sec.innerHTML = `
     <h2 class="c-teal"><span class="h2-badge">🏦</span>6. 소득 확정에 따른 대출·사회보험료 점검</h2>
@@ -2441,7 +2450,6 @@ function renderLoanSection(sc){
     ${insTable}
     <div class="loan-note">※ 개인사업자 대표는 4대보험에 가입한 직원이 없으면 지역가입자, 있으면 직장(사업장)가입자입니다. 다른 직장에 근로자로 함께 가입돼 있는 경우는 구조가 달라 별도 확인이 필요합니다. 반영 시기·보험료율·기준소득월액 상·하한은 매년 달라지므로 국민건강보험공단·국민연금공단 안내로 최종 확인하시기 바랍니다.<br>근거: 국민건강보험공단 「소득 부과 건강보험료 조정·정산제도 안내」·건강보험 웹진(2022.11), 국민건강보험법 시행령 §41, 국민연금공단 「2026 사업장 실무안내」·「사업장에서 꼭 알아두어야 할 국민연금」, 개인사업장 사용자 건강·장기요양보험료 연말정산 안내(공단 안내 · 위하고 도움말 전재).</div>
   `;
-  const insEl = sec.querySelector('table.ins'); if (insEl) groupHeadForPrint(insEl, 1, null);
 }
 
 
@@ -2565,12 +2573,19 @@ function renderSmeCard(sc){
   const long = bizLongOn();
   const rate = reductionRateFor(bizType, size, region, long);
   const {N} = getYears();
+  const chk = s1.incomeTotal<=100000000;
   ul.innerHTML = `
-    <li><b>소기업 판정(매출액 기준)</b> — 중소기업 중 매출액이 업종별 기준 이내이면 소기업입니다(조특법 시행령 §6⑤, 중소기업기본법 시행령 별표 3 준용): 제조업·전기가스수도 120억원 · 농업·광업·건설업 80억원 · 도소매·출판업 50억원 · 전문과학기술서비스업 30억원 · 숙박음식점업 10억원 이하 등. 그 밖의 업종은 별표 3의 해당 업종 기준을 확인하세요.</li>
-    <li>${N}년 추정 매출액 <b>${won(s1.sales)}원</b> · 현재 설정: <b>${size}</b> · ${region} · ${bizType}${long?' · 장수성실중소기업':''} → 적용 감면율 <b>${(rate*100).toFixed(1)}%</b>${rate===0?' (감면대상 업종 아님 또는 수도권 중기업)':''}</li>
-    <li><b>장수성실중소기업(감면율 110%)</b> — ① 해당 과세연도 개시일 현재 같은 업종을 10년 이상 계속 경영, ② 해당 과세연도 종합소득금액 1억원 이하, ③ 성실사업자 요건(신용카드·현금영수증 가맹, 복식부기 또는 간편장부 기장 신고, 사업용계좌 신고·사용 등) 충족 개인사업자. 세 요건을 모두 갖추면 감면율에 110%를 적용합니다.</li>
-    <li>${N}년 ①안 종합소득금액 ${won(s1.incomeTotal)}원은 ${s1.incomeTotal<=100000000 ? '1억원 이하이므로 10년 경영·성실사업자 요건을 갖추면 장수성실중소기업 적용 검토 대상입니다' : '1억원을 초과하여 장수성실중소기업 110% 적용 대상이 아닙니다'}.</li>
-    <li>감면 한도는 1억원이며 전년 대비 상시근로자가 감소하면 1명당 500만원씩 줄어듭니다. 감면 적용 시 최저한세(조특법 §132②)와 농어촌특별세를 함께 확인하세요.</li>`;
+    <li><b>소기업 판정 기준(매출액)</b> — 조특법 시행령 §6⑤(중소기업기본법 시행령 별표 3 준용)
+      <table class="sme-tbl">
+        <tr><th>업종</th><th>소기업 매출액</th><th>업종</th><th>소기업 매출액</th></tr>
+        <tr><td>제조업 · 전기·가스·수도업</td><td>120억원 이하</td><td>농업 · 광업 · 건설업</td><td>80억원 이하</td></tr>
+        <tr><td>도매·소매업 · 출판업</td><td>50억원 이하</td><td>전문·과학·기술서비스업</td><td>30억원 이하</td></tr>
+        <tr><td>숙박·음식점업 등</td><td>10억원 이하</td><td colspan="2" style="color:var(--sub);">그 밖의 업종은 별표 3의 해당 업종 기준 적용</td></tr>
+      </table></li>
+    <li><b>이 사업장</b> — ${N}년 추정 매출 <b>${won(s1.sales)}원</b> · 설정: ${size} · ${region} · ${bizType}${long?' · 장수성실중소기업':''} → 적용 감면율 <b>${(rate*100).toFixed(1)}%</b>${rate===0?' (감면대상 업종이 아니거나 수도권 중기업)':''}</li>
+    <li><b>장수성실중소기업(감면율 110%)</b> — ① 과세연도 개시일 현재 같은 업종 10년 이상 계속 경영 ② 해당 과세연도 종합소득금액 1억원 이하 ③ 성실사업자 요건(신용카드·현금영수증 가맹, 복식부기 또는 간편장부 기장 신고, 사업용계좌 신고·사용 등) 충족. 세 요건을 모두 갖추면 감면율의 110% 적용</li>
+    <li>${N}년 ①안 종합소득금액 ${won(s1.incomeTotal)}원 → <b style="color:${chk?'#2E6B4F':'#9E3B33'};">${chk ? '1억원 이하: 10년 경영·성실사업자 요건 충족 시 적용 검토' : '1억원 초과: 장수성실중소기업 적용 대상 아님'}</b></li>
+    <li>감면 한도 1억원(전년 대비 상시근로자 감소 시 1명당 500만원 차감) · 감면 적용 시 최저한세(조특법 §132②)·농어촌특별세 확인</li>`;
 }
 
 function renderReport(sc){
