@@ -411,6 +411,8 @@ table.rep-table tr.extra td.memo{color:#B4232C;font-weight:400;}
 .plr-flag.ok{background:#e3f3ec;color:#2E6B4F;}
 .plr-flag.warn{background:#fbeceb;color:#9E3B33;}
 .plr-flag.na{background:#eef1f5;color:#5d6b7c;}
+.ev-bar{height:9px;border-radius:4px;background:var(--navy);}
+.ev-bar.nq{background:#C65A3E;}
 table.plr-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;}
 table.plr-tbl th{background:#EEF1F5;color:var(--navy);font-weight:600;padding:4px 8px;text-align:left;}
 table.plr-tbl td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;}
@@ -706,6 +708,27 @@ table.rep-table.loan td.num{text-align:right;}
       </div>
     </div>
     <div id="adjPanelWrap"></div>
+  </div>
+
+  <!-- STEP 2-1: 증빙별 경비 집계 -->
+  <div class="card">
+    <h2><span class="step-no">2-1</span>증빙별 경비 집계 (기준일까지 실적 · 위하고 집계 금액)</h2>
+    <p class="hint">위하고에서 기준일(<span class="yN">N</span>.1.1 ~ 기준월 말)까지 수취한 증빙을 유형별 합계로 넣으세요. 손익계산서 경비와 비교해 "증빙 없는 경비"와 "카드 사용액 부족"을 보고서에 보여줍니다. 모르면 0으로 두면 됩니다.</p>
+    <div class="im-wrap">
+    <table class="income-matrix" style="min-width:0;">
+      <thead><tr><th style="width:140px;"></th><th>세금계산서·계산서<br><small>(매입)</small></th><th>신용·체크카드<br><small>(사업용)</small></th><th>현금영수증</th><th>인건비<br><small>(원천세 신고분)</small></th><th>기타<br><small>(간이영수증·무증빙)</small></th><th>합계</th></tr></thead>
+      <tbody>
+        <tr><th>수취 금액</th>
+          <td><input type="text" inputmode="decimal" class="money-input" id="evTax" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="evCard" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="evCash" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="evLabor" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="evOther" value="0"></td>
+          <td class="auto" id="evTotalCell">0</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div id="evHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:6px 0 0;"></div>
   </div>
 
   <!-- STEP 3: 소득별 자료 입력 -->
@@ -2220,6 +2243,7 @@ function renderAll(){
     renderDiligentCheck(s1);
     renderIncomePreview(s1);
     renderCoopSplitPreview(sc);
+    renderEvidenceHint();
     renderScenarioCards(sc);
     renderSavings(sc);
     renderCharts(sc);
@@ -2908,11 +2932,62 @@ function plrClassify(name){
   if (VARIABLE_COST_KEYS.some(k=> n.includes(normLabel(k)))) return 'variable';
   return 'other';
 }
+/* 증빙별 경비 집계: 기준일까지 실적 경비와 비교 */
+function evidenceStats(){
+  const {N} = getYears();
+  const ev = { tax:num('evTax'), card:num('evCard'), cash:num('evCash'), labor:num('evLabor'), other:num('evOther') };
+  const total = ev.tax+ev.card+ev.cash+ev.labor+ev.other;
+  const qualified = ev.tax+ev.card+ev.cash+ev.labor;
+  const hasDetail = hasAdjDetail(N);
+  const actSales = hasDetail ? sectionActual(N,'Ⅰ. 매출액') : ((state.years[N]||{})['Ⅰ. 매출액']||0);
+  const actExp = hasDetail ? (sectionActual(N,'Ⅱ. 매출원가') + sectionActual(N,'Ⅳ. 판매비와 관리비')) : (((state.years[N]||{})['Ⅱ. 매출원가']||0) + ((state.years[N]||{})['Ⅳ. 판매비와 관리비']||0));
+  const gap = actExp - qualified;        // 적격증빙으로 뒷받침되지 않는 경비
+  return { ev, total, qualified, actSales, actExp, gap, entered: total>0 };
+}
+function renderEvidenceHint(){
+  const e = evidenceStats();
+  const cell = document.getElementById('evTotalCell'); if (cell) cell.textContent = won(e.total);
+  const el = document.getElementById('evHint'); if (!el) return;
+  if (!e.entered){ el.innerHTML = '증빙 금액을 입력하면 기준일까지 실적 경비와 비교한 결과가 여기와 보고서(1-1 검토 항목)에 표시됩니다.'; return; }
+  const baseMonths = num('baseMonths') || 12;
+  el.innerHTML = `기준일까지 실적 경비(매출원가+판관비) <b>${won(e.actExp)}원</b> · 적격증빙 합계 <b>${won(e.qualified)}원</b>(${e.actExp>0?(e.qualified/e.actExp*100).toFixed(1):'-'}%) · 증빙 없는 경비 <b style="color:${e.gap>0?'#9E3B33':'#2E6B4F'};">${won(Math.max(e.gap,0))}원</b>`
+    + ` · 카드 사용액 ${won(e.ev.card)}원(실적 매출 ${won(e.actSales)}원의 ${e.actSales>0?(e.ev.card/e.actSales*100).toFixed(1):'-'}%)`;
+}
+function evidenceReviewHTML(sc){
+  const e = evidenceStats();
+  if (!e.entered) return '';
+  const {N} = getYears();
+  const baseMonths = num('baseMonths') || 12;
+  const s1 = sc[0].s;
+  const pct = (a,b)=> b>0 ? (a/b*100).toFixed(1)+'%' : '-';
+  const rows = [['세금계산서·계산서(매입)', e.ev.tax, true],['신용·체크카드(사업용)', e.ev.card, true],['현금영수증', e.ev.cash, true],['인건비(원천세 신고분)', e.ev.labor, true],['기타(간이영수증·무증빙)', e.ev.other, false]];
+  const mx = Math.max(...rows.map(r=> r[1]), 1);
+  const bars = rows.map(r=> `<tr><td>${r[0]}</td><td>${won(r[1])}</td><td>${pct(r[1], e.total)}</td><td style="text-align:left;"><div class="ev-bar ${r[2]?'q':'nq'}" style="width:${Math.max(r[1]/mx*100,1).toFixed(0)}%"></div></td></tr>`).join('');
+  const cardRatio = e.actSales>0 ? e.ev.card/e.actSales*100 : null;
+  const qRatio = e.actExp>0 ? e.qualified/e.actExp*100 : null;
+  const msgs = [];
+  if (e.ev.card===0) msgs.push(`<b>사업용 카드 사용액이 0원입니다.</b> 카드로 쓴 경비가 전혀 집계되지 않았다는 뜻으로, 경비가 부족한 가장 큰 원인입니다. 사업용 카드를 홈택스에 등록하고 사업 지출은 카드·현금영수증으로 결제해 주세요.`);
+  else if (cardRatio!==null && cardRatio<5) msgs.push(`<b>카드 사용액이 실적 매출의 ${cardRatio.toFixed(1)}%에 불과합니다.</b> 소모품·광고·접대·차량 등 일상 경비가 카드로 잡히지 않고 있어 경비 자체가 부족합니다.`);
+  if (e.gap>0) msgs.push(`장부상 경비 ${won(e.actExp)}원 중 <b>${won(e.gap)}원</b>은 적격증빙(세금계산서·카드·현금영수증·신고 인건비)으로 뒷받침되지 않습니다. 증빙을 보완하지 못하면 경비에서 빠지고, 3만원 초과 건은 증빙불비가산세(2%)까지 붙습니다.`);
+  if (qRatio!==null && qRatio>=90 && e.gap<=0) msgs.push(`적격증빙이 장부 경비의 ${qRatio.toFixed(0)}% 이상을 뒷받침하고 있습니다. 남은 기간 지출도 같은 방식으로 증빙을 챙겨 주세요.`);
+  if (e.ev.other>0) msgs.push(`기타(간이영수증·무증빙) ${won(e.ev.other)}원은 경비 인정이 어렵거나 가산세 대상입니다.`);
+  return `<div class="plr-item full">
+    <div class="plr-h"><span>⑦ 증빙별 경비 현황 (${N}.1.1~${baseMonths}월 말 실적)</span><span class="amt">적격증빙 ${won(e.qualified)}원 / 장부 경비 ${won(e.actExp)}원 ${qRatio!==null?`<span class="plr-flag ${qRatio>=90?'ok':'warn'}">${qRatio.toFixed(1)}%</span>`:''}</span></div>
+    <table class="plr-tbl">
+      <tr><th>증빙 유형</th><th style="text-align:right;">금액</th><th style="text-align:right;">구성비</th><th style="width:38%;">비중</th></tr>
+      ${bars}
+      <tr class="sum"><td>증빙 합계</td><td>${won(e.total)}</td><td>100%</td><td></td></tr>
+      <tr class="sum"><td>장부 경비(매출원가+판관비 실적) − 적격증빙 = 증빙 없는 경비</td><td>${won(e.gap)}</td><td>${pct(Math.max(e.gap,0), e.actExp)}</td><td style="text-align:left;color:${e.gap>0?'#9E3B33':'#2E6B4F'};">${e.gap>0?'증빙 보완 또는 경비 제외 필요':'적격증빙으로 충분히 뒷받침됨'}</td></tr>
+    </table>
+    <div class="plr-q">${msgs.map(m=> `<div>· ${m}</div>`).join('')}<div style="margin-top:4px;"><b>세금은 증빙 싸움입니다.</b> 모든 카드 사용이 경비는 아니지만, 카드·현금영수증 없이 쓴 사업 지출은 경비로 남지 않습니다. 남은 기간(${baseMonths>=12?'연말까지':baseMonths+1+'~12월'}) 지출은 사업용 카드와 세금계산서로 받아 주세요.</div></div>
+  </div>`;
+}
+
 function renderPLReview(sc){
   const box = document.getElementById('plReview');
   if (!box) return;
   const {N} = getYears();
-  if (!hasAdjDetail(N)){ box.innerHTML = ''; return; }
+  if (!hasAdjDetail(N)){ const ev = evidenceReviewHTML(sc); box.innerHTML = ev ? `<div class="plr-wrap"><div class="plr-title">📝 ${N}년 증빙별 경비 현황</div><div class="plr-grid">${ev}</div></div>` : ''; return; }
   const mult = adjMult();
   const s1 = sc[0].s;
   const sales = s1.sales;
@@ -2997,6 +3072,7 @@ function renderPLReview(sc){
         <div class="plr-sub">${personal.map(it=> esc(it.name)+' '+won(it.amt)+'원').join(' · ')}</div>
         <div class="plr-q"><b>이 금액은 사업용 지출인가요, 대표자 개인 지출인가요?</b> 개인 지출은 경비에서 빼고 인출금으로 정리해야 하며, 사업용 카드로 결제했더라도 사업관련성이 없으면 경비가 아닙니다.</div>
       </div>` : ''}
+      ${evidenceReviewHTML(sc)}
     </div>
   </div>`;
 }
@@ -3135,7 +3211,7 @@ function renderReport(sc){
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTax','evCard','evCash','evLabor','evOther']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('otherExpAuto').addEventListener('change', renderAll);
@@ -3272,16 +3348,26 @@ function saveWork(){
             confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct, coop:state.coop }
   };
   const safe = s=> String(s||'').replace(/[\\/:*?"<>|]/g,'').trim();
-  const name = [safe(document.getElementById('bizName').value)||safe(document.getElementById('ownerName').value)||'작업',
-                getYears().N+'년', '작업파일'].join('_') + '.json';
+  const name = reportFileBase() + '_작업파일.json';
   const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
+function reportFileBase(){
+  const safe = t=> String(t||'').replace(/[\\/:*?"<>|]/g,'').trim();
+  const biz = safe(document.getElementById('bizName').value) || safe(document.getElementById('ownerName').value) || '개인사업자';
+  return `${biz}_${getYears().N}년도_연간추정보고서`;
+}
 function printWithWork(){
   try{ saveWork(); }catch(e){ console.warn('작업 파일 저장 실패', e); }
+  const prev = document.title;
+  document.title = reportFileBase();            // PDF 저장 시 기본 파일명 = 상호_N년도_연간추정보고서
+  const restore = ()=>{ document.title = prev; window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  setTimeout(()=> window.print(), 600);
+}
   setTimeout(()=> window.print(), 600);
 }
 function loadWork(data){
