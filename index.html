@@ -165,6 +165,11 @@ table.raw-table td{padding:4px 8px;font-size:11.5px;border-bottom:1px solid var(
 canvas{max-width:100%;}
 .chart-box{background:#fff;border:1px solid var(--line);border-radius:9px;padding:14px;}
 
+.sc-partners{margin-top:10px;border-top:2px solid rgba(0,0,0,.08);padding-top:8px;}
+.sc-pt{font-size:11px;color:var(--sub);margin-bottom:4px;}
+.sc-p{background:rgba(255,255,255,.55);border-radius:7px;padding:6px 8px;margin-top:6px;}
+.sc-pn{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:2px;}
+.sc-p .kv{padding:3px 0;font-size:12px;}
 .coop-split{margin:10px 0 6px;padding:10px 12px;background:#EEF3FA;border-radius:8px;}
 .coop-split-t{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:6px;}
 .coop-select{display:flex;gap:18px;align-items:center;margin:4px 0 10px;font-size:13.5px;font-weight:600;color:var(--navy);}
@@ -1061,7 +1066,7 @@ const state = {
 };
 let extraBizSeq = 0;
 
-const won = n => (isFinite(n) ? Math.round(n).toLocaleString('ko-KR') : '0');
+const won = n => { if (!isFinite(n)) return '0'; const r = Math.round(n); return (r===0 ? 0 : r).toLocaleString('ko-KR'); };
 
 /* ============================================================
    0. 동적 연도 (N = 결산연도, N-1, N-2)
@@ -2280,14 +2285,21 @@ function scenarioCardHTML(title, desc, s, cls){
     <div class="kv"><span class="l">종합소득금액</span><span class="v">${won(s.incomeTotal)}원</span></div>
     <div class="kv"><span class="l">종합소득 과세표준</span><span class="v">${won(s.taxBase)}원</span></div>
     <div class="kv"><span class="l">산출세액</span><span class="v">${won(s.calcTax)}원</span></div>
-    <div class="kv"><span class="l">중소기업특별세액감면</span><span class="v">-${won(s.reduction)}원</span></div>
-    <div class="kv"><span class="l">세액공제 합계</span><span class="v">-${won(s.otherCredit+s.poolUsed)}원</span></div>
+    <div class="kv"><span class="l">중소기업특별세액감면</span><span class="v">${s.reduction?'-':''}${won(s.reduction)}원</span></div>
+    <div class="kv"><span class="l">세액공제 합계</span><span class="v">${(s.otherCredit+s.poolUsed)?'-':''}${won(s.otherCredit+s.poolUsed)}원</span></div>
     ${minRow}
     <div class="kv"><span class="l">결정세액(종합소득세)</span><span class="v">${won(s.decided)}원</span></div>
     <div class="kv"><span class="l">개인지방소득세</span><span class="v">${won(s.localDecided)}원</span></div>
     ${ruralRow}
     <div class="kv total"><span class="l">총부담세액</span><span class="v">${won(s.totalBurden)}원</span></div>
     <div class="kv" style="border-bottom:none;"><span class="l">기납부 차감 후 납부할 세액</span><span class="v">${won(s.netPayable)}원</span></div>
+    ${s.coop ? `<div class="sc-partners"><div class="sc-pt">구성원별 (지분 안분 후 각자 계산)</div>${s.partners.map(r=> `
+      <div class="sc-p"><div class="sc-pn">👤 ${esc(r.partner.name||'-')} <small>${r.partner.share}%</small></div>
+        <div class="kv"><span class="l">과세표준</span><span class="v">${won(r.taxBase)}원</span></div>
+        <div class="kv"><span class="l">결정세액</span><span class="v">${won(r.decided)}원</span></div>
+        <div class="kv"><span class="l">총부담세액</span><span class="v">${won(r.totalBurden)}원</span></div>
+        <div class="kv" style="border-bottom:none;"><span class="l">납부할 세액</span><span class="v">${won(r.netPayable)}원</span></div>
+      </div>`).join('')}</div>` : ''}
   </div>`;
 }
 function renderScenarioCards(sc){
