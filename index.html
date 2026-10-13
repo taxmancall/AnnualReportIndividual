@@ -231,8 +231,8 @@ table.income-matrix input.money-input:disabled{background:#F5F6F4;color:var(--in
 .rep-office .name{font-size:15px;font-weight:700;color:var(--navy);font-family:'Noto Serif KR',serif;}
 .rep-office .addr{font-size:11px;color:var(--sub);}
 .rep-title{text-align:right;}
-.rep-title .rep-doc-title{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--brass);margin-bottom:6px;font-family:'Noto Serif KR',serif;}
-.rep-title h1{margin:0;font-size:22px;color:var(--navy);}
+.rep-title .rep-doc-title{font-size:30px;font-weight:800;letter-spacing:.04em;color:var(--navy);line-height:1.2;margin-bottom:8px;font-family:'Noto Serif KR',serif;}
+.rep-title h1{margin:0;font-size:17px;font-weight:700;color:#333;}
 .rep-title .meta{font-size:12px;color:var(--sub);margin-top:4px;}
 .rep-section{margin:26px 0;}
 .rep-section h2{
@@ -2416,7 +2416,7 @@ function buildYearCompare(sc){
   const pp = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+Math.abs(a-b).toFixed(1)+'%p');
   const short = v=> v===null ? '-' : (Math.abs(v)>=1e8 ? (v/1e8).toFixed(2).replace(/\.?0+$/,'')+'억' : Math.round(v/1e4).toLocaleString('ko-KR')+'만');
   // ②·③안 값 (매출은 부족경비와 무관하므로 ①안만)
-  const scen = sc.map(x=>{ const o={ key:x.key, sales:x.s.sales, income:x.s.mainBizIncome, tax:x.s.totalBurden }; o.margin = o.sales>0 ? o.income/o.sales*100 : null; return o; });
+  const scen = sc.filter((x,i)=> i===0 || x.extra>0).map(x=>{ const o={ key:x.key, sales:x.s.sales, income:x.s.mainBizIncome, tax:x.s.totalBurden }; o.margin = o.sales>0 ? o.income/o.sales*100 : null; return o; });
   const panel = (title,key,fmt,isPct,multi)=>{
     const base=[{lab:String(N2),v:d[N2][key],c:'#9DB2C8'},{lab:String(N1),v:d[N1][key],c:'#6F8FB0'}];
     const scCols=['#C89B3C','#7C6FB0','#3E8E7E'];
@@ -2439,7 +2439,7 @@ function buildYearCompare(sc){
     }).join('');
     return `<div class="yc-panel"><div class="yc-title">${title}</div><div class="yc-bars">${bars}</div><div class="yc-yrs">${all.map(x=>`<span>${x.lab}</span>`).join('')}</div><div class="yc-badges">${badges}</div></div>`;
   };
-  const multi = sc.length>1;
+  const multi = scen.length>1;
   const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false,false)}${panel('메인 사업소득금액','income',money,false,multi)}${panel('마진율','margin',pct,true,multi)}${panel('실부담 세금(국세+지방세)','tax',money,false,multi)}</div>`
   + (multi ? `<p style="font-size:11px;color:var(--sub);margin:-6px 0 8px;">※ ${N}년 ①안은 연간 추정 그대로, ②·③안은 남은 기간 부족경비(${sc.slice(1).map(x=>x.key+'안 '+won(x.extra)+'원').join(' · ')})를 반영한 경우입니다. 매출은 부족경비와 무관하므로 ①안만 표시합니다.</p>` : '');
   const dl = (key,fmt)=>{
