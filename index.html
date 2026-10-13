@@ -400,6 +400,7 @@ table.rep-table.loan td.num{text-align:right;}
 .ico.c1{background:linear-gradient(135deg,#7C6FC4,#5B4FA3);}
 .ico.c2{background:linear-gradient(135deg,#2FA88F,#1E8A70);}
 .ico.c3{background:linear-gradient(135deg,#E0785A,#C65A3E);}
+.ico.c6{background:linear-gradient(135deg,#C89B3C,#AD8A3F);}
 .ico.c4{background:linear-gradient(135deg,#3D82C4,#2660A0);}
 .ico.c5{background:linear-gradient(135deg,#5FA85E,#3D8A3C);}
 .checklist-card ul{margin:0;padding-left:16px;font-size:11.5px;color:#333;line-height:1.75;}
@@ -891,6 +892,11 @@ table.rep-table.loan td.num{text-align:right;}
             <li>중소기업특별세액감면·통합고용세액공제 등 요건(상시근로자 수 유지 등)이 연중 유지되는지 확인해 주세요 (조특법 §7)</li>
             <li>여러 사업장을 운영 중이라면 사업장별 매출·소득금액 귀속이 정확히 구분되는지, 사업장현황신고 내용과 일치하는지 점검해 주세요</li>
           </ul>
+        </div>
+        <div class="checklist-card" id="smeCard">
+          <h3><span class="ico c6">🏷️</span>중소기업특별세액감면 · 소기업 기준과 장수성실중소기업</h3>
+          <ul id="smeChecklist"></ul>
+          <div class="law">근거: 조특법 §7, 같은 법 시행령 §6⑤(중소기업기본법 시행령 별표 3 준용). 장수성실중소기업 요건은 원문 확인 필요.</div>
         </div>
       </div>
     </div>
@@ -2545,6 +2551,25 @@ function groupHeadForPrint(tbl, keep, capNodes){
   tbl.insertBefore(first, tbl.firstChild);
 }
 
+/* 보고서 5: 중소기업특별세액감면 — 소기업 매출액 기준·장수성실중소기업 안내 */
+function renderSmeCard(sc){
+  const ul = document.getElementById('smeChecklist');
+  if (!ul) return;
+  const s1 = sc[0].s;
+  const size = document.getElementById('bizSize').value;
+  const region = document.getElementById('bizRegion').value;
+  const bizType = document.getElementById('bizType').value;
+  const long = bizLongOn();
+  const rate = reductionRateFor(bizType, size, region, long);
+  const {N} = getYears();
+  ul.innerHTML = `
+    <li><b>소기업 판정(매출액 기준)</b> — 중소기업 중 매출액이 업종별 기준 이내이면 소기업입니다(조특법 시행령 §6⑤, 중소기업기본법 시행령 별표 3 준용): 제조업·전기가스수도 120억원 · 농업·광업·건설업 80억원 · 도소매·출판업 50억원 · 전문과학기술서비스업 30억원 · 숙박음식점업 10억원 이하 등. 그 밖의 업종은 별표 3의 해당 업종 기준을 확인하세요.</li>
+    <li>${N}년 추정 매출액 <b>${won(s1.sales)}원</b> · 현재 설정: <b>${size}</b> · ${region} · ${bizType}${long?' · 장수성실중소기업':''} → 적용 감면율 <b>${(rate*100).toFixed(1)}%</b>${rate===0?' (감면대상 업종 아님 또는 수도권 중기업)':''}</li>
+    <li><b>장수성실중소기업(감면율 110%)</b> — ① 해당 과세연도 개시일 현재 같은 업종을 10년 이상 계속 경영, ② 해당 과세연도 종합소득금액 1억원 이하, ③ 성실사업자 요건(신용카드·현금영수증 가맹, 복식부기 또는 간편장부 기장 신고, 사업용계좌 신고·사용 등) 충족 개인사업자. 세 요건을 모두 갖추면 감면율에 110%를 적용합니다.</li>
+    <li>${N}년 ①안 종합소득금액 ${won(s1.incomeTotal)}원은 ${s1.incomeTotal<=100000000 ? '1억원 이하이므로 10년 경영·성실사업자 요건을 갖추면 장수성실중소기업 적용 검토 대상입니다' : '1억원을 초과하여 장수성실중소기업 110% 적용 대상이 아닙니다'}.</li>
+    <li>감면 한도는 1억원이며 전년 대비 상시근로자가 감소하면 1명당 500만원씩 줄어듭니다. 감면 적용 시 최저한세(조특법 §132②)와 농어촌특별세를 함께 확인하세요.</li>`;
+}
+
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
@@ -2598,6 +2623,7 @@ function renderReport(sc){
 
   setTableWithCaption('trendTable', buildPLCompare(sc), 4);
   renderLoanSection(sc);
+  renderSmeCard(sc);
 
   const detailSec = document.getElementById('repEstimateSection');
   const detailHtml = (state.incEstimateDetail!==false) ? buildEstimateDetail() : '';
