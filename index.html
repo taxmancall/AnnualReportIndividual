@@ -337,7 +337,8 @@ table.rep-table.yearcmp th{white-space:nowrap;font-size:11.5px;padding:8px 6px;}
 .yc-bar{width:70%;max-width:44px;border-radius:4px 4px 0 0;}
 .yc-yrs{display:flex;justify-content:space-around;gap:6px;margin-top:4px;}
 .yc-yrs span{flex:1;text-align:center;font-size:10px;color:var(--sub);white-space:nowrap;}
-.yc-badge{margin-top:8px;text-align:center;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 6px;}
+.yc-badges{display:flex;flex-direction:column;gap:3px;margin-top:8px;}
+.yc-badge{text-align:center;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 6px;}
 .yc-badge.up{background:#e3f3ec;color:#2E6B4F;}
 .yc-badge.down{background:#fbeceb;color:#9E3B33;}
 @media (max-width:820px){.yc-grid{grid-template-columns:1fr 1fr;}}
@@ -2397,7 +2398,8 @@ function renderLoanSection(sc){
 /* 보고서 첫 장: 과거 2개년 신고 결과 vs 당해연도(①안) 비교 */
 /* 국세(결정세액) → 지방소득세 10%(10원 미만 절사)를 더한 총 세금 */
 function natToTotal(nat){ return nat===null ? null : nat + Math.floor(nat*0.1/10)*10; }
-function buildYearCompare(s1){
+function buildYearCompare(sc){
+  const s1 = sc[0].s;
   const {N,N1,N2} = getYears();
   const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
   const mainSale = y=> (state.years[y] && state.years[y]['Ⅰ. 매출액']) || null;
@@ -2417,24 +2419,33 @@ function buildYearCompare(s1){
   const rate = (a,b)=> (a===null||b===null||b===0) ? '' : ` <span style="color:#8A909A;font-size:.85em;">(${(a-b>=0?'+':'-')+Math.abs((a-b)/Math.abs(b)*100).toFixed(1)}%)</span>`;
   const pp = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+Math.abs(a-b).toFixed(1)+'%p');
   const short = v=> v===null ? '-' : (Math.abs(v)>=1e8 ? (v/1e8).toFixed(2).replace(/\.?0+$/,'')+'억' : Math.round(v/1e4).toLocaleString('ko-KR')+'만');
-  const panel = (title,key,fmt,isPct)=>{
-    const vals=[d[N2][key],d[N1][key],d[N][key]], yrs=[N2,N1,N], mx=Math.max(...vals.map(v=> v===null?0:Math.abs(v)),1);
-    const cols=['#9DB2C8','#6F8FB0','#C89B3C'];
-    const bars=vals.map((v,i)=>{
-      const h = v===null ? 0 : Math.max(Math.abs(v)/mx*100,2);
-      const lab = v===null ? '-' : (isPct ? v.toFixed(1)+'%' : short(v));
-      return `<div class="yc-col"><div class="yc-val">${lab}</div><div class="yc-bar" style="height:${h}px;background:${cols[i]};"></div></div>`;
+  // ②·③안 값 (매출은 부족경비와 무관하므로 ①안만)
+  const scen = sc.map(x=>{ const o={ key:x.key, sales:x.s.sales, income:x.s.mainBizIncome, tax:x.s.totalBurden }; o.margin = o.sales>0 ? o.income/o.sales*100 : null; return o; });
+  const panel = (title,key,fmt,isPct,multi)=>{
+    const base=[{lab:String(N2),v:d[N2][key],c:'#9DB2C8'},{lab:String(N1),v:d[N1][key],c:'#6F8FB0'}];
+    const scCols=['#C89B3C','#7C6FB0','#3E8E7E'];
+    const cur = multi ? scen.map((o,i)=>({lab:`${N}${o.key}`,v:o.v===undefined?o[key]:o[key],c:scCols[i]||'#C89B3C'})) : [{lab:`${N}(추정)`,v:d[N][key],c:'#C89B3C'}];
+    const all=base.concat(cur);
+    const mx=Math.max(...all.map(x=> x.v===null?0:Math.abs(x.v)),1);
+    const bars=all.map(x=>{
+      const h = x.v===null ? 0 : Math.max(Math.abs(x.v)/mx*100,2);
+      const lab = x.v===null ? '-' : (isPct ? x.v.toFixed(1)+'%' : short(x.v));
+      return `<div class="yc-col"><div class="yc-val">${lab}</div><div class="yc-bar" style="height:${h}px;background:${x.c};"></div></div>`;
     }).join('');
-    const a=vals[2], b=vals[1];
-    let badge='';
-    if (a!==null && b!==null){
+    const b=d[N1][key];
+    const badges = cur.map((x,i)=>{
+      const a=x.v; if (a===null || b===null) return '';
       const up = a-b>=0;
       const txt = isPct ? `${up?'▲':'▼'} ${Math.abs(a-b).toFixed(1)}%p` : (b!==0 ? `${up?'▲':'▼'} ${Math.abs((a-b)/Math.abs(b)*100).toFixed(1)}%` : '');
-      badge = txt ? `<div class="yc-badge ${key==='tax' ? (up?'down':'up') : (up?'up':'down')}">${N}년 전년대비 ${txt}</div>` : '';
-    }
-    return `<div class="yc-panel"><div class="yc-title">${title}</div><div class="yc-bars">${bars}</div><div class="yc-yrs">${yrs.map((y,i)=>`<span>${y}${i===2?'(추정)':''}</span>`).join('')}</div>${badge}</div>`;
+      if (!txt) return '';
+      const tag = multi ? `${scen[i].key}안` : `${N}년`;
+      return `<div class="yc-badge ${key==='tax' ? (up?'down':'up') : (up?'up':'down')}">${tag} 전년대비 ${txt}</div>`;
+    }).join('');
+    return `<div class="yc-panel"><div class="yc-title">${title}</div><div class="yc-bars">${bars}</div><div class="yc-yrs">${all.map(x=>`<span>${x.lab}</span>`).join('')}</div><div class="yc-badges">${badges}</div></div>`;
   };
-  const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false)}${panel('메인 사업소득금액','income',money,false)}${panel('마진율','margin',pct,true)}${panel('실부담 세금(국세+지방세)','tax',money,false)}</div>`;
+  const multi = sc.length>1;
+  const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false,false)}${panel('메인 사업소득금액','income',money,false,multi)}${panel('마진율','margin',pct,true,multi)}${panel('실부담 세금(국세+지방세)','tax',money,false,multi)}</div>`
+  + (multi ? `<p style="font-size:11px;color:var(--sub);margin:-6px 0 8px;">※ ${N}년 ①안은 연간 추정 그대로, ②·③안은 남은 기간 부족경비(${sc.slice(1).map(x=>x.key+'안 '+won(x.extra)+'원').join(' · ')})를 반영한 경우입니다. 매출은 부족경비와 무관하므로 ①안만 표시합니다.</p>` : '');
   const dl = (key,fmt)=>{
     const a=d[N][key], b=d[N1][key], c=d[N2][key];
     if (key==='margin') return [pp(b,c), pp(a,b)];
@@ -2495,7 +2506,7 @@ function renderReport(sc){
         <div class="kpi-sub">추가경비 ${won(best.extra)}원 반영 시</div>
       </div>
     </div>
-    ${buildYearCompare(s1)}
+    ${buildYearCompare(sc)}
     <div class="rep-narrative">
       <b>${N}년 사업실적은</b> 메인 사업장 매출 <span class="hl-blue">${won(t.sales[2])}원</span>(전년대비 <span class="${salesYoY>=0?'hl-up':'hl-down'}">${salesWord} ${Math.abs(salesYoY).toFixed(1)}%</span>),
       전체 사업소득금액 <span class="hl-teal">${won(s1.bizIncomeTotal)}원</span>(사업장 ${1+state.extraBiz.length}곳 합계)으로 추정됩니다.<br>
