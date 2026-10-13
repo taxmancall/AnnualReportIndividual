@@ -2184,7 +2184,7 @@ function buildPLCompare(sc){
   // 열 정의
   const cols = [];
   pastYears.forEach(yr=> cols.push({ type:'past', year:yr, label:`${yr}년` }));
-  if (hasDetail) cols.push({ type:'actual', label:`${N}년 1~${baseMonths}월` });
+  // 실적(1~기준월) 열은 1-1 산출 내역 표에 따로 있으므로 비교표에서는 제외
   sc.forEach(x=> cols.push({ type:'est', sc:x, label:`${N}년 ${x.key}` }));
 
   const pastItem = (yr, section, name)=>{
