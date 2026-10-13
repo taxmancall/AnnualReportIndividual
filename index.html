@@ -736,6 +736,9 @@ table.rep-table.loan td.num{text-align:right;}
       <tr><th colspan="3" class="ev-grp">기타</th></tr>
       <tr><td class="ev-l">기타금액</td><td><input type="text" inputmode="decimal" class="money-input" id="evOther" value="0"></td><td class="ev-n">간이영수증·무증빙·개인 지출 등 (경비 인정 어려움)</td></tr>
       <tr class="ev-sum"><td class="ev-l">합계</td><td id="evTotalCell" style="text-align:right;font-weight:700;">0</td><td class="ev-n">적격증빙 합계 <b id="evQualCell">0</b></td></tr>
+      <tr><th colspan="3" class="ev-grp">증빙 불요 경비 (손익계산서에서 자동 집계 — 감가상각비·4대보험 사업주부담·세금과공과·퇴직급여·이자비용 등, 재고 변동)</th></tr>
+      <tr><td class="ev-l">자동 집계</td><td id="evAutoNonEv" style="text-align:right;">0</td><td class="ev-n" id="evAutoNonEvList">손익계산서 업로드 후 자동 표시</td></tr>
+      <tr><td class="ev-l">추가 (직접)</td><td><input type="text" inputmode="decimal" class="money-input" id="evNonEvidence" value="0"></td><td class="ev-n">자동 집계에 빠진 증빙 불요 경비가 있으면 금액을 넣으세요</td></tr>
     </table>
     <div id="evHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:8px 0 0;"></div>
   </div>
@@ -2942,6 +2945,25 @@ function plrClassify(name){
   return 'other';
 }
 /* 증빙별 경비 집계: 기준일까지 실적 경비와 비교 */
+const NON_EVIDENCE_KEYS = ['감가상각','무형자산상각','상각비','국민연금','건강보험','고용보험','산재보험','4대보험','사대보험','사회보험','장기요양','퇴직급여','퇴직연금','세금과공과','공과금','이자비용','대손상각','대손','잡손실','충당금','재고자산평가','외환차손','기부금'];
+/* 손익계산서 실적 중 외부 증빙이 원래 없는 경비(감가상각·4대보험 사업주부담·세금과공과·퇴직급여·이자 등)와 재고 변동분을 자동 집계 */
+function nonEvidenceExpenses(){
+  const {N} = getYears();
+  const out = { items:[], total:0, inventory:0 };
+  if (!hasAdjDetail(N)) return out;
+  ['Ⅳ. 판매비와 관리비','Ⅶ. 영업외비용'].forEach(sec=>{
+    adjItems(N, sec).forEach(it=>{
+      const n = normLabel(it.name), v = (Number(it.cur)||0) * (it.sign||1);
+      if (v && NON_EVIDENCE_KEYS.some(k=> n.includes(normLabel(k)))){ out.items.push({ name: it.name, amt: v }); out.total += v; }
+    });
+  });
+  // 매출원가 중 재고 변동(기초재고 − 기말재고)은 매입 증빙과 무관 → 매입액만 증빙 대상
+  adjItems(N, 'Ⅱ. 매출원가').forEach(it=>{
+    const n = normLabel(it.name), v = (Number(it.cur)||0) * (it.sign||1);
+    if (n.includes('기초') || n.includes('기말')) out.inventory += v;
+  });
+  return out;
+}
 function evidenceStats(){
   const {N} = getYears();
   const ev = { taxInv:num('evTaxInv'), inv:num('evInv'), card:num('evCard'), cash:num('evCash'), wedding:num('evWedding'),
@@ -2951,18 +2973,24 @@ function evidenceStats(){
   const qualified = ev.taxInv+ev.inv+ev.card+ev.cash+ev.wedding+labor;
   const hasDetail = hasAdjDetail(N);
   const actSales = hasDetail ? sectionActual(N,'Ⅰ. 매출액') : ((state.years[N]||{})['Ⅰ. 매출액']||0);
-  const actExp = hasDetail ? (sectionActual(N,'Ⅱ. 매출원가') + sectionActual(N,'Ⅳ. 판매비와 관리비')) : (((state.years[N]||{})['Ⅱ. 매출원가']||0) + ((state.years[N]||{})['Ⅳ. 판매비와 관리비']||0));
+  const bookExp = hasDetail ? (sectionActual(N,'Ⅱ. 매출원가') + sectionActual(N,'Ⅳ. 판매비와 관리비')) : (((state.years[N]||{})['Ⅱ. 매출원가']||0) + ((state.years[N]||{})['Ⅳ. 판매비와 관리비']||0));
+  const ne = nonEvidenceExpenses();
+  const neManual = num('evNonEvidence');
+  const nonEv = ne.total + ne.inventory + neManual;       // 증빙 불요 경비(자동 + 직접)
+  const actExp = Math.max(bookExp - nonEv, 0);             // 증빙 대상 경비
   const gap = actExp - qualified;
-  return { ev, labor, total, qualified, actSales, actExp, gap, entered: total>0 };
+  return { ev, labor, total, qualified, actSales, bookExp, nonEv, neItems: ne.items, neInventory: ne.inventory, neManual, actExp, gap, entered: total>0 };
 }
 function renderEvidenceHint(){
   const e = evidenceStats();
   const cell = document.getElementById('evTotalCell'); if (cell) cell.textContent = won(e.total);
   const qc = document.getElementById('evQualCell'); if (qc) qc.textContent = won(e.qualified)+'원';
+  const an = document.getElementById('evAutoNonEv'); if (an) an.textContent = won(e.neItems.reduce((a,b)=>a+b.amt,0) + e.neInventory);
+  const al = document.getElementById('evAutoNonEvList'); if (al) al.textContent = (e.neItems.length||e.neInventory) ? (e.neItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.neInventory ? ` · 재고 변동 ${won(e.neInventory)}` : '')) : '손익계산서 업로드 후 자동 표시 (해당 과목 없음)';
   const el = document.getElementById('evHint'); if (!el) return;
   if (!e.entered){ el.innerHTML = '증빙 금액을 입력하면 기준일까지 실적 경비와 비교한 결과가 여기와 보고서(1-1 검토 항목)에 표시됩니다.'; return; }
   const baseMonths = num('baseMonths') || 12;
-  el.innerHTML = `기준일까지 실적 경비(매출원가+판관비) <b>${won(e.actExp)}원</b> · 적격증빙 합계 <b>${won(e.qualified)}원</b>(${e.actExp>0?(e.qualified/e.actExp*100).toFixed(1):'-'}%) · 증빙 없는 경비 <b style="color:${e.gap>0?'#9E3B33':'#2E6B4F'};">${won(Math.max(e.gap,0))}원</b>`
+  el.innerHTML = `기준일까지 장부 경비 ${won(e.bookExp)}원 − 증빙 불요 경비 ${won(e.nonEv)}원 = 증빙 대상 경비 <b>${won(e.actExp)}원</b> · 적격증빙 합계 <b>${won(e.qualified)}원</b>(${e.actExp>0?(e.qualified/e.actExp*100).toFixed(1):'-'}%) · 증빙 없는 경비 <b style="color:${e.gap>0?'#9E3B33':'#2E6B4F'};">${won(Math.max(e.gap,0))}원</b>`
     + ` · 카드 사용액 ${won(e.ev.card)}원(실적 매출 ${won(e.actSales)}원의 ${e.actSales>0?(e.ev.card/e.actSales*100).toFixed(1):'-'}%)`;
 }
 function evidenceReviewHTML(sc){
@@ -2980,16 +3008,19 @@ function evidenceReviewHTML(sc){
   const msgs = [];
   if (e.ev.card===0) msgs.push(`<b>사업용 카드 사용액이 0원입니다.</b> 카드로 쓴 경비가 전혀 집계되지 않았다는 뜻으로, 경비가 부족한 가장 큰 원인입니다. 사업용 카드를 홈택스에 등록하고 사업 지출은 카드·현금영수증으로 결제해 주세요.`);
   else if (cardRatio!==null && cardRatio<5) msgs.push(`<b>카드 사용액이 실적 매출의 ${cardRatio.toFixed(1)}%에 불과합니다.</b> 소모품·광고·접대·차량 등 일상 경비가 카드로 잡히지 않고 있어 경비 자체가 부족합니다.`);
-  if (e.gap>0) msgs.push(`장부상 경비 ${won(e.actExp)}원 중 <b>${won(e.gap)}원</b>은 적격증빙(세금계산서·카드·현금영수증·신고 인건비)으로 뒷받침되지 않습니다. 증빙을 보완하지 못하면 경비에서 빠지고, 3만원 초과 건은 증빙불비가산세(2%)까지 붙습니다.`);
-  if (qRatio!==null && qRatio>=90 && e.gap<=0) msgs.push(`적격증빙이 장부 경비의 ${qRatio.toFixed(0)}% 이상을 뒷받침하고 있습니다. 남은 기간 지출도 같은 방식으로 증빙을 챙겨 주세요.`);
+  if (e.gap>0) msgs.push(`증빙 대상 경비 ${won(e.actExp)}원(장부 경비에서 감가상각·4대보험 등 증빙 불요 경비 제외) 중 <b>${won(e.gap)}원</b>은 적격증빙(세금계산서·카드·현금영수증·신고 인건비)으로 뒷받침되지 않습니다. 증빙을 보완하지 못하면 경비에서 빠지고, 3만원 초과 건은 증빙불비가산세(2%)까지 붙습니다.`);
+  if (qRatio!==null && qRatio>=90 && e.gap<=0) msgs.push(`적격증빙이 증빙 대상 경비의 ${qRatio.toFixed(0)}% 이상을 뒷받침하고 있습니다. 남은 기간 지출도 같은 방식으로 증빙을 챙겨 주세요.`);
   if (e.ev.other>0) msgs.push(`기타(간이영수증·무증빙) ${won(e.ev.other)}원은 경비 인정이 어렵거나 가산세 대상입니다.`);
   return `<div class="plr-item full">
-    <div class="plr-h"><span>⑦ 증빙별 경비 현황 (${N}.1.1~${baseMonths}월 말 실적)</span><span class="amt">적격증빙 ${won(e.qualified)}원 / 장부 경비 ${won(e.actExp)}원 ${qRatio!==null?`<span class="plr-flag ${qRatio>=90?'ok':'warn'}">${qRatio.toFixed(1)}%</span>`:''}</span></div>
+    <div class="plr-h"><span>⑦ 증빙별 경비 현황 (${N}.1.1~${baseMonths}월 말 실적)</span><span class="amt">적격증빙 ${won(e.qualified)}원 / 증빙 대상 경비 ${won(e.actExp)}원 ${qRatio!==null?`<span class="plr-flag ${qRatio>=90?'ok':'warn'}">${qRatio.toFixed(1)}%</span>`:''}</span></div>
     <table class="plr-tbl">
       <tr><th>증빙 유형</th><th style="text-align:right;">금액</th><th style="text-align:right;">구성비</th><th style="width:38%;">비중</th></tr>
       ${bars}
       <tr class="sum"><td>증빙 합계</td><td>${won(e.total)}</td><td>100%</td><td></td></tr>
-      <tr class="sum"><td>장부 경비(매출원가+판관비 실적) − 적격증빙 = 증빙 없는 경비</td><td>${won(e.gap)}</td><td>${pct(Math.max(e.gap,0), e.actExp)}</td><td style="text-align:left;color:${e.gap>0?'#9E3B33':'#2E6B4F'};">${e.gap>0?'증빙 보완 또는 경비 제외 필요':'적격증빙으로 충분히 뒷받침됨'}</td></tr>
+      <tr><td>장부 경비(매출원가+판관비 실적)</td><td>${won(e.bookExp)}</td><td></td><td style="text-align:left;color:var(--sub);"></td></tr>
+      <tr><td>(−) 증빙 불요 경비 — ${e.neItems.map(it=> esc(it.name)).join('·')||'해당 없음'}${e.neInventory?' · 재고 변동':''}${e.neManual?' · 직접 입력':''}</td><td>${won(e.nonEv)}</td><td></td><td style="text-align:left;color:var(--sub);">감가상각·4대보험·세금과공과·퇴직급여·이자 등은 외부 증빙이 없는 경비</td></tr>
+      <tr><td>증빙 대상 경비</td><td>${won(e.actExp)}</td><td>100%</td><td></td></tr>
+      <tr class="sum"><td>증빙 대상 경비 − 적격증빙 = 증빙 없는 경비</td><td>${won(e.gap)}</td><td>${pct(Math.max(e.gap,0), e.actExp)}</td><td style="text-align:left;color:${e.gap>0?'#9E3B33':'#2E6B4F'};">${e.gap>0?'증빙 보완 또는 경비 제외 필요':'적격증빙으로 충분히 뒷받침됨'}</td></tr>
     </table>
     <div class="plr-q">${msgs.map(m=> `<div>· ${m}</div>`).join('')}<div style="margin-top:4px;"><b>세금은 증빙 싸움입니다.</b> 모든 카드 사용이 경비는 아니지만, 카드·현금영수증 없이 쓴 사업 지출은 경비로 남지 않습니다. 남은 기간(${baseMonths>=12?'연말까지':baseMonths+1+'~12월'}) 지출은 사업용 카드와 세금계산서로 받아 주세요.</div></div>
   </div>`;
@@ -3222,7 +3253,7 @@ function renderReport(sc){
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evNonEvidence']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('otherExpAuto').addEventListener('change', renderAll);
