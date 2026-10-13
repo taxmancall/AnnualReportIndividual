@@ -671,6 +671,10 @@ table.rep-table.loan td.num{text-align:right;}
         <select id="bookkeepingType"><option selected>복식부기의무자</option><option>간편장부대상자</option></select>
       </div>
       <div class="field">
+        <label>부가가치세 과세유형(메인)</label>
+        <select id="vatType"><option value="taxable" selected>과세사업자</option><option value="exempt">면세사업자 (의료·교육 등)</option><option value="mixed">과세·면세 겸영</option></select>
+      </div>
+      <div class="field">
         <label>성실신고확인 업종(메인) <span style="font-weight:400;color:var(--sub);">1·2·3호</span></label>
         <select id="diligentBizCategory">
           <option value="1500000000">1호 · 15억원 (농어업·도소매·부동산매매 등)</option>
@@ -724,13 +728,13 @@ table.rep-table.loan td.num{text-align:right;}
   <!-- STEP 2-1: 증빙별 경비 집계 -->
   <div class="card">
     <h2><span class="step-no">2-1</span>증빙별 경비 집계 (기준일까지 실적 · 위하고 집계 금액)</h2>
-    <p class="hint">위하고에서 기준일(<span class="yN">N</span>.1.1 ~ 기준월 말)까지 수취·신고한 금액을 유형별로 넣으세요. 손익계산서 경비와 비교해 "증빙 없는 경비"와 "카드 사용액 부족"을 보고서에 보여줍니다. 모르는 칸은 0으로 두면 됩니다.</p>
+    <p class="hint">위하고에서 기준일(<span class="yN">N</span>.1.1 ~ 기준월 말)까지 수취·신고한 금액을 유형별로 넣으세요. <b id="evVatNote"></b> 손익계산서 경비와 비교해 "증빙 없는 경비"와 "카드 사용액 부족"을 보고서에 보여줍니다. 모르는 칸은 0으로 두면 됩니다.</p>
     <table class="ev-list">
       <tr><th colspan="3" class="ev-grp">매입 증빙</th></tr>
-      <tr><td class="ev-l">세금계산서</td><td><input type="text" inputmode="decimal" class="money-input" id="evTaxInv" value="0"></td><td class="ev-n">전자·종이 매입세금계산서 공급가액</td></tr>
+      <tr><td class="ev-l">세금계산서</td><td><input type="text" inputmode="decimal" class="money-input" id="evTaxInv" value="0"></td><td class="ev-n" id="evNoteTax">전자·종이 매입세금계산서 공급가액</td></tr>
       <tr><td class="ev-l">계산서</td><td><input type="text" inputmode="decimal" class="money-input" id="evInv" value="0"></td><td class="ev-n">면세 매입계산서</td></tr>
-      <tr><td class="ev-l">신용카드</td><td><input type="text" inputmode="decimal" class="money-input" id="evCard" value="0"></td><td class="ev-n">사업용 신용·체크카드 사용액</td></tr>
-      <tr><td class="ev-l">현금영수증</td><td><input type="text" inputmode="decimal" class="money-input" id="evCash" value="0"></td><td class="ev-n">지출증빙용 현금영수증</td></tr>
+      <tr><td class="ev-l">신용카드</td><td><input type="text" inputmode="decimal" class="money-input" id="evCard" value="0"></td><td class="ev-n" id="evNoteCard">사업용 신용·체크카드 사용액</td></tr>
+      <tr><td class="ev-l">현금영수증</td><td><input type="text" inputmode="decimal" class="money-input" id="evCash" value="0"></td><td class="ev-n" id="evNoteCash">지출증빙용 현금영수증</td></tr>
       <tr><td class="ev-l">청첩장·부고장</td><td><input type="text" inputmode="decimal" class="money-input" id="evWedding" value="0"></td><td class="ev-n">경조사비 — 건당 20만원까지 적격증빙 없이 인정</td></tr>
       <tr><th colspan="3" class="ev-grp">인건비 (원천세 신고분) <button type="button" class="small-btn ghost" style="margin-left:10px;padding:2px 9px;font-size:11.5px;" onclick="fillLaborFromPL(true)">손익계산서 실적으로 채우기</button> <span style="font-weight:400;color:var(--sub);font-size:11px;">— 손익 업로드 시 자동 채움. 원천세 신고액과 다르면 직접 고치세요</span></th></tr>
       <tr><td class="ev-l">근로소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evWage" value="0"></td><td class="ev-n">직원 급여·상여 (지급명세서 제출분)</td></tr>
@@ -2301,6 +2305,7 @@ function renderAll(){
     renderIncomePreview(s1);
     renderCoopSplitPreview(sc);
     syncCoopOtherTotalsToDom(sc);
+    renderVatNotes();
     renderEvidenceHint();
     renderScenarioCards(sc);
     renderSavings(sc);
@@ -3113,6 +3118,22 @@ function fillLaborFromPL(force){
 }
 ['evWage','evBizInc','evDaily'].forEach(id=>{ const el=document.getElementById(id); if (el) el.addEventListener('input', ()=>{ el.dataset.touched='1'; }); });
 
+/* 과세유형에 따른 증빙 금액 기준 안내: 면세는 매입세액 불공제 → 장부 경비가 부가세 포함(공급대가) */
+function renderVatNotes(){
+  const t = (document.getElementById('vatType')||{}).value || 'taxable';
+  const set=(id,v)=>{ const el=document.getElementById(id); if (el) el.innerHTML = v; };
+  if (t==='exempt'){
+    set('evVatNote','면세사업자: 매입세액을 공제받지 못하므로 세금계산서·카드·현금영수증 모두 <u>부가세 포함 공급대가</u>로 입력합니다(장부 경비와 동일 기준).');
+    set('evNoteTax','매입세금계산서 <b>공급대가(부가세 포함)</b> — 면세사업자는 매입세액 불공제'); set('evNoteCard','사업용 카드 사용액 <b>(부가세 포함)</b>'); set('evNoteCash','지출증빙용 현금영수증 <b>(부가세 포함)</b>');
+  } else if (t==='mixed'){
+    set('evVatNote','과세·면세 겸영: 공제받은 매입세액은 제외하고, 면세 관련(불공제) 매입은 부가세 포함 금액으로 — 장부에 계상된 경비 기준으로 입력합니다.');
+    set('evNoteTax','매입세금계산서 — 공제분은 공급가액, 불공제(면세 관련)분은 공급대가'); set('evNoteCard','사업용 카드 사용액 — 장부 계상 기준'); set('evNoteCash','지출증빙용 현금영수증 — 장부 계상 기준');
+  } else {
+    set('evVatNote','과세사업자: 매입세액은 부가세 신고에서 공제되므로 <u>공급가액(부가세 제외)</u>으로 입력합니다. 불공제 매입(접대비·비영업용 차량 등)은 부가세 포함 금액.');
+    set('evNoteTax','전자·종이 매입세금계산서 공급가액 (불공제분은 공급대가)'); set('evNoteCard','사업용 신용·체크카드 사용액 (공급가액 기준)'); set('evNoteCash','지출증빙용 현금영수증 (공급가액 기준)');
+  }
+}
+
 function renderEvidenceHint(){
   const e = evidenceStats();
   const st = (id,v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
@@ -3387,7 +3408,7 @@ function renderReport(sc){
 /* ============================================================
    init
 ============================================================ */
-['bizType','bizSize','bizRegion','bizLong','diligentBizCategory','bookkeepingType',
+['bizType','bizSize','bizRegion','bizLong','diligentBizCategory','bookkeepingType','vatType',
  'baseMonths','baseDate','taxPeriod','ownerName','bizName','targetYear',
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
