@@ -406,7 +406,7 @@ table.rep-table.loan td.num{text-align:right;}
   /* 인쇄 설정의 "배경 그래픽"이 꺼져 있어도 표 머리글·요약 카드 색이 나오도록 */
   #report, #report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
   /* 그래프: 가로세로 비율 유지(글자 찌그러짐 방지) + 크기 축소 */
-  #report .chart-box{width:74%;margin:0 auto;padding:10px;}
+  #report .chart-box{width:62%;margin:0 auto;padding:8px;}
   #report .chart-box canvas{width:100%!important;height:auto!important;}
   .rep-section{margin:18px 0;}
   table.rep-table.tax{font-size:11px;}
@@ -418,7 +418,21 @@ table.rep-table.loan td.num{text-align:right;}
   .checklist-grid{break-inside:auto;}
   .rep-section h2{break-after:avoid;}
   table.rep-table{break-inside:auto;}
-  table.rep-table.loan,#scenarioTable,table.rep-table.yearcmp{break-inside:avoid;}
+  table.rep-table.loan,#scenarioTable,table.rep-table.yearcmp,#incomeTable{break-inside:avoid;}
+  table.rep-table.loan.ins{break-inside:auto;}
+  .loan-sub,.rep-section h2{break-after:avoid;}
+  #report thead{display:table-header-group;}
+  .loan-sub + table, .rep-section h2 + table, .rep-section h2 + p{break-before:avoid;}
+  /* 첫 장 3개년 그래프: 인쇄 시 한 줄 4칸으로 */
+  .yc-grid{grid-template-columns:repeat(4,1fr)!important;gap:6px;}
+  .yc-panel{padding:6px 5px 5px;}
+  .yc-title{font-size:9.5px;margin-bottom:4px;}
+  .yc-bars{height:122px;gap:3px;}
+  .yc-val{font-size:7.8px;}
+  .yc-bar{max-width:26px;}
+  .yc-yrs span{font-size:6.8px;}
+  .yc-badges{gap:2px;margin-top:5px;}
+  .yc-badge{font-size:7.5px;padding:1px 3px;}
   table.rep-table.wide{break-inside:auto;font-size:8.6px;}
   table.rep-table.wide th{padding:5px 3px;}
   table.rep-table.wide td{padding:3px 3px;}
@@ -2236,7 +2250,7 @@ function buildPLCompare(sc){
     }).join('');
     return `<tr class="${r.cls}"><td>${esc(r.name)}</td>${tds}<td class="memo">${esc(r.memo)}</td></tr>`;
   }).join('');
-  return head + body;
+  return `<thead>${head}</thead><tbody>${body}</tbody>`;
 }
 
 /* 보고서 표 1-1: 연간 추정 손익 산출 내역 (사무소 엑셀 "연간추정" 시트 양식: 실적 / 수정·가감 / 연간 추정 / 비고) */
@@ -2350,7 +2364,7 @@ function renderLoanSection(sc){
 
   const lab = n=> n;
   const insTable = `<table class="rep-table loan ins">
-    <tr><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr>
+    <thead><tr><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr></thead><tbody>
     <tr><td rowspan="2" class="ins-k">건강보험료</td>
       <td><b>지역가입자</b>(4대보험 가입 직원이 없는 개인사업자 대표)<br>${N+1}년 5월 종합소득세 신고 → 국세청 자료가 ${N+1}년 10월 말경 공단에 전달 → <b>${N+1}년 11월 보험료부터 ${N}년 귀속 소득이 반영</b>되어 ${N+2}년 10월까지 적용됩니다.</td>
       <td>소득(사업·임대 등 종합소득)과 재산·자동차를 합산해 부과하므로, 확정 소득금액이 낮아지면 ${N+1}년 11월부터 납부액이 줄고 높아지면 늘어납니다. 휴·폐업 등으로 사업소득이 중단·감소하면 공단에 소득 조정을 신청할 수 있고, 조정받은 해의 보험료는 다음 해 11월에 국세청 확정 소득으로 정산(추가 부과 또는 환급)됩니다.</td></tr>
@@ -2361,7 +2375,7 @@ function renderLoanSection(sc){
       <td>소득이 낮아지면 납부액과 장래 연금액이 함께 줄고, 높아지면 함께 늘어납니다(기준소득월액 상·하한 범위 내 · 2025.7~2026.6 기준 하한 40만원·상한 637만원).</td></tr>
     <tr><td><b>사업장가입자</b>(4대보험 가입 직원이 있는 개인사업자 대표 — 1인 이상 근로자를 고용한 사업장의 사업주는 사업장가입자)<br>대표 본인은 ${N}년 귀속 사업소득금액(총수입금액 − 필요경비, 이월결손금 공제 전, 부동산임대소득 포함)을 ${N+1}년 5월 말까지(성실신고확인대상자는 6월 말까지) 공단에 소득총액 신고 → 6월 중순 결정 통지 → <b>${N+1}년 7월부터 ${N+2}년 6월까지 적용</b>됩니다.</td>
       <td>기준소득월액 = 전년도 소득총액 ÷ 전년도 근무일수 × 30. 소득금액이 낮아지면 기준소득월액·납부액·장래 연금액이 함께 줄고, 높아지면 함께 늘어납니다(상·하한 범위 내). 직원분 보험료는 사업주와 직원이 나누어 부담합니다.</td></tr>
-  </table>`;
+  </tbody></table>`;
 
   sec.innerHTML = `
     <h2 class="c-teal"><span class="h2-badge">🏦</span>6. 소득 확정에 따른 대출·사회보험료 점검</h2>
