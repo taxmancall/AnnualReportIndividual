@@ -393,6 +393,8 @@ table.rep-table.wide td.g-est{background:rgba(200,155,60,.07);}
 table.rep-table.wide tr.strong td.g-est{background:rgba(200,155,60,.16);}
 table.rep-table.wide td.g-act,table.rep-table.wide th.g-act,table.rep-table.wide td.g-est:first-of-type{border-left:1px solid var(--line);}
 table.rep-table tr.extra td{background:#FDECEC!important;color:#B4232C;font-weight:700;}
+table.rep-table tr.extra.neg td{background:#E6F2FA!important;color:#1F5F8B;}
+table.rep-table tr.extra.neg td:first-child,table.rep-table tr.extra.neg td.memo{color:#1F5F8B;}
 table.rep-table tr.extra td:first-child{color:#B4232C;}
 table.rep-table tr.extra td.memo{color:#B4232C;font-weight:400;}
 /* 1-1 아래 손익계산서 검토 항목 */
@@ -861,12 +863,12 @@ table.rep-table.loan td.num{text-align:right;}
     </label>
 
     <div style="margin-top:16px;padding:14px;background:var(--brass-light);border-radius:9px;">
-      <div style="color:var(--navy);font-weight:600;font-size:13px;margin-bottom:8px;">부족경비 시나리오: 남은 기간 추가로 발생시킬 경비 예정액 (메인 사업장)</div>
+      <div style="color:var(--navy);font-weight:600;font-size:13px;margin-bottom:8px;">경비 조정 시나리오 (메인 사업장): 부족경비는 <b>+</b>, 경비가 남아 줄일 금액은 <b>−</b>(마이너스)로 입력</div>
       <div class="grid cols-2">
-        <div class="field"><label>②안 부족경비</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense" value="0"></div>
-        <div class="field"><label>③안 부족경비 (0이면 ③안 생략)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense3" value="0"></div>
+        <div class="field"><label>②안 경비 조정액 (+ 추가 집행 / − 감축)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense" value="0"></div>
+        <div class="field"><label>③안 경비 조정액 (0이면 ③안 생략)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense3" value="0"></div>
       </div>
-      <div style="font-size:12px;color:var(--sub);margin-top:6px;">①안은 워크시트의 연간 추정 손익 그대로입니다. 예) 설비 추가 구입, 인건비 추가 지급, 광고비 집행 등 연말까지 추가로 쓸 계획인 총 금액</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:6px;">①안은 워크시트의 연간 추정 손익 그대로입니다. 경비가 과다해 줄여 신고할 계획이면 음수(예: -40,000,000)로 넣으세요. 예) 설비 추가 구입, 인건비 추가 지급, 광고비 집행 등 연말까지 추가로 쓸 계획인 총 금액</div>
     </div>
   </div>
 
@@ -2197,14 +2199,19 @@ function computeScenario(extraExpense){
 ============================================================ */
 let trendChart, scenarioChart, repTrendChart, repScenarioChart;
 
-/* 시나리오 목록: ① 연간 추정 그대로 / ② 부족경비 반영 / ③ 부족경비 반영(금액이 있을 때만) */
+
+/* 부족경비(+) / 경비 감축(−) 공통 표기 */
+function extraLabel(extra){ return extra<0 ? '경비 감축' : '부족경비'; }
+function extraDesc(extra){ return extra<0 ? `남은 기간 ${won(-extra)}원 경비 축소(정리) 가정` : `남은 기간 ${won(extra)}원 추가 지출 가정`; }
+function extraHead(extra){ return extra===0 ? '' : (extra<0 ? ` (경비 감축 ${won(-extra)})` : ` (부족경비 ${won(extra)})`); }
+/* 시나리오 목록: ① 연간 추정 그대로 / ② 경비 조정 반영 / ③ 경비 조정 반영(금액이 있을 때만) — 음수면 경비 감축 */
 function buildScenarios(){
   const e2 = num('extraExpense'), e3 = num('extraExpense3');
   const list = [
     { key:'①', cls:'s1', extra:0, title:'①안 · 연간 추정 그대로', desc:'워크시트의 연간 추정 손익 기준', s: computeScenario(0) },
-    { key:'②', cls:'s2', extra:e2, title:'②안 · 부족경비 반영', desc:`남은 기간 ${won(e2)}원 추가 지출 가정`, s: computeScenario(e2) }
+    { key:'②', cls:'s2', extra:e2, title:`②안 · ${extraLabel(e2)} 반영`, desc:extraDesc(e2), s: computeScenario(e2) }
   ];
-  if (e3>0) list.push({ key:'③', cls:'s3', extra:e3, title:'③안 · 부족경비 반영', desc:`남은 기간 ${won(e3)}원 추가 지출 가정`, s: computeScenario(e3) });
+  if (e3!==0) list.push({ key:'③', cls:'s3', extra:e3, title:`③안 · ${extraLabel(e3)} 반영`, desc:extraDesc(e3), s: computeScenario(e3) });
   return list;
 }
 
@@ -2348,9 +2355,13 @@ function renderScenarioCards(sc){
 function renderSavings(sc){
   const el = document.getElementById('savingsBanner');
   const base = sc[0].s;
-  el.innerHTML = sc.slice(1).filter(x=> x.extra>0).map(x=>{
+  el.innerHTML = sc.slice(1).filter(x=> x.extra!==0).map(x=>{
     const diff = base.totalBurden - x.s.totalBurden;
     const netCost = x.extra - diff;
+    if (x.extra<0) return `<div class="savings-banner ${diff<0?'negative':''}">
+      <span>${x.key}안: 경비 ${won(-x.extra)}원을 줄여 신고하면 세금이 <b>${won(Math.abs(diff))}원</b> ${diff<0?'증가':'감소'}합니다.
+      (경비 축소분 대비 세부담 증가율 ${(-x.extra)>0 ? (Math.abs(diff)/(-x.extra)*100).toFixed(1) : '-'}%)</span>
+    </div>`;
     return `<div class="savings-banner ${diff<0?'negative':''}">
       <span>${x.key}안: 추가 경비 ${won(x.extra)}원 집행 시 세금이 <b>${won(Math.abs(diff))}원</b> ${diff>=0?'절감':'증가'}됩니다.
       (실질 자기부담: 약 ${won(netCost)}원)</span>
@@ -2605,7 +2616,7 @@ function buildPLCompare(sc){
   pushItems('Ⅳ. 판매비와 관리비', insur);
   if (insur.length>1) push('sub', '4대보험료 합계', sumVals('Ⅳ. 판매비와 관리비', insur));
   pushItems('Ⅳ. 판매비와 관리비', etc);
-  if (sc.some(x=> x.extra>0)) push('item extra', '부족경비(추가 집행 예정)', estOnly(x=> x.extra), '남은 기간 추가 집행 가정액');
+  if (sc.some(x=> x.extra!==0)){ const neg = sc.some(x=> x.extra<0), pos = sc.some(x=> x.extra>0); push('item extra'+(neg&&!pos?' neg':''), neg&&pos ? '경비 조정(+부족경비 / −감축)' : (neg ? '경비 감축(정리 예정)' : '부족경비(추가 집행 예정)'), estOnly(x=> x.extra), neg ? '남은 기간 경비 조정 가정액(음수는 감축)' : '남은 기간 추가 집행 가정액'); }
   push('strong', '영업이익', totalVals('Ⅴ. 영업이익','op','opIncome'));
   push('strong', '영업외수익', totalVals('Ⅵ. 영업외수익','nonOpInc','nonOpInc'));
   pushItems('Ⅵ. 영업외수익', namesOf('Ⅵ. 영업외수익'));
@@ -2671,7 +2682,7 @@ function buildEstimateDetail(){
 function buildTaxTable(sc){
   const row = (cls, label, fn, note)=> `<tr class="${cls}"><td>${label}</td>${sc.map(x=> `<td>${fn(x.s, x)}</td>`).join('')}<td class="memo">${note||''}</td></tr>`;
   const any = (fn)=> sc.some(x=> fn(x.s));
-  let h = `<thead><tr><th>구분</th>${sc.map(x=> `<th>${x.key}안${x.extra>0?` (부족경비 ${won(x.extra)})`:''}</th>`).join('')}<th style="text-align:left;">비고</th></tr></thead><tbody>`;
+  let h = `<thead><tr><th>구분</th>${sc.map(x=> `<th>${x.key}안${extraHead(x.extra)}</th>`).join('')}<th style="text-align:left;">비고</th></tr></thead><tbody>`;
   h += row('', '매출(메인 사업장)', s=> won(s.sales), '연간 추정 매출');
   h += row('', '경비(메인 사업장)', s=> won(s.sales - s.pretax), '매출 − 당기순이익 (매출원가·판관비 등, 부족경비 포함)');
   h += row('', '당기순이익(메인 사업장)', s=> won(s.pretax), '연간 추정 손익 − 부족경비');
@@ -2743,7 +2754,7 @@ function renderLoanSection(sc){
   </table>`;
 
   const cmp = `<table class="rep-table loan">
-    <tr><th>구분</th>${sc.map(x=>`<th style="text-align:right;">${x.key}안${x.extra>0?` (부족경비 ${won(x.extra)})`:''}</th>`).join('')}</tr>
+    <tr><th>구분</th>${sc.map(x=>`<th style="text-align:right;">${x.key}안${extraHead(x.extra)}</th>`).join('')}</tr>
     <tr><td>종합소득금액<br><span style="color:var(--sub);font-size:11px;">(소득금액증명원 반영 예상 소득)</span></td>${sc.map(x=>`<td class="num">${won(x.s.incomeTotal)}</td>`).join('')}</tr>
     <tr><td>①안 대비 소득 증감</td>${sc.map((x,i)=>`<td class="num">${i===0?'-':sign(x.s.incomeTotal - s1.incomeTotal)}</td>`).join('')}</tr>
     <tr><td>예상 총부담세액(지방소득세 포함)</td>${sc.map(x=>`<td class="num">${won(x.s.totalBurden)}</td>`).join('')}</tr>
@@ -2824,7 +2835,7 @@ function buildYearCompare(sc){
   const pp = (a,b)=> (a===null||b===null) ? '-' : ((a-b>=0?'+':'-')+Math.abs(a-b).toFixed(1)+'%p');
   const short = v=> v===null ? '-' : (Math.abs(v)>=1e8 ? (v/1e8).toFixed(2).replace(/\.?0+$/,'')+'억' : Math.round(v/1e4).toLocaleString('ko-KR')+'만');
   // ②·③안 값 (매출은 부족경비와 무관하므로 ①안만)
-  const scen = sc.filter((x,i)=> i===0 || x.extra>0).map(x=>{ const o={ key:x.key, sales:x.s.sales, income:x.s.mainBizIncome, tax:x.s.totalBurden }; o.margin = o.sales>0 ? o.income/o.sales*100 : null; return o; });
+  const scen = sc.filter((x,i)=> i===0 || x.extra!==0).map(x=>{ const o={ key:x.key, sales:x.s.sales, income:x.s.mainBizIncome, tax:x.s.totalBurden }; o.margin = o.sales>0 ? o.income/o.sales*100 : null; return o; });
   const panel = (title,key,fmt,isPct,multi)=>{
     const base=[{lab:String(N2),v:d[N2][key],c:'#9DB2C8'},{lab:String(N1),v:d[N1][key],c:'#6F8FB0'}];
     const scCols=['#C89B3C','#7C6FB0','#3E8E7E'];
@@ -3261,11 +3272,13 @@ function renderReport(sc){
   { const cap = document.querySelector('#scenarioTable tr.cap-row h2'); if (cap){ let tag = cap.querySelector('.coop-tag'); if (!tag){ tag = document.createElement('span'); tag.className='coop-tag'; cap.appendChild(tag); } tag.textContent = sc[0].s.coop ? ' — 구성원 합계' : ''; } }
   renderPartnerBreak(sc);
 
-  const extras = sc.slice(1).filter(x=> x.extra>0);
+  const extras = sc.slice(1).filter(x=> x.extra!==0);
   document.getElementById('repSavingsSection').innerHTML = extras.length ? `
-    <h2 class="c-purple"><span class="h2-badge">💡</span>4. 절세 효과 요약</h2>
+    <h2 class="c-purple"><span class="h2-badge">💡</span>4. ${extras.some(x=> x.extra<0) ? '경비 조정 효과 요약' : '절세 효과 요약'}</h2>
     ${extras.map(x=>{
       const diff = s1.totalBurden - x.s.totalBurden;
+      if (x.extra<0) return `<p style="font-size:13px;">${x.key}안 - 남은 기간 경비를 <b>${won(-x.extra)}원</b> 줄여(개인 지출 정리·증빙 없는 경비 제외 등) 신고할 경우, 예상 총부담세액은
+      <b style="color:${diff<0?'#9E3B33':'#2E6B4F'};">${won(Math.abs(diff))}원 ${diff<0?'증가':'감소'}</b>합니다. 경비 축소분의 ${(-x.extra)>0 ? (Math.abs(diff)/(-x.extra)*100).toFixed(1) : '-'}%가 세금으로 돌아오지만, 부인될 경비를 미리 정리하면 가산세·조사 위험이 줄어듭니다.</p>`;
       return `<p style="font-size:13px;">${x.key}안 - 남은 기간 <b>${won(x.extra)}원</b>의 경비를 추가로 집행할 경우, 예상 총부담세액은
       <b style="color:${diff>=0?'#2E6B4F':'#9E3B33'};">${won(Math.abs(diff))}원 ${diff>=0?'절감':'증가'}</b>됩니다.
       실질 자기부담 지출액은 약 <b>${won(x.extra-diff)}원</b>입니다.</p>`;
