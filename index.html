@@ -561,6 +561,13 @@ table.rep-table.loan td.num{text-align:right;}
         <label>기장의무 구분</label>
         <select id="bookkeepingType"><option selected>복식부기의무자</option><option>간편장부대상자</option></select>
       </div>
+      <div class="field">
+        <label>성실신고확인 업종(메인) <span style="font-weight:400;color:var(--sub);">1·2·3호</span></label>
+        <select id="diligentBizCategory">
+          <option value="1500000000">1호 · 15억원 (농어업·도소매·부동산매매 등)</option>
+          <option value="750000000" selected>2호 · 7.5억원 (제조·숙박음식·건설·운수·정보통신 등)</option>
+          <option value="500000000">3호 · 5억원 (임대·전문과학기술·보건·교육·개인서비스 등)</option></select>
+      </div>
     </div>
     <div style="margin-top:14px;">
       <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 메인 사업장 기준, 신고서 기준으로 입력)</span></div>
@@ -638,10 +645,7 @@ table.rep-table.loan td.num{text-align:right;}
           <td id="imBizSum">0</td><td id="imRentSum">0</td><td id="imWageSum">0</td><td id="imPenSum">0</td><td id="imOthSum">0</td><td id="imFinSum">0</td></tr>
         <tr id="imRowSet"><th>감면 설정<br><small>(조특법 §7)</small></th><td class="auto dim" id="imBizSet">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
         <tr id="imRowDil"><th>성실신고확인<br>업종<br><small>(1호·2호·3호)</small></th>
-          <td class="im-set"><select id="diligentBizCategory">
-            <option value="1500000000">1호 · 15억원</option>
-            <option value="750000000" selected>2호 · 7.5억원</option>
-            <option value="500000000">3호 · 5억원</option></select></td>
+          <td class="auto dim" id="imDilMain">2호 · 7.5억원<br><small>(STEP 1에서 선택)</small></td>
           <td class="auto dim">3호 · 5억원<br><small>(임대업)</small></td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
       </tbody>
     </table>
@@ -1611,6 +1615,7 @@ function diligentCheck(s){
 }
 function renderDiligentCheck(s){
   const d = diligentCheck(s);
+  const mc = document.getElementById('imDilMain'); if (mc) mc.innerHTML = `${DIL_NAME[parseInt(document.getElementById('diligentBizCategory').value,10)]||''}<br><small>(STEP 1에서 선택)</small>`;
   const wrap = document.getElementById('diligentBadgeWrap');
   const multi = d.rows.length>1;
   wrap.innerHTML = `<div class="badge-diligent ${d.isTarget?'yes':'no'}">
