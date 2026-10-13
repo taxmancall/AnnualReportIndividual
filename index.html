@@ -407,6 +407,9 @@ table.plr-tbl td:first-child{text-align:left;color:#444;}
 table.plr-tbl tr.sum td{font-weight:700;color:var(--navy);background:#F7F5EF;}
 @media (max-width:820px){.plr-grid{grid-template-columns:1fr;}}
 .pb-title{font-size:12px;color:var(--sub);margin:14px 0 8px;}
+.pb-head{font-size:13.5px;font-weight:700;color:var(--navy);margin:16px 0 6px;}
+.pb-share{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:var(--brass);border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:middle;}
+.coop-tag{font-size:12px;color:var(--brass);margin-left:6px;}
 .pb-grid{display:grid;grid-template-columns:1fr;gap:12px;}
 table.rep-table.pb{font-size:11.5px;break-inside:avoid;}
 table.rep-table.pb td{padding:5px 9px;}
@@ -2934,41 +2937,21 @@ function renderPLReview(sc){
   </div>`;
 }
 
-/* 보고서 3 하단: 공동사업 구성원별 세액 안분표 (안별) */
+/* 보고서 3: 공동사업이면 구성원별 세액표(①②③안)를 각각 보여주고, 합계 표는 #scenarioTable에 표시 */
 function renderPartnerBreak(sc){
   const box = document.getElementById('partnerBreak'); if (!box) return;
   if (!sc[0].s.coop){ box.innerHTML=''; return; }
-  const {N} = getYears();
-  const rows = [
-    ['지분율', r=> (r.partner.share)+'%', true],
-    ['종합소득금액(안분)', r=> won(r.incomeTotal)],
-    ['소득공제 합계', r=> won(r.comboDeduction)],
-    ['과세표준', r=> won(r.taxBase), true],
-    ['(×) 세율', r=> (r.rate*100).toFixed(0)+'%'],
-    ['산출세액', r=> won(r.calcTax), true],
-    ['세액감면·공제 합계', r=> won(r.totalCredit)],
-    ['결정세액(종합소득세)', r=> won(r.decided), true],
-    ['개인지방소득세', r=> won(r.localDecided)],
-    ['농어촌특별세', r=> won(r.ruralTax)],
-    ['총부담세액', r=> won(r.totalBurden), true],
-    ['기납부세액', r=> won(r.prepaid)],
-    ['납부할 세액', r=> won(r.netPayable), true],
-  ];
-  const tbl = (x)=>{
-    const s = x.s, ps = s.partners;
-    const head = `<thead><tr><th>${x.key}안 ${x.extra>0?'(부족경비 '+won(x.extra)+')':''}</th>${ps.map(r=> `<th>${esc(r.partner.name||'-')}</th>`).join('')}<th>합계</th></tr></thead>`;
-    const body = rows.map(([label,fn,strong])=>{
-      const cells = ps.map(r=> `<td>${fn(r)}</td>`).join('');
-      let tot = '';
-      if (label==='지분율') tot = shareTotal()+'%';
-      else if (label==='(×) 세율') tot = '-';
-      else { const k = {'종합소득금액(안분)':'incomeTotal','소득공제 합계':'comboDeduction','과세표준':'taxBase','산출세액':'calcTax','세액감면·공제 합계':'totalCredit','결정세액(종합소득세)':'decided','개인지방소득세':'localDecided','농어촌특별세':'ruralTax','총부담세액':'totalBurden','기납부세액':'prepaid','납부할 세액':'netPayable'}[label]; tot = won(s[k]); }
-      return `<tr class="${strong?'strong':''}"><td>${label}</td>${cells}<td>${tot}</td></tr>`;
-    }).join('');
-    return `<table class="rep-table tax pb">${head}<tbody>${body}</tbody></table>`;
-  };
-  box.innerHTML = `<div class="pb-title">공동사업 구성원별 세액 안분 — 종합소득금액을 지분율로 배분한 뒤 각자 소득공제·세액공제를 적용하고 합산합니다 (소득세법 §43)</div>
-    <div class="pb-grid">${sc.map(tbl).join('')}</div>`;
+  const n = sc[0].s.partners.length;
+  let h = `<div class="pb-title">공동사업: 종합소득금액을 손익분배비율(지분율)로 배분한 뒤 구성원별로 소득공제·세율·세액공제를 각각 적용합니다(소득세법 §43). 위 표는 구성원 합계이며, 아래는 구성원별 계산입니다.</div>`;
+  for (let i=0;i<n;i++){
+    const p = sc[0].s.partners[i].partner;
+    const psc = sc.map(x=> Object.assign({}, x, { s: x.s.partners[i] }));
+    h += `<div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div>
+      <table class="rep-table tax pb">${buildTaxTable(psc)}</table>`;
+  }
+  box.innerHTML = h;
+  // 인쇄용: 제목·머리글·첫 행 묶음
+  box.querySelectorAll('table.pb').forEach(t=> groupHeadForPrint(t, 3, null));
 }
 
 function renderReport(sc){
@@ -3044,12 +3027,18 @@ function renderReport(sc){
     <tr><td>기타소득금액(종합과세분)</td><td>${won(s1.otherIncomeIncluded)}</td><td>${s1.otherIncomeAmt>s1.otherIncomeIncluded?'분리과세 선택(300만원 이하)':'-'}</td></tr>
     <tr><td>금융소득 - 종합과세대상(2천만원 초과분)</td><td>${won(s1.finOver)}</td><td>금융소득 합계 ${won(s1.finGross)}원 중 2천만원 이하분은 분리과세</td></tr>
     <tr class="strong"><td>종합소득금액</td><td>${won(s1.incomeTotal)}</td><td>월 평균 ${won(s1.incomeTotal/12)}원</td></tr>
+    ${s1.coop ? s1.partners.map(r=> `
+    <tr class="sub"><td>↳ ${esc(r.partner.name||'-')} 안분 소득금액 (지분 ${r.partner.share}%)</td><td>${won(r.incomeTotal)}</td><td>종합소득금액 × ${r.partner.share}% (소득세법 §43 손익분배비율)</td></tr>
+    <tr><td style="padding-left:28px;">소득공제 합계</td><td>-${won(r.comboDeduction)}</td><td>인적공제 등 ${won(r.dedBasic)} · 국민연금 ${won(r.dedPension)} · 노란우산 ${won(r.dedYellow)}${r.yuOver>0?`(납입 ${won(r.yuPaid)} 중 한도 초과 ${won(r.yuOver)} 제외)`:''} · 기타 ${won(r.dedOther)}</td></tr>
+    <tr><td style="padding-left:28px;">종합소득 과세표준</td><td>${won(r.taxBase)}</td><td>${r.methodUsed}</td></tr>`).join('') + `
+    <tr class="strong"><td>과세표준 합계(구성원 합산)</td><td>${won(s1.taxBase)}</td><td>소득공제 합계 ${won(s1.comboDeduction)}원 차감 후</td></tr>` : `
     <tr><td>소득공제 합계</td><td>-${won(s1.comboDeduction)}</td><td>인적공제 등 ${won(s1.dedBasic)} · 국민연금 ${won(s1.dedPension)} · 노란우산 ${won(s1.dedYellow)}${s1.yuOver>0?`(납입 ${won(s1.yuPaid)} 중 한도 초과 ${won(s1.yuOver)} 제외)`:''} · 기타 ${won(s1.dedOther)}</td></tr>
-    <tr class="strong"><td>종합소득 과세표준</td><td>${won(s1.taxBase)}</td><td>${s1.methodUsed}</td></tr>
+    <tr class="strong"><td>종합소득 과세표준</td><td>${won(s1.taxBase)}</td><td>${s1.methodUsed}</td></tr>`}
   `;
 
   document.querySelectorAll('#incomeTable tr').forEach(tr=>{ if (tr.cells[2] && tr.cells[2].tagName==='TD') tr.cells[2].classList.add('memo'); });
   setTableWithCaption('scenarioTable', buildTaxTable(sc), 3);
+  { const cap = document.querySelector('#scenarioTable tr.cap-row h2'); if (cap){ let tag = cap.querySelector('.coop-tag'); if (!tag){ tag = document.createElement('span'); tag.className='coop-tag'; cap.appendChild(tag); } tag.textContent = sc[0].s.coop ? ' — 구성원 합계' : ''; } }
   renderPartnerBreak(sc);
 
   const extras = sc.slice(1).filter(x=> x.extra>0);
