@@ -235,6 +235,16 @@ table.income-matrix input.money-input:disabled{background:#F5F6F4;color:var(--in
 .rep-title h1{margin:0;font-size:17px;font-weight:700;color:#333;}
 .rep-title .meta{font-size:12px;color:var(--sub);margin-top:4px;}
 .rep-section{margin:26px 0;}
+#report caption{caption-side:top;text-align:left;padding:0;}
+#report thead.thead-repeat{display:none;}
+#report tr.cap-row,#report tr.hdr-row,#report tbody.tb-head tr:not(:last-child){break-after:avoid;}
+#report tr.cap-row td{padding:0 0 8px!important;border:0!important;background:#fff!important;text-align:left!important;color:inherit;}
+#report tr.cap-row:hover td{background:#fff!important;}
+#report tr.hdr-row th{background:var(--navy);}
+#report table.rep-table tbody.tb-head tr:nth-child(even){background:transparent;}
+#report caption h2{margin-bottom:8px;}
+#report caption .rep-unit{margin-bottom:6px;}
+#report caption .loan-sub{margin-top:0;}
 .rep-section h2{
   font-size:14.5px;color:var(--navy);padding-left:0;margin:0 0 14px;
   display:flex;align-items:center;gap:10px;
@@ -354,6 +364,12 @@ table.rep-table.wide td.g-est{background:rgba(200,155,60,.07);}
 table.rep-table.wide tr.strong td.g-est{background:rgba(200,155,60,.16);}
 table.rep-table.wide td.g-act,table.rep-table.wide th.g-act,table.rep-table.wide td.g-est:first-of-type{border-left:1px solid var(--line);}
 table.rep-table.wide{font-size:10.5px;}
+#estimateTable{font-size:12px;}
+#estimateTable th{padding:8px 10px;}
+#estimateTable td{padding:6px 10px;}
+#estimateTable td.memo{font-size:10.5px;color:#6b7684;max-width:220px;}
+#estimateTable tr.strong td{font-size:12.5px;}
+#estimateTable tr.item td:first-child{padding-left:22px;color:#444;}
 table.rep-table.wide th{padding:6px 6px;white-space:nowrap;}
 table.rep-table.wide td{padding:4px 6px;white-space:nowrap;}
 table.rep-table.wide th.pct,table.rep-table.wide td.pct{color:#8A909A;font-size:9.5px;padding-left:2px;}
@@ -406,7 +422,7 @@ table.rep-table.loan td.num{text-align:right;}
   /* 인쇄 설정의 "배경 그래픽"이 꺼져 있어도 표 머리글·요약 카드 색이 나오도록 */
   #report, #report *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
   /* 그래프: 가로세로 비율 유지(글자 찌그러짐 방지) + 크기 축소 */
-  #report .chart-box{width:62%;margin:0 auto;padding:8px;}
+  #report .chart-box{width:52%;margin:0 auto;padding:6px;}
   #report .chart-box canvas{width:100%!important;height:auto!important;}
   .rep-section{margin:18px 0;}
   table.rep-table.tax{font-size:11px;}
@@ -418,9 +434,14 @@ table.rep-table.loan td.num{text-align:right;}
   .checklist-grid{break-inside:auto;}
   .rep-section h2{break-after:avoid;}
   table.rep-table{break-inside:auto;}
-  table.rep-table.loan,#scenarioTable,table.rep-table.yearcmp,#incomeTable{break-inside:avoid;}
+  table.rep-table.loan,table.rep-table.yearcmp,#incomeTable{break-inside:avoid;}
+  #scenarioTable{break-inside:auto;}
+  .loan-sub + ul,.loan-sub + table,.loan-sub + div{break-before:avoid;}
+  #repLoanSection .checklist-intro{break-after:avoid;}
   table.rep-table.loan.ins{break-inside:auto;}
   .loan-sub,.rep-section h2{break-after:avoid;}
+  #report caption, #report caption *{break-after:auto;break-before:auto;}
+  #report caption{break-inside:avoid;}
   #report thead{display:table-header-group;}
   .loan-sub + table, .rep-section h2 + table, .rep-section h2 + p{break-before:avoid;}
   /* 첫 장 3개년 그래프: 인쇄 시 한 줄 4칸으로 */
@@ -437,6 +458,11 @@ table.rep-table.loan td.num{text-align:right;}
   table.rep-table.wide th{padding:5px 3px;}
   table.rep-table.wide td{padding:3px 3px;}
   table.rep-table.wide td.memo{font-size:7px;min-width:0;width:15%;}
+  #estimateTable{font-size:10px;}
+  #estimateTable th{padding:5px 8px;}
+  #estimateTable td{padding:4px 8px;}
+  #estimateTable td.memo{font-size:8px;width:26%;}
+  #estimateTable tr.strong td{font-size:10.5px;}
   table.rep-table.wide tr.item td:first-child{padding-left:9px;}
   table.rep-table tr{break-inside:avoid;}
   .chart-box{break-inside:avoid;}
@@ -2279,7 +2305,7 @@ function buildEstimateDetail(){
 function buildTaxTable(sc){
   const row = (cls, label, fn, note)=> `<tr class="${cls}"><td>${label}</td>${sc.map(x=> `<td>${fn(x.s, x)}</td>`).join('')}<td class="memo">${note||''}</td></tr>`;
   const any = (fn)=> sc.some(x=> fn(x.s));
-  let h = `<tr><th>구분</th>${sc.map(x=> `<th>${x.key}안${x.extra>0?` (부족경비 ${won(x.extra)})`:''}</th>`).join('')}<th style="text-align:left;">비고</th></tr>`;
+  let h = `<thead><tr><th>구분</th>${sc.map(x=> `<th>${x.key}안${x.extra>0?` (부족경비 ${won(x.extra)})`:''}</th>`).join('')}<th style="text-align:left;">비고</th></tr></thead><tbody>`;
   h += row('', '매출(메인 사업장)', s=> won(s.sales), '연간 추정 매출');
   h += row('', '경비(메인 사업장)', s=> won(s.sales - s.pretax), '매출 − 당기순이익 (매출원가·판관비 등, 부족경비 포함)');
   h += row('', '당기순이익(메인 사업장)', s=> won(s.pretax), '연간 추정 손익 − 부족경비');
@@ -2317,7 +2343,7 @@ function buildTaxTable(sc){
   h += row('strong', '총부담세액', s=> won(s.totalBurden), '소득세+지방소득세+농특세');
   h += row('strong', '총 납부할 세액', s=> won(s.netPayable), '기납부세액 차감 후');
   h += row('', '세부담율', s=> (s.burdenRate*100).toFixed(1)+'%', '총부담세액 ÷ 종합소득금액');
-  return h;
+  return h + '</tbody>';
 }
 
 
@@ -2363,7 +2389,7 @@ function renderLoanSection(sc){
   const tips = timing==='before' ? [tipBefore] : timing==='after' ? [tipAfter] : [tipBefore, tipAfter];
 
   const lab = n=> n;
-  const insTable = `<table class="rep-table loan ins">
+  const insTable = `<table class="rep-table loan ins"><caption><div class="loan-sub">④ 소득금액 확정 후 건강보험료·국민연금 조절</div></caption>
     <thead><tr><th style="width:17%">구분</th><th style="width:40%">소득 확정·반영 시기</th><th>소득금액에 따른 조절</th></tr></thead><tbody>
     <tr><td rowspan="2" class="ins-k">건강보험료</td>
       <td><b>지역가입자</b>(4대보험 가입 직원이 없는 개인사업자 대표)<br>${N+1}년 5월 종합소득세 신고 → 국세청 자료가 ${N+1}년 10월 말경 공단에 전달 → <b>${N+1}년 11월 보험료부터 ${N}년 귀속 소득이 반영</b>되어 ${N+2}년 10월까지 적용됩니다.</td>
@@ -2398,10 +2424,10 @@ function renderLoanSection(sc){
     ${tips.map(t=>`<div class="loan-tip">${t}</div>`).join('')}
     <div class="loan-warn">※ 소득 조정은 실제 지출과 세법상 인정되는 경비·공제의 선택 등 적법한 범위에서만 가능합니다. 가공경비 계상 등 허위 신고로 소득을 조정하는 것은 세무조사와 금융기관 제출서류 문제로 이어질 수 있습니다.</div>
 
-    <div class="loan-sub">④ 소득금액 확정 후 건강보험료·국민연금 조절</div>
     ${insTable}
     <div class="loan-note">※ 개인사업자 대표는 4대보험에 가입한 직원이 없으면 지역가입자, 있으면 직장(사업장)가입자입니다. 다른 직장에 근로자로 함께 가입돼 있는 경우는 구조가 달라 별도 확인이 필요합니다. 반영 시기·보험료율·기준소득월액 상·하한은 매년 달라지므로 국민건강보험공단·국민연금공단 안내로 최종 확인하시기 바랍니다.<br>근거: 국민건강보험공단 「소득 부과 건강보험료 조정·정산제도 안내」·건강보험 웹진(2022.11), 국민건강보험법 시행령 §41, 국민연금공단 「2026 사업장 실무안내」·「사업장에서 꼭 알아두어야 할 국민연금」, 개인사업장 사용자 건강·장기요양보험료 연말정산 안내(공단 안내 · 위하고 도움말 전재).</div>
   `;
+  const insEl = sec.querySelector('table.ins'); if (insEl) groupHeadForPrint(insEl, 1, null);
 }
 
 
@@ -2455,7 +2481,7 @@ function buildYearCompare(sc){
   };
   const multi = scen.length>1;
   const graph = `<div class="yc-grid">${panel('메인 사업장 매출','sales',money,false,false)}${panel('메인 사업소득금액','income',money,false,multi)}${panel('마진율','margin',pct,true,multi)}${panel('실부담 세금(국세+지방세)','tax',money,false,multi)}</div>`
-  + (multi ? `<p style="font-size:11px;color:var(--sub);margin:-6px 0 8px;">※ ${N}년 ①안은 연간 추정 그대로, ②·③안은 남은 기간 부족경비(${sc.slice(1).map(x=>x.key+'안 '+won(x.extra)+'원').join(' · ')})를 반영한 경우입니다. 매출은 부족경비와 무관하므로 ①안만 표시합니다.</p>` : '');
+;
   const dl = (key,fmt)=>{
     const a=d[N][key], b=d[N1][key], c=d[N2][key];
     if (key==='margin') return [pp(b,c), pp(a,b)];
@@ -2472,6 +2498,46 @@ function buildYearCompare(sc){
     ${row('실부담 세금(국세+지방소득세)','tax',money)}
   </table>
   <p style="font-size:11px;color:var(--sub);margin:4px 0 0;">※ ${N}년은 ①안(연간 추정 그대로) 기준이며 매출·사업소득금액은 메인 사업장만 비교합니다(추가 사업장·임대·근로 등 제외). 세금은 사업장별 구분이 불가해 종합소득세 전체 기준이며, 과거 연도는 입력한 국세(결정세액)에 지방소득세 10%를 더한 금액입니다. 과거 연도 매출을 입력하지 않으면 메인 사업장 손익계산서 매출로 표시됩니다. 마진율 증감은 %p입니다.</p>`;
+}
+
+
+/* 큰 표: 제목(h2)·단위 표기를 표 첫 묶음(tbody.tb-head)의 한 행으로 넣고, 머리글 행·첫 몇 행과 함께 묶어
+   인쇄 시 제목·머리글만 쪽 끝에 남지 않게 한다(뒤 쪽에서는 thead가 머리글을 반복) */
+function setTableWithCaption(id, html, keep){
+  const tbl = document.getElementById(id);
+  if (!tbl) return;
+  let capNodes = tbl._capNodes;
+  if (!capNodes){
+    capNodes = [];
+    let el = tbl.previousElementSibling;
+    while (el && (el.tagName==='H2' || el.classList.contains('rep-unit'))){ capNodes.unshift(el); el = el.previousElementSibling; }
+    capNodes.forEach(n=> n.remove());
+    tbl._capNodes = capNodes;
+  }
+  tbl.innerHTML = html;
+  groupHeadForPrint(tbl, keep, capNodes);
+}
+function groupHeadForPrint(tbl, keep, capNodes){
+  keep = keep || 3;
+  const thead = tbl.querySelector('thead'), tbody = tbl.querySelector('tbody');
+  if (!thead || !tbody) return;
+  const ncol = Array.from(thead.rows[0].cells).reduce((a,c)=> a + (c.colSpan||1), 0);
+  const rows = Array.from(tbody.rows);
+  const first = document.createElement('tbody');
+  first.className = 'tb-head';
+  let cap = tbl.querySelector('caption');
+  if (capNodes && capNodes.length || cap){
+    const tr = document.createElement('tr'); tr.className = 'cap-row';
+    const td = document.createElement('td'); td.colSpan = ncol;
+    if (capNodes) capNodes.forEach(n=> td.appendChild(n));
+    if (cap){ while (cap.firstChild) td.appendChild(cap.firstChild); cap.remove(); }
+    tr.appendChild(td); first.appendChild(tr);
+  }
+  const hdr = thead.rows[0].cloneNode(true); hdr.className = 'hdr-row';
+  first.appendChild(hdr);
+  if (rows.length <= keep + 1){ rows.forEach(r=> first.appendChild(r)); tbody.remove(); thead.remove(); }
+  else { rows.slice(0, keep).forEach(r=> first.appendChild(r)); thead.classList.add('thead-repeat'); }
+  tbl.insertBefore(first, tbl.firstChild);
 }
 
 function renderReport(sc){
@@ -2525,13 +2591,13 @@ function renderReport(sc){
       남은 기간 경비 집행 계획에 따라 최대 <span class="hl-purple">${won(savingAmt)}원</span>까지 절세가 가능할 것으로 예상됩니다.
     </div>`;
 
-  document.getElementById('trendTable').innerHTML = buildPLCompare(sc);
+  setTableWithCaption('trendTable', buildPLCompare(sc), 4);
   renderLoanSection(sc);
 
   const detailSec = document.getElementById('repEstimateSection');
   const detailHtml = (state.incEstimateDetail!==false) ? buildEstimateDetail() : '';
   detailSec.style.display = detailHtml ? '' : 'none';
-  document.getElementById('estimateTable').innerHTML = detailHtml;
+  setTableWithCaption('estimateTable', detailHtml, 4);
 
   document.getElementById('incomeTable').innerHTML = `
     <tr><th>소득 구분</th><th>금액</th><th>비고</th></tr>
@@ -2549,7 +2615,7 @@ function renderReport(sc){
   `;
 
   document.querySelectorAll('#incomeTable tr').forEach(tr=>{ if (tr.cells[2] && tr.cells[2].tagName==='TD') tr.cells[2].classList.add('memo'); });
-  document.getElementById('scenarioTable').innerHTML = buildTaxTable(sc);
+  setTableWithCaption('scenarioTable', buildTaxTable(sc), 3);
 
   const extras = sc.slice(1).filter(x=> x.extra>0);
   document.getElementById('repSavingsSection').innerHTML = extras.length ? `
