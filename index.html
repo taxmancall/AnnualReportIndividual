@@ -734,6 +734,7 @@ table.rep-table.loan td.num{text-align:right;}
       <tr><td class="ev-l">세금계산서</td><td><input type="text" inputmode="decimal" class="money-input" id="evTaxInv" value="0"></td><td class="ev-n" id="evNoteTax">전자·종이 매입세금계산서 공급가액</td></tr>
       <tr><td class="ev-l">계산서</td><td><input type="text" inputmode="decimal" class="money-input" id="evInv" value="0"></td><td class="ev-n">면세 매입계산서</td></tr>
       <tr><td class="ev-l">신용카드</td><td><input type="text" inputmode="decimal" class="money-input" id="evCard" value="0"></td><td class="ev-n" id="evNoteCard">사업용 신용·체크카드 사용액</td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 세금·보험료 등 차감</td><td><input type="text" inputmode="decimal" class="money-input" id="evCardDeduct" value="0"></td><td class="ev-n">카드로 납부한 국세·지방세·4대보험료·공과금 등 (경비 증빙이 아니거나 장부에서 세금과공과·보험료로 따로 잡히는 금액) → 카드 사용액에서 뺍니다. 순 카드 경비 <b id="evCardNet">0</b></td></tr>
       <tr><td class="ev-l">현금영수증</td><td><input type="text" inputmode="decimal" class="money-input" id="evCash" value="0"></td><td class="ev-n" id="evNoteCash">지출증빙용 현금영수증</td></tr>
       <tr><td class="ev-l">청첩장·부고장</td><td><input type="text" inputmode="decimal" class="money-input" id="evWedding" value="0"></td><td class="ev-n">경조사비 — 건당 20만원까지 적격증빙 없이 인정</td></tr>
       <tr><th colspan="3" class="ev-grp">인건비 (원천세 신고분) <button type="button" class="small-btn ghost" style="margin-left:10px;padding:2px 9px;font-size:11.5px;" onclick="fillLaborFromPL(true)">손익계산서 실적으로 채우기</button> <span style="font-weight:400;color:var(--sub);font-size:11px;">— 손익 업로드 시 자동 채움. 원천세 신고액과 다르면 직접 고치세요</span></th></tr>
@@ -3075,7 +3076,8 @@ function plExpenseBreakdown(){
 /* 증빙별 경비 구성: 장부 경비(매출원가+판관비 실적) = 적격증빙(8종) + 증빙불요(자동) + 임시계정(자동) + 재고변동 + 무증빙·미분류(차이) */
 function evidenceStats(){
   const {N} = getYears();
-  const ev = { taxInv:num('evTaxInv'), inv:num('evInv'), card:num('evCard'), cash:num('evCash'), wedding:num('evWedding'),
+  const cardGross = num('evCard'), cardDeduct = Math.min(num('evCardDeduct'), cardGross);
+  const ev = { taxInv:num('evTaxInv'), inv:num('evInv'), card:cardGross - cardDeduct, cardGross, cardDeduct, cash:num('evCash'), wedding:num('evWedding'),
                wage:num('evWage'), bizInc:num('evBizInc'), daily:num('evDaily'), other:num('evOther') };
   const labor = ev.wage + ev.bizInc + ev.daily;
   const qualified = ev.taxInv+ev.inv+ev.card+ev.cash+ev.wedding+labor;
@@ -3137,7 +3139,7 @@ function renderVatNotes(){
 function renderEvidenceHint(){
   const e = evidenceStats();
   const st = (id,v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
-  st('evTotalCell', won(e.total)); st('evBookCell', won(e.bookExp)+'원'); st('evQualCell', won(e.qualified)+'원');
+  st('evTotalCell', won(e.total)); st('evBookCell', won(e.bookExp)+'원'); st('evQualCell', won(e.qualified)+'원'); st('evCardNet', won(e.ev.card)+'원');
   st('evAutoNonEv', won(e.nonEv)); st('evAutoTemp', won(e.temp)); st('evAutoRest', won(e.other)); st('evOtherAuto', won(Math.max(e.bookExp - e.qualified,0))+'원');
   st('evAutoNonEvList', (e.nonEvItems.length||e.inventory) ? (e.nonEvItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.inventory ? ` · 재고 변동 ${won(e.inventory)}` : '')) : '감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익 업로드 후 자동 (해당 과목 없음)');
   st('evAutoTempList', e.tempItems.length ? e.tempItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + ' — 개인 지출 의심, 정리 필요' : '임시계정·가지급금 등 미정리 금액 — 해당 과목 없음');
@@ -3155,7 +3157,7 @@ function evidenceReviewHTML(sc){
   const baseMonths = num('baseMonths') || 12;
   const pct = (a,b)=> b>0 ? (a/b*100).toFixed(1)+'%' : '-';
   const rows = [
-    ['세금계산서', e.ev.taxInv, 'q'],['계산서', e.ev.inv, 'q'],['신용카드(사업용)', e.ev.card, 'q'],['현금영수증', e.ev.cash, 'q'],['청첩장·부고장(경조사비)', e.ev.wedding, 'q'],
+    ['세금계산서', e.ev.taxInv, 'q'],['계산서', e.ev.inv, 'q'],['신용카드(사업용)'+(e.ev.cardDeduct>0?` — 사용액 ${won(e.ev.cardGross)} 중 세금·보험료 납부 ${won(e.ev.cardDeduct)} 제외`:''), e.ev.card, 'q'],['현금영수증', e.ev.cash, 'q'],['청첩장·부고장(경조사비)', e.ev.wedding, 'q'],
     ['근로소득(급여)', e.ev.wage, 'q'],['사업소득(프리랜서)', e.ev.bizInc, 'q'],['일용소득', e.ev.daily, 'q'],
     ['증빙 불요 경비(감가상각·4대보험·세금과공과 등)', e.nonEv, 'n'],
     ['임시계정(미정리·개인 지출 의심)', e.temp, 'x'],
@@ -3413,7 +3415,7 @@ function renderReport(sc){
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evCardDeduct']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('otherExpAuto').addEventListener('change', renderAll);
