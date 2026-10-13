@@ -187,7 +187,14 @@ canvas{max-width:100%;}
 .pblock-no{font-size:11px;font-weight:700;color:#fff;background:#3b4f66;border-radius:4px;padding:2px 7px;}
 .pblock-note{font-size:11.5px;color:var(--sub);font-weight:400;}
 .pwho-tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:middle;}
-input.ro{background:#f1f3f6;color:#555;}
+/* 직원 입력칸 강조: 입력 가능한 칸은 연노랑, 자동·잠김 칸은 회색 */
+.card input[type=text]:not([readonly]):not([disabled]),.card input[type=number]:not([readonly]):not([disabled]),.card input[type=date],.card select:not([disabled]){background:#FFFBE6;border-color:#E3D39A;}
+.card input[type=text]:not([readonly]):focus,.card input[type=number]:focus,.card select:focus{background:#FFF6CC;border-color:var(--brass);box-shadow:0 0 0 2px rgba(200,155,60,.18);}
+.card input[type=checkbox],.card input[type=radio]{accent-color:var(--brass);}
+.card input[readonly],.card input[disabled],input.ro{background:#f1f3f6!important;color:#555;border-color:var(--line)!important;}
+.input-legend{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub);margin-left:10px;}
+.input-legend i{display:inline-block;width:14px;height:10px;border:1px solid #E3D39A;background:#FFFBE6;border-radius:2px;}
+.input-legend i.g{background:#f1f3f6;border-color:var(--line);}
 .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 .topbar-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .topbar-actions .small-btn,.topbar-actions .btn-primary{white-space:nowrap;}
@@ -615,7 +622,7 @@ table.rep-table.loan td.num{text-align:right;}
 
   <!-- STEP 1: 사업자 정보 -->
   <div class="card">
-    <h2><span class="step-no">1</span>사업자 정보</h2>
+    <h2><span class="step-no">1</span>사업자 정보 <span class="input-legend"><i></i> 입력칸 <i class="g"></i> 자동·잠김</span></h2>
     <p class="hint">보고서 상단과 세액 계산 기준이 됩니다. 사업장이 2곳 이상이면 STEP 3 표의 "+ 사업소득 추가"에서 등록해 주세요.</p>
     <div class="coop-select">
       <label><input type="radio" name="bizMode" value="single" checked onchange="setCoopMode(false)"> 단독사업자</label>
