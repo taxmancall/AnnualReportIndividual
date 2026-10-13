@@ -792,6 +792,7 @@ table.rep-table.loan td.num{text-align:right;}
       <div><b>3호 · 5억원</b> 부동산 임대업·부동산업(매매업 제외), 전문·과학·기술서비스업, 사업시설관리·사업지원 및 임대서비스업, 교육서비스업, 보건업 및 사회복지서비스업, 예술·스포츠·여가 관련 서비스업, 협회·단체·수리 및 기타 개인서비스업, 가구 내 고용활동</div>
       <div class="dil-sub">사업소득 열마다 해당 호수를 선택하세요. 2개 이상 업종이면 수입금액이 가장 큰 업종(주업종) 기준으로 환산해 판정합니다.</div>
     </div>
+    <div id="coopOtherIncome" style="display:none;"></div>
     <div id="coopSplitPreview" class="coop-split" style="display:none;"></div>
     <div id="diligentBadgeWrap"></div>
     <div class="im-notes">
@@ -1453,7 +1454,7 @@ function renderExtraBizList(){
     imRowInc: list.map(b=> `<td class="sub-col auto" id="xbInc_${b.id}">${won(b.income)}</td>`),
     imRowSum: list.map(b=> `<td class="sub-col" id="xbSum_${b.id}">${won(b.income)}</td>`),
     imRowDil: list.map(b=> `<td class="sub-col im-set"><select onchange="updateExtraBiz('${b.id}','dilCat',Number(this.value))"><option value="1500000000" ${b.dilCat===1500000000?'selected':''}>1호 · 15억원</option><option value="750000000" ${b.dilCat===750000000?'selected':''}>2호 · 7.5억원</option><option value="500000000" ${b.dilCat===500000000?'selected':''}>3호 · 5억원</option></select></td>`),
-    imRowSet: list.map(b=> `<td class="sub-col im-set">${sel(b.id,'bizType',BIZ_TYPE_OPTIONS,b.bizType)}${sel(b.id,'bizSize',['소기업','중기업'],b.bizSize)}${sel(b.id,'bizRegion',['수도권(서울/인천/경기)','수도권 외'],b.bizRegion)}</td>`)
+    imRowSet: list.map(b=> `<td class="sub-col im-set">${coopOn() ? `<select onchange="updateExtraBiz('${b.id}','owner',this.value)" title="이 서브 사업소득의 귀속"><option value="all" ${(!b.owner||b.owner==='all')?'selected':''}>귀속: 공동(지분 안분)</option>${state.coop.partners.map(p=> `<option value="${p.id}" ${b.owner===p.id?'selected':''}>귀속: ${escAttr(p.name||'-')}</option>`).join('')}</select>` : ''}${sel(b.id,'bizType',BIZ_TYPE_OPTIONS,b.bizType)}${sel(b.id,'bizSize',['소기업','중기업'],b.bizSize)}${sel(b.id,'bizRegion',['수도권(서울/인천/경기)','수도권 외'],b.bizRegion)}</td>`)
   };
   Object.keys(cells).forEach(rid=>{
     const row = document.getElementById(rid);
@@ -1843,6 +1844,40 @@ function yellowUmbrellaDeduction(paid, bizIncome, rental){
   return { paid, limit, cap, deduction, over: Math.max(paid - deduction, 0) };
 }
 
+
+/* 타소득 계산(근로·연금·기타·금융·임대) — src: {wageGross, pensionGross, otherIncomeGross, otherIncomeExpenseRate, otherExpAuto, otherIncomeExpense, otherIncomeSeparate, finIncomeGross, rentalGross, rentalExpense} */
+function domOtherSrc(){
+  return { wageGross:num('wageGross'), pensionGross:num('pensionGross'), otherIncomeGross:num('otherIncomeGross'),
+    otherIncomeExpenseRate:num('otherIncomeExpenseRate'), otherExpAuto:document.getElementById('otherExpAuto').checked,
+    otherIncomeExpense:num('otherIncomeExpense'), otherIncomeSeparate:document.getElementById('otherIncomeSeparate').checked,
+    finIncomeGross:num('finIncomeGross'), rentalGross:num('rentalGross'), rentalExpense:num('rentalExpense') };
+}
+function computeOtherIncomes(src){
+  const wageGross = Number(src.wageGross)||0;
+  const wageDeduction = laborDeduction(wageGross);
+  const wageIncome = Math.max(wageGross - wageDeduction, 0);
+  const pensionGross = Number(src.pensionGross)||0;
+  const pensionDeductionAmt = pensionDeduction(pensionGross);
+  const pensionIncome = Math.max(pensionGross - pensionDeductionAmt, 0);
+  const otherGross = Number(src.otherIncomeGross)||0;
+  const otherRateInput = Number(src.otherIncomeExpenseRate);
+  const otherRate = Math.min(Math.max(isFinite(otherRateInput)?otherRateInput:60, 0), 100)/100;
+  // 기타소득 필요경비: 필요경비율(의제) 적용 또는 금액 직접입력(총수입 한도)
+  const otherExpense = src.otherExpAuto ? Math.round(otherGross*otherRate) : Math.min(Math.max(Number(src.otherIncomeExpense)||0,0), Math.max(otherGross,0));
+  const otherIncomeAmt = Math.max(otherGross - otherExpense, 0);
+  const otherIncomeIncluded = (src.otherIncomeSeparate && otherIncomeAmt<=3000000) ? 0 : otherIncomeAmt;
+  const finGross = Number(src.finIncomeGross)||0;
+  const finOver = Math.max(finGross-20000000, 0);
+  const finIncluded = finGross>20000000 ? finGross : 0;
+  // 임대소득(부동산임대업): 결손금은 다른 소득과 통산 불가(소득세법 §45②) → 0 하한
+  const rentalGross = Number(src.rentalGross)||0, rentalExpense = Number(src.rentalExpense)||0;
+  const rentalIncomeRaw = rentalGross - rentalExpense;
+  const rentalIncome = Math.max(rentalIncomeRaw, 0);
+  const otherIncomeSum = rentalIncome + wageIncome + pensionIncome + otherIncomeIncluded;
+  return { wageGross, wageDeduction, wageIncome, pensionGross, pensionDeductionAmt, pensionIncome,
+    otherGross, otherExpense, otherIncomeAmt, otherIncomeIncluded, finGross, finOver, finIncluded,
+    rentalGross, rentalExpense, rentalIncomeRaw, rentalIncome, otherIncomeSum };
+}
 function computeIncome(extraExpense, opts){
   opts = opts || {};
   const {N} = getYears();
@@ -1875,41 +1910,19 @@ function computeIncome(extraExpense, opts){
   const taxAdj = adjIn - adjOut - nol;
   const mainBizIncome = pretax + taxAdj;
 
-  const extraBizIncomeTotal = state.extraBiz.reduce((s,b)=> s + (Number(b.income)||0), 0);
-  const extraBizSalesTotal = state.extraBiz.reduce((s,b)=> s + (Number(b.sales)||0), 0);
+  // 추가 사업장(서브): 단독이면 전부, 공동이면 opts.extraBizFilter로 지정된 것만
+  const ebFilter = opts.extraBizFilter || (()=> true);
+  const extraBizIncomes = state.extraBiz.map(b=> ebFilter(b) ? (Number(b.income)||0) : 0);
+  const extraBizIncomeTotal = extraBizIncomes.reduce((s,v)=> s+v, 0);
+  const extraBizSalesTotal = state.extraBiz.reduce((s,b)=> s + (ebFilter(b) ? (Number(b.sales)||0) : 0), 0);
   const bizIncomeTotal = mainBizIncome + extraBizIncomeTotal;
   const totalRevenue = sales + extraBizSalesTotal;
 
-  const wageGross = num('wageGross');
-  const wageDeduction = laborDeduction(wageGross);
-  const wageIncome = Math.max(wageGross - wageDeduction, 0);
-
-  const pensionGross = num('pensionGross');
-  const pensionDeductionAmt = pensionDeduction(pensionGross);
-  const pensionIncome = Math.max(pensionGross - pensionDeductionAmt, 0);
-
-  const otherGross = num('otherIncomeGross');
-  const otherRateInput = num('otherIncomeExpenseRate');
-  const otherRate = Math.min(Math.max(isFinite(otherRateInput)?otherRateInput:60, 0), 100)/100;
-  // 기타소득 필요경비: 필요경비율(의제) 적용 또는 금액 직접입력(총수입 한도)
-  const otherExpAuto = document.getElementById('otherExpAuto').checked;
-  const otherExpense = otherExpAuto
-    ? Math.round(otherGross*otherRate)
-    : Math.min(Math.max(num('otherIncomeExpense'),0), Math.max(otherGross,0));
-  const otherIncomeAmt = Math.max(otherGross - otherExpense, 0);
-  const otherSeparate = document.getElementById('otherIncomeSeparate').checked;
-  const otherIncomeIncluded = (otherSeparate && otherIncomeAmt<=3000000) ? 0 : otherIncomeAmt;
-
-  const finGross = num('finIncomeGross');
-  const finOver = Math.max(finGross-20000000, 0);
-  const finIncluded = finGross>20000000 ? finGross : 0;
-
-  // 임대소득(부동산임대업): 결손금은 다른 소득과 통산 불가(소득세법 §45②) → 0 하한. 중소기업특별세액감면 대상 아님
-  const rentalGross = num('rentalGross'), rentalExpense = num('rentalExpense');
-  const rentalIncomeRaw = rentalGross - rentalExpense;
-  const rentalIncome = Math.max(rentalIncomeRaw, 0);
-
-  const otherIncomeSum = rentalIncome + wageIncome + pensionIncome + otherIncomeIncluded;
+  // 타소득(임대·근로·연금·기타·금융): 단독이면 STEP 3 입력, 공동이면 구성원별 입력(opts.otherSrc)
+  const oi = computeOtherIncomes(opts.otherSrc || domOtherSrc());
+  const { wageGross, wageDeduction, wageIncome, pensionGross, pensionDeductionAmt, pensionIncome,
+          otherGross, otherExpense, otherIncomeAmt, otherIncomeIncluded, finGross, finOver, finIncluded,
+          rentalGross, rentalExpense, rentalIncomeRaw, rentalIncome, otherIncomeSum } = oi;
   // 타소득합산(엑셀 "타소득합산" 행): 추가 사업장 + 근로·연금·기타 + 종합과세 금융소득
   const otherMerged = extraBizIncomeTotal + otherIncomeSum + finIncluded;
   const incomeTotal = bizIncomeTotal + otherIncomeSum + finIncluded;   // 종합소득금액
@@ -1917,7 +1930,7 @@ function computeIncome(extraExpense, opts){
   return { sales, cogs, gross, sga, sgaBase, extraExpense, opIncome, nonOpInc, nonOpExp, pretax,
     adjIn, adjOut, nol, taxAdj,
     mainBizIncome, extraBizIncomeTotal, bizIncomeTotal, totalRevenue,
-    extraBizIncomes: state.extraBiz.map(b=> Number(b.income)||0),
+    extraBizIncomes,
     wageGross, wageDeduction, wageIncome,
     pensionGross, pensionDeductionAmt, pensionIncome,
     otherGross, otherExpense, otherIncomeAmt, otherIncomeIncluded,
@@ -2064,7 +2077,7 @@ const PARTNER_TAX_IDS = ['comboDeduction','pensionContrib','yellowUmbrella','oth
 state.coop = { on:false, active:0, partners:[] };
 let partnerSeq = 0;
 function coopOn(){ return !!(state.coop && state.coop.on && state.coop.partners.length>=2); }
-function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, pastTax1:'', pastTax2:'' }; }
+function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'' }; }
 function partnerVal(p, id){ const v = p.inputs ? p.inputs[id] : undefined; return v==null ? 0 : (Number(v)||0); }
 function activePartner(){ return state.coop.partners[state.coop.active] || null; }
 function bindMoneyInput(el){
@@ -2112,6 +2125,7 @@ function setCoopMode(on){
       const p0 = newPartner(owner, 50);
       PARTNER_TAX_IDS.forEach(id=>{ const el=document.getElementById(id); if (el) p0.inputs[id] = unfmtMoney(el.value); });
       p0.inputs.nolP = num('nol');
+      p0.other = Object.assign({}, domOtherSrc());
       p0.pastTax1 = document.getElementById('pastTax1').value; p0.pastTax2 = document.getElementById('pastTax2').value;
       state.coop.partners.push(p0);
     }
@@ -2121,22 +2135,22 @@ function setCoopMode(on){
   document.getElementById('coopBox').style.display = on ? '' : 'none';
   document.getElementById('pastTaxCoop').style.display = on ? '' : 'none';
   ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly = on; el.classList.toggle('ro', on); });
-  renderPartnerTable(); renderPartnerBlocks(); renderPastTaxCoop();
+  renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop();
   renderAll();
 }
-function addPartner(){ state.coop.partners.push(newPartner('', 0)); renderPartnerTable(); renderPartnerBlocks(); renderPastTaxCoop(); renderAll(); }
+function addPartner(){ state.coop.partners.push(newPartner('', 0)); renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop(); renderAll(); }
 function removePartner(id){
   if (state.coop.partners.length<=2) return;
   const idx = state.coop.partners.findIndex(p=> p.id===id);
   if (idx<0) return;
   state.coop.partners.splice(idx,1);
-  renderPartnerTable(); renderPartnerBlocks(); renderPastTaxCoop(); renderAll();
+  renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop(); renderAll();
 }
 function updatePartner(id, field, val){
   const p = state.coop.partners.find(x=> x.id===id); if (!p) return;
   if (field==='share') p.share = Math.max(Math.min(parseFloat(String(val).replace(/[^0-9.]/g,''))||0, 100), 0);
   else p[field] = val;
-  if (field==='name' || field==='share') updatePartnerBlockHeads();
+  if (field==='name' || field==='share'){ updatePartnerBlockHeads(); renderCoopOtherIncome(); renderExtraBizList(); }
   renderShareHint(); if (field!=='name' && field!=='share') renderPastTaxCoop(); renderAll();
 }
 function shareTotal(){ return state.coop.partners.reduce((a,p)=> a + (Number(p.share)||0), 0); }
@@ -2173,24 +2187,46 @@ function renderPastTaxCoop(){
 }
 
 /* 단독/공동 공통 진입점 */
+const OTHER_SRC_KEYS = ['wageGross','pensionGross','otherIncomeGross','otherIncomeExpenseRate','otherExpAuto','otherIncomeExpense','otherIncomeSeparate','finIncomeGross','rentalGross','rentalExpense'];
+function partnerOtherSrc(p){
+  const o = p.other || {};
+  return { wageGross:o.wageGross||0, pensionGross:o.pensionGross||0, otherIncomeGross:o.otherIncomeGross||0,
+    otherIncomeExpenseRate:(o.otherIncomeExpenseRate==null?60:o.otherIncomeExpenseRate), otherExpAuto:o.otherExpAuto!==false,
+    otherIncomeExpense:o.otherIncomeExpense||0, otherIncomeSeparate:!!o.otherIncomeSeparate, finIncomeGross:o.finIncomeGross||0,
+    rentalGross:o.rentalGross||0, rentalExpense:o.rentalExpense||0 };
+}
+const ZERO_OTHER = { wageGross:0, pensionGross:0, otherIncomeGross:0, otherIncomeExpenseRate:60, otherExpAuto:true, otherIncomeExpense:0, otherIncomeSeparate:false, finIncomeGross:0, rentalGross:0, rentalExpense:0 };
+const OTHER_SUM_KEYS = ['wageGross','wageDeduction','wageIncome','pensionGross','pensionDeductionAmt','pensionIncome','otherGross','otherExpense','otherIncomeAmt','otherIncomeIncluded','finGross','finOver','finIncluded','rentalGross','rentalExpense','rentalIncomeRaw','rentalIncome','otherIncomeSum','extraBizIncomeTotal','totalRevenue','bizIncomeTotal','otherMerged','incomeTotal','nol','taxAdj','mainBizIncome'];
 function computeScenario(extraExpense){
   if (!coopOn()){
     const inc = computeIncome(extraExpense);
     return Object.assign(inc, computeTax(inc, id=> num(id)), { coop:false });
   }
-  const inc = computeIncome(extraExpense, { ignoreNol:true });
   const parts = state.coop.partners;
+  // 공동 안분 대상: 메인 사업소득 + 귀속이 '공동'인 서브 사업소득 (타소득·개인 귀속 서브는 제외)
+  const inc = computeIncome(extraExpense, { ignoreNol:true, otherSrc:ZERO_OTHER, extraBizFilter: b=> !b.owner || b.owner==='all' });
   const results = parts.map(p=>{
-    const pi = scaleIncome(inc, (Number(p.share)||0)/100);
-    // 이월결손금은 구성원 개인 귀속: 안분된 사업소득금액 범위에서 차감
-    const nol = Math.min(Math.max(partnerVal(p,'nolP'),0), Math.max(pi.mainBizIncome,0));
-    pi.nol = nol; pi.taxAdj -= nol; pi.mainBizIncome -= nol; pi.bizIncomeTotal -= nol; pi.incomeTotal -= nol; pi.otherMerged = pi.otherMerged;
+    const share = (Number(p.share)||0)/100;
+    const pi = scaleIncome(inc, share);
+    // 이 구성원 개인 귀속 서브 사업소득·타소득
+    const own = computeIncome(extraExpense, { ignoreNol:true, otherSrc: partnerOtherSrc(p), extraBizFilter: b=> b.owner===p.id });
+    OTHER_SUM_KEYS.forEach(k=>{ if (['extraBizIncomeTotal','totalRevenue'].includes(k)) return; });
+    ['wageGross','wageDeduction','wageIncome','pensionGross','pensionDeductionAmt','pensionIncome','otherGross','otherExpense','otherIncomeAmt','otherIncomeIncluded','finGross','finOver','finIncluded','rentalGross','rentalExpense','rentalIncomeRaw','rentalIncome','otherIncomeSum'].forEach(k=> pi[k] = own[k]);
+    pi.extraBizIncomes = pi.extraBizIncomes.map((v,i)=> v + own.extraBizIncomes[i]);
+    pi.extraBizIncomeTotal = pi.extraBizIncomes.reduce((a,v)=> a+v, 0);
+    pi.totalRevenue = pi.sales + state.extraBiz.reduce((a,b)=> a + (b.owner===p.id ? (Number(b.sales)||0) : (!b.owner||b.owner==='all' ? (Number(b.sales)||0)*share : 0)), 0);
+    // 이월결손금은 구성원 개인 귀속: 사업소득금액 범위에서 차감
+    const nol = Math.min(Math.max(partnerVal(p,'nolP'),0), Math.max(pi.mainBizIncome + pi.extraBizIncomeTotal,0));
+    pi.nol = nol; pi.taxAdj -= nol; pi.mainBizIncome -= nol;
+    pi.bizIncomeTotal = pi.mainBizIncome + pi.extraBizIncomeTotal;
+    pi.otherMerged = pi.extraBizIncomeTotal + pi.otherIncomeSum + pi.finIncluded;
+    pi.incomeTotal = pi.bizIncomeTotal + pi.otherIncomeSum + pi.finIncluded;
     const t = computeTax(pi, id=> partnerVal(p, id));
     return Object.assign({ partner: p }, pi, t);
   });
   const merged = mergeTax(results, inc);
-  // 합계 소득 항목도 구성원 합으로(이월결손금 반영)
-  ['nol','taxAdj','mainBizIncome','bizIncomeTotal','incomeTotal'].forEach(k=> inc[k] = results.reduce((a,r)=> a + r[k], 0));
+  OTHER_SUM_KEYS.forEach(k=> inc[k] = results.reduce((a,r)=> a + (Number(r[k])||0), 0));
+  inc.extraBizIncomes = state.extraBiz.map((b,i)=> results.reduce((a,r)=> a + (r.extraBizIncomes[i]||0), 0));
   merged.burdenRate = inc.incomeTotal>0 ? merged.totalBurden/inc.incomeTotal : 0;
   return Object.assign(inc, merged, { coop:true, partners: results });
 }
@@ -2264,6 +2300,7 @@ function renderAll(){
     renderDiligentCheck(s1);
     renderIncomePreview(s1);
     renderCoopSplitPreview(sc);
+    syncCoopOtherTotalsToDom(sc);
     renderEvidenceHint();
     renderScenarioCards(sc);
     renderSavings(sc);
@@ -2272,6 +2309,57 @@ function renderAll(){
   } catch(e){
     console.warn('renderAll 중 오류(입력값 처리에는 영향 없음):', e);
   }
+}
+
+/* STEP 3 (공동): 구성원별 타소득 입력표 — 임대·근로·연금·기타·금융은 지분 안분이 아니라 귀속자 개인 소득 */
+const OTHER_INPUT_IDS = ['rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross'];
+function renderCoopOtherIncome(){
+  const box = document.getElementById('coopOtherIncome'); if (!box) return;
+  const on = coopOn();
+  // 공동이면 STEP 3 표의 타소득 칸은 잠그고(합계 표시용), 구성원별 표에 입력
+  OTHER_INPUT_IDS.forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
+  ['otherExpAuto','otherIncomeSeparate'].forEach(id=>{ const el=document.getElementById(id); if (el) el.disabled = on; });
+  if (!on){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  const money = (p,key)=> `<input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(p.other&&p.other[key]||0)}" data-pid="${p.id}" data-key="${key}">`;
+  box.innerHTML = `<div class="coop-split" style="margin-top:12px;">
+    <div class="coop-split-t">👥 구성원별 타소득 입력 — 임대·근로·연금·기타·금융소득은 지분 안분 없이 <b>귀속 구성원 개인</b>의 소득으로 계산합니다 (위 표의 타소득 칸은 구성원 합계)</div>
+    <div class="im-wrap"><table class="income-matrix" style="min-width:900px;">
+      <thead><tr><th>구성원</th><th>임대 총수입</th><th>임대 필요경비</th><th>근로 총급여</th><th>연금 총연금액</th><th>기타 총수입</th><th>기타 필요경비</th><th>금융소득<br><small>(이자+배당)</small></th><th>안분 종합소득금액<br><small>(①안, 사업+타소득)</small></th></tr></thead>
+      <tbody>${state.coop.partners.map(p=> `<tr>
+        <th>${escAttr(p.name||'-')} <small>${p.share}%</small></th>
+        <td>${money(p,'rentalGross')}</td><td>${money(p,'rentalExpense')}</td><td>${money(p,'wageGross')}</td><td>${money(p,'pensionGross')}</td>
+        <td>${money(p,'otherIncomeGross')}</td>
+        <td><label class="im-rate" style="display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:11.5px;"><input type="checkbox" data-pid="${p.id}" data-key="otherExpAuto" ${(p.other&&p.other.otherExpAuto===false)?'':'checked'} style="width:auto;"> 경비율 <input type="number" min="0" max="100" value="${p.other&&p.other.otherIncomeExpenseRate!=null?p.other.otherIncomeExpenseRate:60}" data-pid="${p.id}" data-key="otherIncomeExpenseRate" style="width:52px;">%</label>
+            <input type="text" inputmode="decimal" class="money-input" value="${fmtMoney(p.other&&p.other.otherIncomeExpense||0)}" data-pid="${p.id}" data-key="otherIncomeExpense" placeholder="직접입력" ${(p.other&&p.other.otherExpAuto===false)?'':'disabled'}></td>
+        <td>${money(p,'finIncomeGross')}</td>
+        <td class="auto" id="coopInc_${p.id}">-</td></tr>`).join('')}</tbody>
+    </table></div>
+    <label class="im-check" style="margin-top:6px;">${state.coop.partners.map(p=> `<span style="margin-right:14px;"><input type="checkbox" data-pid="${p.id}" data-key="otherIncomeSeparate" ${(p.other&&p.other.otherIncomeSeparate)?'checked':''} style="width:auto;"> ${escAttr(p.name||'-')} 기타소득 300만원 이하 분리과세 선택</span>`).join('')}</label>
+    <div style="font-size:11.5px;color:var(--sub);margin-top:4px;">· 서브 사업소득은 STEP 3 표의 각 서브 열에서 "귀속"을 구성원 또는 공동(지분 안분)으로 지정합니다. · 근로·연금소득공제, 기타소득 필요경비율, 금융소득 2천만원 기준은 구성원별로 각각 적용됩니다.</div>
+  </div>`;
+  box.querySelectorAll('input[data-pid]').forEach(el=>{
+    const p = state.coop.partners.find(x=> x.id===el.dataset.pid); if (!p) return;
+    p.other = p.other || {};
+    const key = el.dataset.key;
+    if (el.type==='checkbox'){
+      el.addEventListener('change', ()=>{ p.other[key] = el.checked; if (key==='otherExpAuto'){ const m = box.querySelector(`input[data-pid="${p.id}"][data-key="otherIncomeExpense"]`); if (m) m.disabled = el.checked; } renderAll(); });
+    } else if (el.type==='number'){
+      el.addEventListener('input', ()=>{ p.other[key] = parseFloat(el.value); renderAll(); });
+    } else {
+      bindMoneyInput(el);
+      el.addEventListener('input', ()=>{ p.other[key] = unfmtMoney(el.value); renderAll(); });
+    }
+  });
+}
+function syncCoopOtherTotalsToDom(sc){
+  // 공동: STEP 3 표의 타소득 칸(잠김)에 구성원 합계를 표시하고, 구성원별 표에 ①안 소득금액 표시
+  if (!coopOn()) return;
+  const s1 = sc[0].s;
+  const set = (id,v)=>{ const el=document.getElementById(id); if (el) el.value = fmtMoney(v); };
+  set('rentalGross', s1.rentalGross); set('rentalExpense', s1.rentalExpense); set('wageGross', s1.wageGross); set('pensionGross', s1.pensionGross);
+  set('otherIncomeGross', s1.otherGross); set('otherIncomeExpense', s1.otherExpense); set('finIncomeGross', s1.finGross);
+  s1.partners.forEach(r=>{ const el=document.getElementById('coopInc_'+r.partner.id); if (el) el.textContent = won(r.incomeTotal); });
 }
 
 /* STEP 3 아래: 공동사업 구성원별 안분 미리보기 (①안 종합소득금액 기준) */
@@ -3496,7 +3584,7 @@ function loadWork(data){
   renderExtraBizList();
   const coopRadio = document.querySelector(`input[name=bizMode][value=${state.coop.on?'coop':'single'}]`); if (coopRadio) coopRadio.checked = true;
   if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly=true; el.classList.add('ro'); }); }
-  renderPartnerTable(); renderPartnerBlocks(); renderPastTaxCoop();
+  renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderPastTaxCoop();
   renderAll();
 }
 document.getElementById('workFile').addEventListener('change', e=>{
