@@ -367,6 +367,28 @@ table.rep-table.wide td.g-act,table.rep-table.wide th.g-act,table.rep-table.wide
 table.rep-table tr.extra td{background:#FDECEC!important;color:#B4232C;font-weight:700;}
 table.rep-table tr.extra td:first-child{color:#B4232C;}
 table.rep-table tr.extra td.memo{color:#B4232C;font-weight:400;}
+/* 1-1 아래 손익계산서 검토 항목 */
+.plr-wrap{margin-top:18px;border:1px solid var(--line);border-radius:10px;background:#FCFBF7;padding:14px 16px;}
+.plr-title{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.plr-intro{font-size:11.5px;color:var(--sub);margin-bottom:10px;}
+.plr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.plr-item{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;break-inside:avoid;}
+.plr-item.full{grid-column:1 / -1;}
+.plr-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;font-weight:700;color:var(--navy);}
+.plr-h .amt{font-family:'Noto Serif KR',serif;font-size:14px;color:#1c2733;white-space:nowrap;}
+.plr-sub{font-size:11px;color:var(--sub);margin:3px 0 6px;line-height:1.5;}
+.plr-q{font-size:12px;color:#8a4b00;background:#FFF6E5;border-left:3px solid var(--brass);padding:6px 9px;border-radius:0 6px 6px 0;line-height:1.55;}
+.plr-q b{color:#6b3a00;}
+.plr-flag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:middle;}
+.plr-flag.ok{background:#e3f3ec;color:#2E6B4F;}
+.plr-flag.warn{background:#fbeceb;color:#9E3B33;}
+.plr-flag.na{background:#eef1f5;color:#5d6b7c;}
+table.plr-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;}
+table.plr-tbl th{background:#EEF1F5;color:var(--navy);font-weight:600;padding:4px 8px;text-align:left;}
+table.plr-tbl td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;}
+table.plr-tbl td:first-child{text-align:left;color:#444;}
+table.plr-tbl tr.sum td{font-weight:700;color:var(--navy);background:#F7F5EF;}
+@media (max-width:820px){.plr-grid{grid-template-columns:1fr;}}
 table.rep-table.wide{font-size:10.5px;}
 #estimateTable{font-size:12px;}
 #estimateTable th{padding:8px 10px;}
@@ -435,6 +457,13 @@ table.rep-table.loan td.num{text-align:right;}
   #report .chart-box{width:52%;margin:0 auto;padding:6px;}
   #report .chart-box canvas{width:100%!important;height:auto!important;}
   .rep-section{margin:18px 0;}
+  .plr-wrap{padding:10px 12px;}
+  .plr-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .plr-item{padding:8px 10px;}
+  .plr-h{font-size:11px;}
+  .plr-h .amt{font-size:12px;}
+  .plr-sub,.plr-q{font-size:9.5px;}
+  table.plr-tbl{font-size:9px;}
   table.rep-table.tax{font-size:11px;}
   table.rep-table.tax td{padding:4px 9px;}
   table.rep-table.tax th{padding:6px 9px;}
@@ -806,6 +835,7 @@ table.rep-table.loan td.num{text-align:right;}
       <h2 class="c-blue"><span class="h2-badge">📐</span>1-1. <span class="yN">N</span>년 연간 추정 손익 산출 내역 (실적 → 수정·가감 → 연간 추정)</h2>
       <div class="rep-unit">(단위: 원)</div>
       <table class="rep-table wide" id="estimateTable"></table>
+      <div id="plReview"></div>
     </div>
 
     <div class="rep-section">
@@ -2588,6 +2618,111 @@ function renderSmeCard(sc){
     <li>감면 한도 1억원(전년 대비 상시근로자 감소 시 1명당 500만원 차감) · 감면 적용 시 최저한세(조특법 §132②)·농어촌특별세 확인</li>`;
 }
 
+/* ============================================================
+   보고서 1-1 아래: 손익계산서 검토 항목 (연간 추정 기준) — 지출이 적정한지 묻는 질문형 점검
+============================================================ */
+const FIXED_COST_KEYS = ['지급임차료','임차료','감가상각비','무형자산상각','보험료','통신비','세금과공과','리스료','이자비용','수도광열비','전력비','관리비','경비','보안','회비','협회비','교육훈련비','도서인쇄비','사무용품비','소프트웨어','전산','임차'];
+const VARIABLE_COST_KEYS = ['소모품','재료','원가','매입','광고','선전','접대','기업업무추진','여비','교통','차량','수수료','운반','포장','판매','수선','의료폐기물','폐기물','외주','용역','수출','견본','잡비','기타'];
+function plrClassify(name){
+  const n = normLabel(name);
+  if (isLaborItem(n) || isInsuranceItem(n) || n.includes('복리후생')) return 'labor';
+  if (FIXED_COST_KEYS.some(k=> n.includes(normLabel(k)))) return 'fixed';
+  if (VARIABLE_COST_KEYS.some(k=> n.includes(normLabel(k)))) return 'variable';
+  return 'other';
+}
+function renderPLReview(sc){
+  const box = document.getElementById('plReview');
+  if (!box) return;
+  const {N} = getYears();
+  if (!hasAdjDetail(N)){ box.innerHTML = ''; return; }
+  const mult = adjMult();
+  const s1 = sc[0].s;
+  const sales = s1.sales;
+  const pct = (a,b)=> (b>0 ? (a/b*100).toFixed(1)+'%' : '-');
+  const SGA = 'Ⅳ. 판매비와 관리비';
+  const items = adjItems(N, SGA).map(it=> ({ name: it.name, amt: lineFinal(it, mult) * (it.sign||1) })).filter(it=> it.amt);
+  const sum = (pred)=> items.filter(pred).reduce((a,b)=> a+b.amt, 0);
+  const find = (pred)=> items.filter(pred);
+  const nm = (it, ks)=> ks.some(k=> normLabel(it.name).includes(normLabel(k)));
+
+  // 1. 인건비
+  const salary = sum(it=> isLaborItem(it.name) && !normLabel(it.name).includes('퇴직') && !normLabel(it.name).includes('잡급'));
+  const retire = sum(it=> normLabel(it.name).includes('퇴직'));
+  const daily = sum(it=> nm(it, ['잡급','일용']));
+  const free = sum(it=> nm(it, ['프리랜서','외주','용역','사업소득지급','사업소득급여']));
+  const welfare = sum(it=> nm(it, ['복리후생']));
+  const insur = sum(it=> isInsuranceItem(it.name));
+  const laborCore = salary + retire + daily + free;
+  const laborAll = laborCore + welfare + insur;
+  const welfareRate = laborCore>0 ? welfare/laborCore*100 : null;
+
+  // 2. 접대비 한도 (소득세법 §35: 기본 3,600만원 + 수입금액×0.3%(100억 이하 구간))
+  const ent = sum(it=> nm(it, ['접대','기업업무추진']));
+  const entLimit = 36000000 + Math.min(sales, 10000000000)*0.003 + Math.max(Math.min(sales,50000000000)-10000000000,0)*0.002 + Math.max(sales-50000000000,0)*0.0003;
+  // 3. 차량유지비
+  const car = sum(it=> nm(it, ['차량']));
+  // 4. 고정비 / 변동비
+  const cogs = sectionTotal(N, 'Ⅱ. 매출원가', mult);
+  const fixed = sum(it=> plrClassify(it.name)==='fixed');
+  const variableSga = sum(it=> plrClassify(it.name)==='variable');
+  const other = sum(it=> plrClassify(it.name)==='other');
+  const variable = cogs + variableSga;
+  const vRatio = sales>0 ? variable/sales : 0;
+  const bep = (1 - vRatio) > 0 ? (fixed + laborAll) / (1 - vRatio) : null;
+  // 5. 개인적 사용 의심 과목
+  const personal = find(it=> nm(it, ['임시계정','가지급','개인','대표자']));
+
+  const flag = (ok, txt)=> `<span class="plr-flag ${ok===null?'na':(ok?'ok':'warn')}">${txt}</span>`;
+  const row = (l,v,p)=> `<tr><td>${l}</td><td>${won(v)}</td><td>${p}</td></tr>`;
+  box.innerHTML = `
+  <div class="plr-wrap">
+    <div class="plr-title">📝 ${N}년 연간 추정 손익계산서 검토 항목 — 지출, 이 정도면 괜찮을까요?</div>
+    <div class="plr-intro">연간 추정 금액(①안) 기준입니다. 아래 질문을 보시고 사업 실정과 다르거나 빠진 지출이 있으면 알려주세요. 남은 기간 집행 계획(②·③안)에 반영합니다.</div>
+    <div class="plr-grid">
+      <div class="plr-item">
+        <div class="plr-h"><span>① 인건비</span><span class="amt">${won(laborAll)}원 <small>(매출 대비 ${pct(laborAll,sales)})</small></span></div>
+        <table class="plr-tbl">
+          ${row('직원급여·상여', salary, pct(salary,sales))}${retire?row('퇴직급여', retire, pct(retire,sales)):''}${daily?row('일용직(잡급)', daily, pct(daily,sales)):''}${free?row('프리랜서·외주 용역', free, pct(free,sales)):''}
+          <tr class="sum"><td>인건비 소계</td><td>${won(laborCore)}</td><td>${pct(laborCore,sales)}</td></tr>
+          ${row('복리후생비', welfare, (welfareRate!==null? '인건비의 '+welfareRate.toFixed(1)+'%' : '-'))}${insur?row('4대보험 사업주부담', insur, pct(insur,sales)):''}
+        </table>
+        <div class="plr-q"><b>인건비 지출이 이 정도면 괜찮을까요?</b> 직원 수·근무시간 대비 적정한지, 일용직·프리랜서 지급분의 원천세 신고와 지급명세서 제출이 모두 되어 있는지 확인해 주세요. 신고되지 않은 인건비는 경비로 인정되지 않습니다.</div>
+      </div>
+      <div class="plr-item">
+        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원 ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>
+        <div class="plr-sub">식대·간식·회식·경조사·직원 선물 등. 사무소 참고 기준: 인건비(급여·상여 등)의 <b>10% 내외</b>. 직원 수에 비해 크면 대표자 개인 지출이 섞였는지 봅니다.</div>
+        <div class="plr-q"><b>복리후생비가 직원 복지에 쓰인 금액이 맞나요?</b> 직원이 없는 사업장의 복리후생비, 주말·심야 식대, 1인 결제 반복은 개인 지출로 보아 부인될 수 있습니다.</div>
+      </div>
+      <div class="plr-item">
+        <div class="plr-h"><span>③ 접대비(기업업무추진비)</span><span class="amt">${won(ent)}원 ${flag(ent<=entLimit, ent<=entLimit?'한도 이내':'한도 초과 '+won(ent-entLimit)+'원')}</span></div>
+        <div class="plr-sub">${N}년 한도 약 <b>${won(entLimit)}원</b> = 기본 3,600만원 + 매출 ${won(sales)}원 × 0.3%(100억 이하 구간) (소득세법 §35). 건당 3만원 초과분은 적격증빙 필수, 경조사비는 20만원까지.</div>
+        <div class="plr-q"><b>접대비 지출이 거래처·고객 관련이 맞나요?</b> 가족·지인 식사, 골프, 선물 중 사업과 무관한 건은 경비에서 제외해야 합니다.</div>
+      </div>
+      <div class="plr-item">
+        <div class="plr-h"><span>④ 차량유지비</span><span class="amt">${won(car)}원 ${car>0 ? flag(car<=15000000, car<=15000000?'연 1,500만원 이내':'1,500만원 초과') : flag(null,'해당 없음')}</span></div>
+        <div class="plr-sub">업무용승용차는 업무전용자동차보험 가입 + 운행기록부가 있어야 전액 인정되고, 운행기록부가 없으면 감가상각비 포함 연 1,500만원까지만 인정됩니다(소득세법 §33의2).</div>
+        <div class="plr-q"><b>차량을 업무에 얼마나 쓰시나요?</b> 운행기록부를 쓰고 계신지, 가족 차량 비용이 들어가 있지는 않은지 확인해 주세요.</div>
+      </div>
+      <div class="plr-item full">
+        <div class="plr-h"><span>⑤ 고정비 · 변동비 구조</span><span class="amt">고정비 ${won(fixed+laborAll)}원 / 변동비 ${won(variable)}원</span></div>
+        <table class="plr-tbl">
+          <tr><th>구분</th><th style="text-align:right;">연간 추정</th><th style="text-align:right;">매출 대비</th><th>내용</th></tr>
+          <tr><td>고정비(매출과 무관하게 나가는 비용)</td><td>${won(fixed+laborAll)}</td><td>${pct(fixed+laborAll,sales)}</td><td style="text-align:left;color:var(--sub);">인건비·복리후생·4대보험 ${won(laborAll)} + 임차료·감가상각·보험·통신·세금과공과 등 ${won(fixed)}</td></tr>
+          <tr><td>변동비(매출에 비례해 나가는 비용)</td><td>${won(variable)}</td><td>${pct(variable,sales)}</td><td style="text-align:left;color:var(--sub);">매출원가 ${won(cogs)} + 소모품·광고·접대·여비·차량·수수료 등 ${won(variableSga)}</td></tr>
+          ${other?`<tr><td>기타(분류 보류)</td><td>${won(other)}</td><td>${pct(other,sales)}</td><td style="text-align:left;color:var(--sub);">${find(it=> plrClassify(it.name)==='other').map(it=> esc(it.name)).join(', ')}</td></tr>`:''}
+          <tr class="sum"><td>손익분기 매출(고정비 ÷ (1 − 변동비율))</td><td>${bep!==null?won(bep):'-'}</td><td>${bep!==null && sales>0 ? '현재 매출의 '+(bep/sales*100).toFixed(0)+'%' : '-'}</td><td style="text-align:left;color:var(--sub);">${bep!==null && sales>0 ? (bep<sales ? '매출이 손익분기점을 넘어 고정비 부담은 감당되고 있습니다' : '매출이 손익분기점에 미달해 고정비 구조 점검이 필요합니다') : ''}</td></tr>
+        </table>
+        <div class="plr-q"><b>매출이 줄어도 계속 나가는 고정비가 매출의 ${pct(fixed+laborAll,sales)}입니다.</b> 임차료·인건비·리스 등 고정비 중 조정 여지가 있는 항목이 있을까요? 변동비 중 단가 협상이 가능한 매입처는 없을까요?</div>
+      </div>
+      ${personal.length ? `<div class="plr-item full">
+        <div class="plr-h"><span>⑥ 개인적 사용 가능성 과목</span><span class="amt">${won(personal.reduce((a,b)=>a+b.amt,0))}원</span></div>
+        <div class="plr-sub">${personal.map(it=> esc(it.name)+' '+won(it.amt)+'원').join(' · ')}</div>
+        <div class="plr-q"><b>이 금액은 사업용 지출인가요, 대표자 개인 지출인가요?</b> 개인 지출은 경비에서 빼고 인출금으로 정리해야 하며, 사업용 카드로 결제했더라도 사업관련성이 없으면 경비가 아닙니다.</div>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
@@ -2647,6 +2782,7 @@ function renderReport(sc){
   const detailHtml = (state.incEstimateDetail!==false) ? buildEstimateDetail() : '';
   detailSec.style.display = detailHtml ? '' : 'none';
   setTableWithCaption('estimateTable', detailHtml, 4);
+  renderPLReview(sc);
 
   document.getElementById('incomeTable').innerHTML = `
     <tr><th>소득 구분</th><th>금액</th><th>비고</th></tr>
