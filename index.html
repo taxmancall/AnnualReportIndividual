@@ -174,6 +174,8 @@ canvas{max-width:100%;}
 .ptab.on{background:var(--navy);color:#fff;border-color:var(--navy);}
 .ptab small{opacity:.8;margin-left:3px;}
 .ptab-note{font-size:11.5px;color:var(--sub);flex-basis:100%;}
+#partnerArea.coop{border:2px solid #9DB2C8;border-radius:10px;padding:4px 12px 12px;margin-top:8px;background:#FAFCFF;}
+.pwho-tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:middle;}
 input.ro{background:#f1f3f6;color:#555;}
 .actions{display:flex;justify-content:flex-end;gap:10px;margin:6px 0 26px;flex-wrap:wrap;align-items:center;}
 .actions label,.actions .small-btn,.actions .btn-primary{white-space:nowrap;}
@@ -752,7 +754,8 @@ table.rep-table.loan td.num{text-align:right;}
     </div>
 
     <div id="partnerTabs" class="ptabs" style="display:none;"></div>
-    <div class="step-subhead">소득공제</div>
+    <div id="partnerArea">
+    <div class="step-subhead">소득공제 <span class="pwho"></span></div>
     <div class="im-wrap">
     <table class="income-matrix ded-matrix">
       <thead><tr><th></th><th>소득공제<br>(인적공제 등)</th><th>국민연금 공제<br><small>(대표자 본인 납입분)</small></th><th>노란우산공제<br><small>(조특법 §86의3)</small></th><th>기타공제</th><th>합계</th></tr></thead>
@@ -770,7 +773,7 @@ table.rep-table.loan td.num{text-align:right;}
     </div>
     <div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:6px 0 4px;"></div>
 
-    <div class="step-subhead">세액공제 · 감면 <span style="font-weight:400;color:var(--sub);font-size:12px;">(중소기업특별세액감면은 STEP 1 정보로 자동 계산)</span></div>
+    <div class="step-subhead">세액공제 · 감면 <span class="pwho"></span> <span style="font-weight:400;color:var(--sub);font-size:12px;">(중소기업특별세액감면은 STEP 1 정보로 자동 계산)</span></div>
     <div class="im-wrap">
     <table class="income-matrix cr-matrix">
       <thead><tr><th></th><th>① 자녀·출산</th><th>② 기장</th><th>③ 표준·근로소득<br>세액공제 등</th><th>④ 통합고용(고용증대)<br>당기분</th><th>⑤ 통합고용(고용증대)<br>이월분</th><th>⑥ 성실신고<br>확인비용</th></tr></thead>
@@ -783,12 +786,13 @@ table.rep-table.loan td.num{text-align:right;}
       <input type="checkbox" id="minTaxOn" style="width:auto;" checked> 최저한세 적용 (조특법 §132② - 중소기업특별세액감면·통합고용세액공제·사회보험료 세액공제·노란우산공제 대상. 성실신고 확인비용 등 그 밖의 세액공제는 대상 아님. 배제된 통합고용·사회보험료 공제는 다음 연도로 이월)
     </label>
 
-    <div class="step-subhead">가산세 · 기납부세액</div>
+    <div class="step-subhead">가산세 · 기납부세액 <span class="pwho"></span></div>
     <div class="grid cols-4">
       <div class="field"><label>가산세·추가납부세액</label><input type="text" inputmode="decimal" class="money-input" id="penalty" value="0"></div>
       <div class="field"><label>중간예납세액</label><input type="text" inputmode="decimal" class="money-input" id="midterm" value="0"></div>
       <div class="field"><label>기납부(원천징수)세액 - 국세</label><input type="text" inputmode="decimal" class="money-input" id="withhold" value="0"></div>
       <div class="field"><label>기납부세액 - 지방소득세</label><input type="text" inputmode="decimal" class="money-input" id="withholdLocal" value="0"></div>
+    </div>
     </div>
 
     <div style="margin-top:16px;padding:14px;background:var(--brass-light);border-radius:9px;">
@@ -2063,7 +2067,12 @@ function renderPartnerTable(){
 }
 function renderPartnerTabs(){
   const el = document.getElementById('partnerTabs'); if (!el) return;
-  if (!coopOn()){ el.style.display='none'; return; }
+  const area = document.getElementById('partnerArea');
+  const who = document.querySelectorAll('#partnerArea .pwho');
+  if (!coopOn()){ el.style.display='none'; if (area) area.classList.remove('coop'); who.forEach(w=> w.textContent=''); return; }
+  const ap = activePartner();
+  if (area) area.classList.add('coop');
+  who.forEach(w=> w.innerHTML = `<span class="pwho-tag">👤 ${escAttr(ap && ap.name || '구성원')} ${ap?ap.share:0}% 입력 중</span>`);
   el.style.display='';
   el.innerHTML = `<span class="ptab-label">입력 대상 구성원:</span>` + state.coop.partners.map((p,i)=>
     `<button type="button" class="ptab ${i===state.coop.active?'on':''}" onclick="selectPartner(${i})">${escAttr(p.name||('구성원'+(i+1)))} <small>${p.share}%</small></button>`).join('')
