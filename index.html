@@ -765,10 +765,9 @@ table.rep-table.loan td.num{text-align:right;}
       <tr><td class="ev-l">근로소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evWage" value="0"></td><td class="ev-n">직원 급여·상여 (지급명세서 제출분)</td></tr>
       <tr><td class="ev-l">사업소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evBizInc" value="0"></td><td class="ev-n">프리랜서 3.3% 원천징수 지급액</td></tr>
       <tr><td class="ev-l">일용소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evDaily" value="0"></td><td class="ev-n">일용근로자 지급액</td></tr>
-      <tr><th colspan="3" class="ev-grp">기타 (적격증빙 외 전부 — 감가상각비·4대보험료·세금과공과·무증빙 포함)</th></tr>
+      <tr><th colspan="3" class="ev-grp">기타 (적격증빙 외 전부 — 감가상각비·4대보험료·세금과공과·보험료 등 증빙 불요 경비)</th></tr>
       <tr><td class="ev-l">기타금액</td><td><input type="text" inputmode="decimal" class="money-input" id="evOther" value="0"></td><td class="ev-n">위하고 집계의 기타 합계. 비워 두면 <b>장부 경비 − 적격증빙</b>으로 자동 계산 (<span id="evOtherAuto">0</span>)</td></tr>
       <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 증빙 불요 경비</td><td id="evAutoNonEv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoNonEvList">감가상각비·4대보험·세금과공과·보험료·퇴직급여·이자 등 — 손익계산서에서 자동</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 무증빙·미분류</td><td id="evAutoRest" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n">기타금액 − 증빙 불요 = 입력 누락 증빙 또는 영수증 없이 나간 지출 → 직원이 먼저 확인</td></tr>
       <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">※ 임시계정(장부 과목)</td><td id="evAutoTemp" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n" id="evAutoTempList">임시계정·가지급금 등 — 손익계산서에서 자동 · 카드·통장 등 위 증빙 유형에 이미 포함된 금액이라 합계에 더하지 않음 · 개인 지출 의심</td></tr>
       <tr class="ev-sum"><td class="ev-l">합계</td><td id="evTotalCell" style="text-align:right;font-weight:700;">0</td><td class="ev-n">장부 경비(매출원가+판관비 실적) <b id="evBookCell">0</b> · 적격증빙 <b id="evQualCell">0</b> <span id="evMismatch"></span></td></tr>
     </table>
@@ -3223,14 +3222,14 @@ function renderEvidenceHint(){
   const e = evidenceStats();
   const st = (id,v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
   st('evTotalCell', won(e.total)); st('evBookCell', won(e.bookExp)+'원'); st('evQualCell', won(e.qualified)+'원'); st('evCardNet', won(e.ev.card)+'원');
-  st('evAutoNonEv', won(e.nonEv)); st('evAutoTemp', won(e.temp)); st('evAutoRest', won(e.other)); st('evOtherAuto', won(Math.max(e.bookExp - e.qualified,0))+'원');
+  st('evAutoNonEv', won(e.nonEv)); st('evAutoTemp', won(e.temp)); st('evOtherAuto', won(Math.max(e.bookExp - e.qualified,0))+'원');
   st('evAutoNonEvList', (e.nonEvItems.length||e.inventory) ? (e.nonEvItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.inventory ? ` · 재고 변동 ${won(e.inventory)}` : '')) : '감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익 업로드 후 자동 (해당 과목 없음)');
   st('evAutoTempList', e.tempItems.length ? e.tempItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + ' — 개인 지출 의심, 정리 필요' : '임시계정·가지급금 등 미정리 금액 — 해당 과목 없음');
   const mm = document.getElementById('evMismatch');
   if (mm) mm.innerHTML = Math.abs(e.mismatch) < 1 ? '<span style="color:#2E6B4F;">· 장부와 일치</span>' : `<span style="color:#9E3B33;">· 장부와 ${won(e.mismatch)}원 차이 (입력 확인)</span>`;
   const el = document.getElementById('evHint'); if (!el) return;
   if (!e.entered){ el.innerHTML = '증빙 금액을 입력하면 장부 경비의 증빙별 구성이 여기와 보고서(1-1 검토 항목)에 표시됩니다.'; return; }
-  el.innerHTML = `장부 경비 ${won(e.bookExp)}원 = 적격증빙 <b>${won(e.qualified)}원</b>(${e.bookExp>0?(e.qualified/e.bookExp*100).toFixed(1):'-'}%) + 기타 ${won(e.bucket)}원 [증빙 불요 ${won(e.nonEv)} · 무증빙·미분류 <b style="color:#9E3B33;">${won(e.other)}</b>] · 그중 임시계정(장부 과목) <b style="color:#9E3B33;">${won(e.temp)}</b>`
+  el.innerHTML = `장부 경비 ${won(e.bookExp)}원 = 적격증빙 <b>${won(e.qualified)}원</b>(${e.bookExp>0?(e.qualified/e.bookExp*100).toFixed(1):'-'}%) + 기타 ${won(e.bucket)}원 (그중 증빙 불요 ${won(e.nonEv)}) · 임시계정(장부 과목, 정리 필요) <b style="color:#9E3B33;">${won(e.temp)}</b>`
     + ` · 카드 사용액 ${won(e.ev.card)}원(실적 매출 ${won(e.actSales)}원의 ${e.actSales>0?(e.ev.card/e.actSales*100).toFixed(1):'-'}%)`;
 }
 function evidenceReviewHTML(sc){
@@ -3242,20 +3241,19 @@ function evidenceReviewHTML(sc){
   const rows = [
     ['세금계산서', e.ev.taxInv, 'q'],['계산서', e.ev.inv, 'q'],['신용카드(사업용)'+(e.ev.cardDeduct>0?` — 사용액 ${won(e.ev.cardGross)} 중 세금·보험료 납부 ${won(e.ev.cardDeduct)} 제외`:''), e.ev.card, 'q'],['현금영수증', e.ev.cash, 'q'],['청첩장·부고장(경조사비)', e.ev.wedding, 'q'],
     ['근로소득(급여)', e.ev.wage, 'q'],['사업소득(프리랜서)', e.ev.bizInc, 'q'],['일용소득', e.ev.daily, 'q'],
-    ['증빙 불요 경비(감가상각·4대보험·세금과공과·보험료 등)', e.nonEv, 'n'],
-    ['무증빙·미분류', e.other, 'x'],
-    ['↳ 그중 임시계정(미정리·개인 지출 의심) — 장부 과목 기준, 위 증빙 유형에 포함된 금액', e.temp, 's']
+    ['기타 (증빙 불요 경비 등 — 장부 경비 − 적격증빙)', e.bucket, 'n'],
+    ['↳ 그중 증빙 불요 경비(감가상각·4대보험·세금과공과·보험료 등)', e.nonEv, 's2'],
+    ['※ 임시계정(미정리·개인 지출 의심) — 장부 과목 기준, 위 증빙 유형에 포함된 금액', e.temp, 's']
   ].filter(r=> r[1]>0 || ['세금계산서','신용카드(사업용)','현금영수증','근로소득(급여)'].includes(r[0]));
   const mx = Math.max(...rows.map(r=> r[1]), 1);
-  const bars = rows.map(r=> `<tr${r[2]==='s'?' style="color:#9E3B33;font-size:11.5px;"':''}><td>${r[0]}</td><td>${won(r[1])}</td><td>${pct(r[1], e.bookExp)}</td><td style="text-align:left;"><div class="ev-bar ${r[2]==='q'?'q':(r[2]==='n'?'ne':'nq')}" style="width:${Math.max(r[1]/mx*100,1).toFixed(0)}%"></div></td></tr>`).join('');
+  const bars = rows.map(r=> `<tr${r[2]==='s'?' style="color:#9E3B33;font-size:11.5px;"':(r[2]==='s2'?' style="color:var(--sub);font-size:11.5px;"':'')}><td>${r[0]}</td><td>${won(r[1])}</td><td>${pct(r[1], e.bookExp)}</td><td style="text-align:left;">${r[2]==='s2'?'':`<div class="ev-bar ${r[2]==='q'?'q':(r[2]==='n'?'ne':'nq')}" style="width:${Math.max(r[1]/mx*100,1).toFixed(0)}%"></div>`}</td></tr>`).join('');
   const cardRatio = e.actSales>0 ? e.ev.card/e.actSales*100 : null;
   const qRatio = e.bookExp>0 ? e.qualified/e.bookExp*100 : null;
-  const badRatio = e.bookExp>0 ? (e.temp+e.other)/e.bookExp*100 : null;
+  const badRatio = e.bookExp>0 ? e.temp/e.bookExp*100 : null;
   const msgs = [];
   if (e.ev.card===0) msgs.push(`<b>사업용 카드 사용액이 0원입니다.</b> 카드로 쓴 경비가 전혀 집계되지 않았다는 뜻으로, 경비가 부족한 가장 큰 원인입니다. 사업용 카드를 홈택스에 등록하고 사업 지출은 카드·현금영수증으로 결제해 주세요.`);
   else if (cardRatio!==null && cardRatio<5) msgs.push(`<b>카드 사용액이 실적 매출의 ${cardRatio.toFixed(1)}%에 불과합니다.</b> 소모품·광고·접대·차량 등 일상 경비가 카드로 잡히지 않고 있어 경비 자체가 부족합니다.`);
   if (e.temp>0) msgs.push(`<b>임시계정 ${won(e.temp)}원</b>은 카드·통장으로 나갔지만 용도(과목)가 정리되지 않은 지출입니다. 사업 관련이면 과목을 정리해 경비로, 개인 지출이면 인출금으로 빼야 합니다. 그대로 두면 경비에서 부인될 수 있습니다.`);
-  if (e.other>0) msgs.push(`무증빙·미분류 ${won(e.other)}원은 적격증빙이 없어 경비 인정이 어렵고, 건당 3만원 초과분은 증빙불비가산세(2%) 대상입니다.`);
   if (qRatio!==null && qRatio>=85) msgs.push(`적격증빙이 장부 경비의 ${qRatio.toFixed(0)}%를 차지해 증빙 상태는 양호합니다.`);
   return `<div class="plr-item full">
     <div class="plr-h"><span>⑦ 증빙별 경비 구성 (${N}.1.1~${baseMonths}월 말 실적)</span><span class="amt">적격증빙 ${won(e.qualified)}원 / 장부 경비 ${won(e.bookExp)}원 ${qRatio!==null?`<span class="plr-flag ${qRatio>=85?'ok':'warn'}">${qRatio.toFixed(1)}%</span>`:''}</span></div>
@@ -3263,7 +3261,7 @@ function evidenceReviewHTML(sc){
       <tr><th>증빙 유형</th><th style="text-align:right;">금액</th><th style="text-align:right;">장부 경비 대비</th><th style="width:38%;">비중</th></tr>
       ${bars}
       <tr class="sum"><td>합계 (= 장부 경비 매출원가+판관비 실적)</td><td>${won(e.total)}</td><td>${pct(e.total,e.bookExp)}</td><td style="text-align:left;color:${Math.abs(e.mismatch)<1?'#2E6B4F':'#9E3B33'};">${Math.abs(e.mismatch)<1?'장부와 일치':'장부와 '+won(e.mismatch)+'원 차이'}</td></tr>
-      <tr class="sum"><td>정리·보완 필요 경비 (무증빙·미분류 + 임시계정)</td><td>${won(e.temp+e.other)}</td><td>${badRatio!==null?badRatio.toFixed(1)+'%':'-'}</td><td style="text-align:left;color:${(e.temp+e.other)>0?'#9E3B33':'#2E6B4F'};">${(e.temp+e.other)>0?'정리·보완 필요':'없음'}</td></tr>
+      <tr class="sum"><td>정리 필요 경비 (임시계정)</td><td>${won(e.temp)}</td><td>${badRatio!==null?badRatio.toFixed(1)+'%':'-'}</td><td style="text-align:left;color:${e.temp>0?'#9E3B33':'#2E6B4F'};">${e.temp>0?'과목 정리 필요':'없음'}</td></tr>
     </table>
     <div class="plr-q">${msgs.map(m=> `<div>· ${m}</div>`).join('')}<div style="margin-top:4px;"><b>세금은 증빙 싸움입니다.</b> 모든 카드 사용이 경비는 아니지만, 카드·현금영수증 없이 쓴 사업 지출은 경비로 남지 않습니다. 남은 기간(${baseMonths>=12?'연말까지':baseMonths+1+'~12월'}) 지출은 사업용 카드와 세금계산서로 받아 주세요.</div></div>
   </div>`;
