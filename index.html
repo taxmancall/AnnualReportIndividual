@@ -767,6 +767,7 @@ table.rep-table.loan td.num{text-align:right;}
       <tr><td class="ev-l">일용소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evDaily" value="0"></td><td class="ev-n">일용근로자 지급액</td></tr>
       <tr><th colspan="3" class="ev-grp">기타 (적격증빙 외 전부 — 감가상각비·4대보험료·세금과공과·보험료 등 증빙 불요 경비)</th></tr>
       <tr><td class="ev-l">기타금액</td><td><input type="text" inputmode="decimal" class="money-input" id="evOther" value="0"></td><td class="ev-n">위하고 집계의 기타 합계. 비워 두면 <b>장부 경비 − 적격증빙</b>으로 자동 계산 (<span id="evOtherAuto">0</span>)</td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;">↳ 복리후생비 계정에 포함된 4대보험료</td><td><input type="text" inputmode="decimal" class="money-input" id="evWelfareIns" value="0"></td><td class="ev-n">위하고 전표상 건강·장기요양·고용·산재보험(직원분·대표 본인분)이 <b>복리후생비</b>로 분개된 금액. 증빙 불요 경비로 집계하고, 복리후생비 10% 검토에서도 제외. 국민연금(세금과공과)·계정명이 '건강보험' 등인 경우는 자동 집계되므로 입력하지 않음</td></tr>
       <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 증빙 불요 경비</td><td id="evAutoNonEv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoNonEvList">감가상각비·4대보험·세금과공과·보험료·퇴직급여·이자 등 — 손익계산서에서 자동</td></tr>
       <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">※ 임시계정(장부 과목)</td><td id="evAutoTemp" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n" id="evAutoTempList">임시계정·가지급금 등 — 손익계산서에서 자동 · 카드·통장 등 위 증빙 유형에 이미 포함된 금액이라 합계에 더하지 않음 · 개인 지출 의심</td></tr>
       <tr class="ev-sum"><td class="ev-l">합계</td><td id="evTotalCell" style="text-align:right;font-weight:700;">0</td><td class="ev-n">장부 경비(매출원가+판관비 실적) <b id="evBookCell">0</b> · 적격증빙 <b id="evQualCell">0</b> <span id="evMismatch"></span></td></tr>
@@ -3168,7 +3169,8 @@ function evidenceStats(){
   // 비적격 묶음(기타금액): 직접 입력하면 그 값(감가상각·4대보험·임시계정 포함 금액), 비우면 장부 경비 − 적격증빙
   const bucket = ev.other>0 ? ev.other : Math.max(bookExp - qualified, 0);
   // 묶음 내역: 증빙 불요(감가상각·4대보험·세금과공과 등 + 재고변동), 임시계정, 나머지 = 무증빙·미분류
-  const nonEv = Math.min(br.nonEvTotal + br.inventory, bucket);
+  const welfareIns = num('evWelfareIns');   // 복리후생비 계정에 섞인 4대보험료(증빙 불요)
+  const nonEv = Math.min(br.nonEvTotal + br.inventory + welfareIns, bucket);
   // 임시계정은 '계정과목'이라 카드·세금계산서 등 증빙 유형과 겹친다(카드로 쓴 뒤 과목 미정리 등). 합계에 더하지 않고 장부 금액 그대로 '그중 정리 필요'로 표시
   const temp = br.tempTotal;
   const other = Math.max(bucket - nonEv, 0);
@@ -3176,7 +3178,7 @@ function evidenceStats(){
   const total = qualified + bucket;
   const mismatch = bookExp - total;   // 0이면 장부와 일치
   const tempBook = temp, tempOverlap = 0;
-  return { ev, labor, qualified, bucket, nonEv, nonEvItems: br.nonEv, inventory: br.inventory, temp, tempBook, tempOverlap, tempItems: br.temp, other, otherAuto: ev.other<=0, remainderCalc, total, bookExp, mismatch, actSales, entered: qualified>0 };
+  return { ev, labor, qualified, bucket, nonEv, welfareIns, nonEvItems: br.nonEv, inventory: br.inventory, temp, tempBook, tempOverlap, tempItems: br.temp, other, otherAuto: ev.other<=0, remainderCalc, total, bookExp, mismatch, actSales, entered: qualified>0 };
 }
 /* 인건비 증빙칸: 손익계산서 실적(기준일까지)에서 자동 채움 — 직원급여·상여(근로), 사업소득급여·외주(사업), 잡급·일용(일용) */
 function laborFromPL(){
@@ -3223,7 +3225,7 @@ function renderEvidenceHint(){
   const st = (id,v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
   st('evTotalCell', won(e.total)); st('evBookCell', won(e.bookExp)+'원'); st('evQualCell', won(e.qualified)+'원'); st('evCardNet', won(e.ev.card)+'원');
   st('evAutoNonEv', won(e.nonEv)); st('evAutoTemp', won(e.temp)); st('evOtherAuto', won(Math.max(e.bookExp - e.qualified,0))+'원');
-  st('evAutoNonEvList', (e.nonEvItems.length||e.inventory) ? (e.nonEvItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.inventory ? ` · 재고 변동 ${won(e.inventory)}` : '')) : '감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익 업로드 후 자동 (해당 과목 없음)');
+  st('evAutoNonEvList', (e.nonEvItems.length||e.inventory) ? (e.nonEvItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.inventory ? ` · 재고 변동 ${won(e.inventory)}` : '') + (e.welfareIns ? ` · 복리후생비 내 4대보험료 ${won(e.welfareIns)}` : '')) : '감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익 업로드 후 자동 (해당 과목 없음)');
   st('evAutoTempList', e.tempItems.length ? e.tempItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + ' — 개인 지출 의심, 정리 필요' : '임시계정·가지급금 등 미정리 금액 — 해당 과목 없음');
   const mm = document.getElementById('evMismatch');
   if (mm) mm.innerHTML = Math.abs(e.mismatch) < 1 ? '<span style="color:#2E6B4F;">· 장부와 일치</span>' : `<span style="color:#9E3B33;">· 장부와 ${won(e.mismatch)}원 차이 (입력 확인)</span>`;
@@ -3287,8 +3289,10 @@ function renderPLReview(sc){
   const retire = sum(it=> normLabel(it.name).includes('퇴직'));
   const daily = sum(it=> nm(it, ['잡급','일용']));
   const free = sum(it=> nm(it, ['프리랜서','외주','용역','사업소득지급','사업소득급여']));
-  const welfare = sum(it=> nm(it, ['복리후생']));
-  const insur = sum(it=> isInsuranceItem(it.name));
+  const welfareRaw = sum(it=> nm(it, ['복리후생']));
+  const welfareIns = Math.min(num('evWelfareIns'), welfareRaw);   // 복리후생비 계정에 분개된 4대보험료 → 보험료로 재분류
+  const welfare = welfareRaw - welfareIns;
+  const insur = sum(it=> isInsuranceItem(it.name)) + welfareIns;
   const laborCore = salary + retire + daily + free;
   const laborAll = laborCore + welfare + insur;
   const welfareRate = laborCore>0 ? welfare/laborCore*100 : null;
@@ -3326,7 +3330,7 @@ function renderPLReview(sc){
         <div class="plr-q"><b>인건비 지출이 이 정도면 괜찮을까요?</b> 직원 수·근무시간 대비 적정한지, 일용직·프리랜서 지급분의 원천세 신고와 지급명세서 제출이 모두 되어 있는지 확인해 주세요. 신고되지 않은 인건비는 경비로 인정되지 않습니다.</div>
       </div>
       <div class="plr-item">
-        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원 ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>
+        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원${welfareIns>0?` <span style="font-weight:400;color:var(--sub);font-size:11px;">(장부 ${won(welfareRaw)} − 4대보험료 ${won(welfareIns)})</span>`:''} ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>
         <div class="plr-sub">식대·간식·회식·경조사·직원 선물 등. 사무소 기준: 인건비(급여·상여 등)의 <b>10% 내외</b>. 직원 수에 비해 크면 대표자 개인 지출이 섞였는지 봅니다.</div>
         <div class="plr-q"><b>종합소득세 신고 시 복리후생비는 인건비의 10% 내외로 조절하여 신고할 예정입니다.</b>${welfareRate!==null && welfareRate>10 ? ` 현재 추정액 ${won(welfare)}원은 인건비의 ${welfareRate.toFixed(1)}%로, 10% 기준(약 ${won(Math.round(laborCore*0.1))}원)을 <b>${won(Math.round(welfare - laborCore*0.1))}원</b> 초과합니다. 초과분은 증빙·사용 내역을 확인해 개인 지출은 경비에서 제외합니다.` : ''} 직원이 없는 사업장의 복리후생비, 주말·심야 식대, 1인 결제 반복은 개인 지출로 보아 부인될 수 있습니다.</div>
       </div>
@@ -3511,7 +3515,7 @@ function renderReport(sc){
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evCardDeduct']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evCardDeduct','evWelfareIns']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.querySelectorAll('[id$="_py"]').forEach(el=> el.addEventListener('input', renderAll));
 document.getElementById('openDate').addEventListener('change', renderAll);
