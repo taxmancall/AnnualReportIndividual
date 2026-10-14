@@ -767,8 +767,8 @@ table.rep-table.loan td.num{text-align:right;}
       <tr><td class="ev-l">일용소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evDaily" value="0"></td><td class="ev-n">일용근로자 지급액</td></tr>
       <tr><th colspan="3" class="ev-grp">기타 (적격증빙 외 전부 — 감가상각비·4대보험료·세금과공과·무증빙 포함)</th></tr>
       <tr><td class="ev-l">기타금액</td><td><input type="text" inputmode="decimal" class="money-input" id="evOther" value="0"></td><td class="ev-n">위하고 집계의 기타 합계. 비워 두면 <b>장부 경비 − 적격증빙</b>으로 자동 계산 (<span id="evOtherAuto">0</span>)</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 증빙 불요 경비</td><td id="evAutoNonEv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoNonEvList">감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익계산서에서 자동</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 무증빙·미분류</td><td id="evAutoRest" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n">기타금액 − 증빙 불요</td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 증빙 불요 경비</td><td id="evAutoNonEv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoNonEvList">감가상각비·4대보험·세금과공과·보험료·퇴직급여·이자 등 — 손익계산서에서 자동</td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 무증빙·미분류</td><td id="evAutoRest" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n">기타금액 − 증빙 불요 = 입력 누락 증빙 또는 영수증 없이 나간 지출 → 직원이 먼저 확인</td></tr>
       <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">※ 임시계정(장부 과목)</td><td id="evAutoTemp" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n" id="evAutoTempList">임시계정·가지급금 등 — 손익계산서에서 자동 · 카드·통장 등 위 증빙 유형에 이미 포함된 금액이라 합계에 더하지 않음 · 개인 지출 의심</td></tr>
       <tr class="ev-sum"><td class="ev-l">합계</td><td id="evTotalCell" style="text-align:right;font-weight:700;">0</td><td class="ev-n">장부 경비(매출원가+판관비 실적) <b id="evBookCell">0</b> · 적격증빙 <b id="evQualCell">0</b> <span id="evMismatch"></span></td></tr>
     </table>
@@ -3132,7 +3132,8 @@ function plrClassify(name){
   return 'other';
 }
 /* 증빙별 경비 집계: 기준일까지 실적 경비와 비교 */
-const NON_EVIDENCE_KEYS = ['감가상각','무형자산상각','상각비','국민연금','건강보험','고용보험','산재보험','4대보험','사대보험','사회보험','장기요양','퇴직급여','퇴직연금','세금과공과','공과금','이자비용','대손상각','대손','잡손실','충당금','재고자산평가','외환차손','기부금'];
+/* 보험료: 금융·보험용역은 정규증빙 수취 의무 면제(소득세법 시행령 §208의2①) → 증빙 불요 경비로 분류 */
+const NON_EVIDENCE_KEYS = ['감가상각','무형자산상각','상각비','국민연금','건강보험','고용보험','산재보험','4대보험','사대보험','사회보험','장기요양','퇴직급여','퇴직연금','세금과공과','공과금','이자비용','대손상각','대손','잡손실','충당금','재고자산평가','외환차손','기부금','보험료'];
 const TEMP_KEYS = ['임시계정','가지급','미결산','대표자','개인'];
 /* 손익계산서 실적(기준일까지)에서 자동 집계: 증빙 불요 경비(감가상각·4대보험·세금과공과 등), 임시계정(미정리·개인 지출 의심), 재고 변동 */
 function plExpenseBreakdown(){
@@ -3241,7 +3242,7 @@ function evidenceReviewHTML(sc){
   const rows = [
     ['세금계산서', e.ev.taxInv, 'q'],['계산서', e.ev.inv, 'q'],['신용카드(사업용)'+(e.ev.cardDeduct>0?` — 사용액 ${won(e.ev.cardGross)} 중 세금·보험료 납부 ${won(e.ev.cardDeduct)} 제외`:''), e.ev.card, 'q'],['현금영수증', e.ev.cash, 'q'],['청첩장·부고장(경조사비)', e.ev.wedding, 'q'],
     ['근로소득(급여)', e.ev.wage, 'q'],['사업소득(프리랜서)', e.ev.bizInc, 'q'],['일용소득', e.ev.daily, 'q'],
-    ['증빙 불요 경비(감가상각·4대보험·세금과공과 등)', e.nonEv, 'n'],
+    ['증빙 불요 경비(감가상각·4대보험·세금과공과·보험료 등)', e.nonEv, 'n'],
     ['무증빙·미분류', e.other, 'x'],
     ['↳ 그중 임시계정(미정리·개인 지출 의심) — 장부 과목 기준, 위 증빙 유형에 포함된 금액', e.temp, 's']
   ].filter(r=> r[1]>0 || ['세금계산서','신용카드(사업용)','현금영수증','근로소득(급여)'].includes(r[0]));
