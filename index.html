@@ -657,10 +657,11 @@ table.rep-table.loan td.num{text-align:right;}
     <div class="grid cols-4">
       <div class="field"><label>대표자 성명</label><input type="text" id="ownerName" placeholder="홍길동"></div>
       <div class="field"><label>상호(메인 사업장명)</label><input type="text" id="bizName" placeholder="OO상회"></div>
+      <div class="field"><label>개업일(사업자등록증)</label><input type="date" id="openDate"></div>
       <div class="field"><label>결산(가결산) 연도 N</label><input type="number" id="targetYear" value="2026"></div>
-      <div class="field"><label>기준일자(마감일)</label><input type="date" id="baseDate"></div>
     </div>
     <div class="grid cols-4" style="margin-top:12px;">
+      <div class="field"><label>기준일자(마감일)</label><input type="date" id="baseDate"></div>
       <div class="field"><label>기준월수(1월~기준월)</label><input type="number" id="baseMonths" value="11" min="1" max="12"></div>
       <div class="field"><label>귀속연도(과세기간)</label><input type="text" id="taxPeriod" value=""></div>
       <div class="field">
@@ -3375,6 +3376,16 @@ function renderPartnerBreak(sc){
   box.querySelectorAll('table.pb').forEach(t=> groupHeadForPrint(t, 3, null));
 }
 
+/* 개업일 → 기준일자(없으면 오늘)까지 영업기간 'N년 M개월' */
+function openDurationText(){
+  const o = document.getElementById('openDate').value; if (!o) return '';
+  const od = new Date(o), bd = new Date(document.getElementById('baseDate').value || new Date());
+  if (isNaN(od) || isNaN(bd) || bd<od) return '';
+  let m = (bd.getFullYear()-od.getFullYear())*12 + (bd.getMonth()-od.getMonth());
+  if (bd.getDate() < od.getDate()) m--;
+  const y = Math.floor(m/12), r = m%12;
+  return `개업 ${y>0 ? y+'년 ' : ''}${r}개월차`;
+}
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
@@ -3383,7 +3394,12 @@ function renderReport(sc){
   const coopTag = coopOn() ? ` · 공동사업 ${state.coop.partners.map(p=> `${p.name||'-'} ${p.share}%`).join(' / ')}` : '';
   document.getElementById('repCompanyName').textContent = `${bizName} (대표자 ${ownerName}${coopTag})`;
   document.getElementById('repMeta').textContent =
-    `기준일자: ${document.getElementById('baseDate').value||'-'} · 귀속연도: ${document.getElementById('taxPeriod').value}`;
+    (()=>{
+      const od = document.getElementById('openDate').value, bd = document.getElementById('baseDate').value;
+      const N = getYears().N, oy = od ? parseInt(od.slice(0,4),10) : NaN;
+      const gi = (!isNaN(oy) && N>=oy) ? `(제${N-oy+1}기) ` : '';
+      return `기준일자: ${bd ? bd.replace(/-/g,'.') : '-'}` + (od ? ` · 개업연월일: ${od.replace(/-/g,'.')}` : '') + ` · 귀속연도${gi? " "+gi.trim() : ""}: ${document.getElementById('taxPeriod').value}`;
+    })();
 
   const t = buildTrendData(s1);
   const {N,N1,N2} = getYears();
@@ -3497,6 +3513,7 @@ function renderReport(sc){
  'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evCardDeduct']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
 document.querySelectorAll('[id$="_py"]').forEach(el=> el.addEventListener('input', renderAll));
+document.getElementById('openDate').addEventListener('change', renderAll);
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('otherExpAuto').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
