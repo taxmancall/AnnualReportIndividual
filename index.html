@@ -3174,7 +3174,8 @@ function evidenceStats(){
   const remainderCalc = other;
   const total = qualified + bucket;
   const mismatch = bookExp - total;   // 0이면 장부와 일치
-  return { ev, labor, qualified, bucket, nonEv, nonEvItems: br.nonEv, inventory: br.inventory, temp, tempItems: br.temp, other, otherAuto: ev.other<=0, remainderCalc, total, bookExp, mismatch, actSales, entered: qualified>0 };
+  const tempBook = br.tempTotal, tempOverlap = Math.max(tempBook - temp, 0);   // 장부 임시계정 중 묶음(장부경비−적격증빙)에 들어가지 못한 금액 = 이미 적격증빙에 포함된 것으로 봄
+  return { ev, labor, qualified, bucket, nonEv, nonEvItems: br.nonEv, inventory: br.inventory, temp, tempBook, tempOverlap, tempItems: br.temp, other, otherAuto: ev.other<=0, remainderCalc, total, bookExp, mismatch, actSales, entered: qualified>0 };
 }
 /* 인건비 증빙칸: 손익계산서 실적(기준일까지)에서 자동 채움 — 직원급여·상여(근로), 사업소득급여·외주(사업), 잡급·일용(일용) */
 function laborFromPL(){
@@ -3240,7 +3241,7 @@ function evidenceReviewHTML(sc){
     ['세금계산서', e.ev.taxInv, 'q'],['계산서', e.ev.inv, 'q'],['신용카드(사업용)'+(e.ev.cardDeduct>0?` — 사용액 ${won(e.ev.cardGross)} 중 세금·보험료 납부 ${won(e.ev.cardDeduct)} 제외`:''), e.ev.card, 'q'],['현금영수증', e.ev.cash, 'q'],['청첩장·부고장(경조사비)', e.ev.wedding, 'q'],
     ['근로소득(급여)', e.ev.wage, 'q'],['사업소득(프리랜서)', e.ev.bizInc, 'q'],['일용소득', e.ev.daily, 'q'],
     ['증빙 불요 경비(감가상각·4대보험·세금과공과 등)', e.nonEv, 'n'],
-    ['임시계정(미정리·개인 지출 의심)', e.temp, 'x'],
+    ['임시계정(미정리·개인 지출 의심)'+(e.tempOverlap>0?` — 장부 ${won(e.tempBook)} 중 ${won(e.tempOverlap)}은 카드·세금계산서 등 적격증빙과 겹침`:''), e.temp, 'x'],
     ['무증빙·미분류', e.other, 'x']
   ].filter(r=> r[1]>0 || ['세금계산서','신용카드(사업용)','현금영수증','근로소득(급여)'].includes(r[0]));
   const mx = Math.max(...rows.map(r=> r[1]), 1);
@@ -3251,7 +3252,8 @@ function evidenceReviewHTML(sc){
   const msgs = [];
   if (e.ev.card===0) msgs.push(`<b>사업용 카드 사용액이 0원입니다.</b> 카드로 쓴 경비가 전혀 집계되지 않았다는 뜻으로, 경비가 부족한 가장 큰 원인입니다. 사업용 카드를 홈택스에 등록하고 사업 지출은 카드·현금영수증으로 결제해 주세요.`);
   else if (cardRatio!==null && cardRatio<5) msgs.push(`<b>카드 사용액이 실적 매출의 ${cardRatio.toFixed(1)}%에 불과합니다.</b> 소모품·광고·접대·차량 등 일상 경비가 카드로 잡히지 않고 있어 경비 자체가 부족합니다.`);
-  if (e.temp>0) msgs.push(`<b>임시계정 ${won(e.temp)}원</b>은 용도가 정리되지 않은 지출입니다. 사업 관련이면 과목을 정리해 경비로, 개인 지출이면 인출금으로 빼야 합니다. 그대로 두면 경비에서 부인될 수 있습니다.`);
+  if (e.temp>0 || e.tempBook>0) msgs.push(`<b>임시계정 ${won(e.tempBook)}원</b>(장부)은 용도가 정리되지 않은 지출입니다. 사업 관련이면 과목을 정리해 경비로, 개인 지출이면 인출금으로 빼야 합니다. 그대로 두면 경비에서 부인될 수 있습니다.`
+    + (e.tempOverlap>0 ? ` 이 중 ${won(e.tempOverlap)}원은 적격증빙 합계가 장부 경비에 가까워 카드·세금계산서로 이미 증빙된 지출로 보이고, 증빙 자체가 없는 금액은 <b>${won(e.temp)}원</b>입니다.` : ''));
   if (e.other>0) msgs.push(`무증빙·미분류 ${won(e.other)}원은 적격증빙이 없어 경비 인정이 어렵고, 건당 3만원 초과분은 증빙불비가산세(2%) 대상입니다.`);
   if (qRatio!==null && qRatio>=85) msgs.push(`적격증빙이 장부 경비의 ${qRatio.toFixed(0)}%를 차지해 증빙 상태는 양호합니다.`);
   return `<div class="plr-item full">
