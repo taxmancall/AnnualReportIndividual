@@ -225,6 +225,9 @@ canvas{max-width:100%;}
 .im-toolbar span{font-size:11.5px;color:var(--sub);}
 table.income-matrix th small{font-weight:400;color:var(--sub);font-size:10.5px;}
 table.income-matrix.vform{min-width:0;table-layout:fixed;margin:4px 0 6px;}
+table.pc-grid{table-layout:auto;}
+table.pc-grid thead th{font-size:11.5px;}
+table.pc-grid td.auto{font-weight:700;color:var(--navy);}
 table.income-matrix.vform th:first-child{width:34%;}
 table.income-matrix.vform td.py,table.income-matrix.vform th.py{width:22%;}
 table.income-matrix.vform td:nth-child(3){width:22%;}
@@ -707,6 +710,7 @@ table.rep-table.loan td.num{text-align:right;}
     </div>
     <div style="margin-top:14px;">
       <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 메인 사업장 기준, 신고서 기준으로 입력)</span></div>
+      <div id="pastTaxSingle">
       <table class="income-matrix" style="min-width:0;">
         <tr><th>귀속연도</th><th>메인 사업장 매출</th><th>메인 사업소득금액<br><span style="font-weight:400;font-size:11px;">(신고서 기준)</span></th><th>국세(종합소득세 결정세액)<br><span style="font-weight:400;font-size:11px;">입력 시 지방소득세 10%를 더해 표시</span></th><th>농어촌특별세<br><span style="font-weight:400;font-size:11px;">(감면·공제분 20%, 있으면 입력)</span></th></tr>
         <tr><th><span class="yN2">N-2</span>년</th>
@@ -720,6 +724,7 @@ table.rep-table.loan td.num{text-align:right;}
           <td><input type="text" inputmode="decimal" class="money-input" id="pastTax1"> <span id="pastTaxHint1" style="font-size:11px;color:var(--sub);"></span></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastRural1" placeholder="0"></td></tr>
       </table>
+      </div>
       <div id="pastTaxCoop" style="display:none;"></div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sub);">자동조회 감면율(메인 사업장): <b id="rateDisplay" style="color:var(--brass);">-</b> <span style="color:#999;">(조특법 §7①, 2025.1.1. 개정 반영)</span></div>
@@ -2179,7 +2184,7 @@ const PARTNER_TAX_IDS = ['comboDeduction','pensionContrib','yellowUmbrella','oth
 state.coop = { on:false, active:0, partners:[] };
 let partnerSeq = 0;
 function coopOn(){ return !!(state.coop && state.coop.on && state.coop.partners.length>=2); }
-function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'', pastIncome1:'', pastRural1:'', pastRural2:'' }; }
+function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'', pastIncome1:'', pastIncome2:'', pastRural1:'', pastRural2:'' }; }
 function partnerVal(p, id){ const v = p.inputs ? p.inputs[id] : undefined; return v==null ? 0 : (Number(v)||0); }
 function activePartner(){ return state.coop.partners[state.coop.active] || null; }
 function bindMoneyInput(el){
@@ -2239,7 +2244,7 @@ function setCoopMode(on){
       p0.inputs.nolP = num('nol');
       p0.other = Object.assign({}, domOtherSrc());
       p0.pastTax1 = document.getElementById('pastTax1').value; p0.pastTax2 = document.getElementById('pastTax2').value;
-      p0.pastIncome1 = document.getElementById('pastIncome1').value; p0.pastRural1 = document.getElementById('pastRural1').value; p0.pastRural2 = document.getElementById('pastRural2').value;
+      p0.pastIncome1 = document.getElementById('pastIncome1').value; p0.pastRural1 = document.getElementById('pastRural1').value; p0.pastRural2 = document.getElementById('pastRural2').value; p0.pastIncome2 = document.getElementById('pastIncome2').value;
       PY_IDS.forEach(id=>{ const el=document.getElementById(id+'_py'); if (el) p0.inputs[id+'_py'] = unfmtMoney(el.value); });
       state.coop.partners.push(p0);
     }
@@ -2248,7 +2253,7 @@ function setCoopMode(on){
   state.coop.on = on;
   document.getElementById('coopBox').style.display = on ? '' : 'none';
   document.getElementById('pastTaxCoop').style.display = on ? '' : 'none';
-  ['pastTax1','pastTax2','pastIncome1','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
+  ['pastTax1','pastTax2','pastIncome1','pastIncome2','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop();
   renderAll();
 }
@@ -2264,7 +2269,7 @@ function updatePartner(id, field, val){
   const p = state.coop.partners.find(x=> x.id===id); if (!p) return;
   if (field==='share') p.share = Math.max(Math.min(parseFloat(String(val).replace(/[^0-9.]/g,''))||0, 100), 0);
   else p[field] = val;
-  if (field==='name' || field==='share'){ updatePartnerBlockHeads(); renderCoopOtherIncome(); renderExtraBizList(); }
+  if (field==='name' || field==='share'){ updatePartnerBlockHeads(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop(); }
   renderShareHint(); if (field!=='name' && field!=='share') syncPastTaxSums(); renderAll();
 }
 function shareTotal(){ return state.coop.partners.reduce((a,p)=> a + (Number(p.share)||0), 0); }
@@ -2283,27 +2288,38 @@ function renderPartnerTable(){
   renderShareHint();
 }
 function renderPastTaxCoop(){
-  const el = document.getElementById('pastTaxCoop'); if (!el) return;
-  if (!coopOn()){ el.style.display='none'; return; }
-  el.style.display='';
+  const el = document.getElementById('pastTaxCoop'), single = document.getElementById('pastTaxSingle'); if (!el) return;
+  if (!coopOn()){ el.style.display='none'; if (single) single.style.display=''; return; }
+  el.style.display=''; if (single) single.style.display='none';
   const {N1,N2} = getYears();
-  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 과거 신고 결과(국세·농특세 입력, 지방소득세 10%는 자동) — 위 표의 사업소득금액·국세·농특세 칸은 합계로 자동 계산됩니다. 소득공제·세액공제 등 전년 상세는 STEP 4 구성원 블록의 전년 열에 입력</div>
-    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세<br><small>결정세액</small></th><th>${N2}년 농특세</th><th>${N1}년 사업소득금액<br><small>구성원 귀속분(신고서)</small></th><th>${N1}년 국세<br><small>결정세액</small></th><th>${N1}년 농특세</th></tr>${
-    state.coop.partners.map(p=> `<tr><th>${escAttr(p.name||'-')}</th>
-      <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastTax2!==''&&p.pastTax2!=null ? fmtMoney(unfmtMoney(p.pastTax2)) : ''}" oninput="updatePartner('${p.id}','pastTax2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
-      <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastRural2!==''&&p.pastRural2!=null ? fmtMoney(unfmtMoney(p.pastRural2)) : ''}" oninput="updatePartner('${p.id}','pastRural2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
-      <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastIncome1!==''&&p.pastIncome1!=null ? fmtMoney(unfmtMoney(p.pastIncome1)) : ''}" oninput="updatePartner('${p.id}','pastIncome1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
-      <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastTax1!==''&&p.pastTax1!=null ? fmtMoney(unfmtMoney(p.pastTax1)) : ''}" oninput="updatePartner('${p.id}','pastTax1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
-      <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastRural1!==''&&p.pastRural1!=null ? fmtMoney(unfmtMoney(p.pastRural1)) : ''}" oninput="updatePartner('${p.id}','pastRural1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td></tr>`).join('')}</table>`;
+  const ps = state.coop.partners;
+  const fv = v=> (v!==''&&v!=null) ? fmtMoney(unfmtMoney(v)) : '';
+  const inp = (p,f,ph)=> `<td><input type="text" inputmode="decimal" class="money-input" value="${fv(p[f])}" placeholder="${ph||''}" oninput="updatePartner('${p.id}','${f}',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>`;
+  const salesCell = (id)=>{ const m = document.getElementById(id); return `<td><input type="text" inputmode="decimal" class="money-input" value="${m?m.value:''}" placeholder="미입력 시 손익 매출" oninput="(function(v){ const t=document.getElementById('${id}'); t.value=v; t.dispatchEvent(new Event('input')); })(this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>`; };
+  const yearRow = (y, k)=> `<tr><th>${y}년</th>${salesCell('pastSales'+k)}${ps.map(p=> inp(p,'pastIncome'+k) + inp(p,'pastTax'+k) + inp(p,'pastRural'+k,'0')).join('')}<td class="auto" id="pcSumInc${k}">-</td><td class="auto" id="pcSumTax${k}">-</td></tr>`;
+  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">공동사업: 과거 신고 결과도 <b>구성원별 신고서 기준</b>으로 입력합니다. 매출은 사업장 전체 금액 1개, 사업소득금액·국세(결정세액)·농특세는 구성원마다 입력하면 지방소득세 10%를 더한 실부담 세금과 합계가 자동 계산됩니다. 과거에 단독이었으면 그 해는 당시 대표 칸에만 넣고 나머지는 비워 두세요. (전년 소득공제·세액공제 상세는 STEP 4 구성원 블록의 전년 열)</div>
+    <div class="im-wrap"><table class="income-matrix pc-grid" style="min-width:${Math.max(720, 300 + ps.length*330)}px;">
+      <thead><tr><th rowspan="2">귀속연도</th><th rowspan="2">사업장 매출<br><small>전체</small></th>${ps.map(p=> `<th colspan="3">👤 ${escAttr(p.name||'구성원')} <small>지분 ${p.share}%</small></th>`).join('')}<th colspan="2">합계(자동)</th></tr>
+      <tr>${ps.map(()=> `<th>사업소득금액<br><small>신고서</small></th><th>국세<br><small>결정세액</small></th><th>농특세</th>`).join('')}<th>소득금액</th><th>실부담 세금<br><small>국세+지방세+농특세</small></th></tr></thead>
+      <tbody>${yearRow(N2,2)}${yearRow(N1,1)}</tbody></table></div>`;
   syncPastTaxSums();
 }
 /* 구성원별 전년 입력의 합계를 1장 비교용 칸(pastTax1/2 · pastIncome1 · pastRural1)에 반영 — 입력 중 표를 다시 그리지 않도록 분리 */
 function syncPastTaxSums(){
   if (!coopOn()) return;
-  ['pastTax1','pastTax2','pastIncome1','pastRural1','pastRural2'].forEach(f=>{
+  ['pastTax1','pastTax2','pastIncome1','pastIncome2','pastRural1','pastRural2'].forEach(f=>{
     const any = state.coop.partners.some(p=> p[f]!=='' && p[f]!=null);
     const sum = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p[f]||''), 0);
     const el = document.getElementById(f); if (el) el.value = any ? fmtMoney(sum) : '';
+  });
+  [1,2].forEach(k=>{
+    const inc = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p['pastIncome'+k]||''), 0);
+    const anyInc = state.coop.partners.some(p=> p['pastIncome'+k]!=='' && p['pastIncome'+k]!=null);
+    const tax = state.coop.partners.reduce((a,p)=>{ const n = unfmtMoney(p['pastTax'+k]||''); return a + (p['pastTax'+k] ? natToTotal(n, unfmtMoney(p['pastRural'+k]||'')) : 0); }, 0);
+    const anyTax = state.coop.partners.some(p=> p['pastTax'+k]!=='' && p['pastTax'+k]!=null);
+    const a1 = document.getElementById('pcSumInc'+k), a2 = document.getElementById('pcSumTax'+k);
+    if (a1) a1.textContent = anyInc ? won(inc) : '-';
+    if (a2) a2.textContent = anyTax ? won(tax) : '-';
   });
 }
 
@@ -3812,7 +3828,7 @@ function loadWork(data){
   if (s1 && Object.keys(state.years).length) s1.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0;">※ 저장된 작업 파일의 손익 자료가 반영되어 있습니다. 엑셀을 다시 올리면 해당 연도 자료가 교체됩니다.</div>';
   renderExtraBizList();
   const coopRadio = document.querySelector(`input[name=bizMode][value=${state.coop.on?'coop':'single'}]`); if (coopRadio) coopRadio.checked = true;
-  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2','pastIncome1','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly=true; el.classList.add('ro'); } }); }
+  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2','pastIncome1','pastIncome2','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly=true; el.classList.add('ro'); } }); renderPastTaxCoop(); }
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderPastTaxCoop();
   renderAll();
 }
