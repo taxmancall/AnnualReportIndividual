@@ -2179,7 +2179,7 @@ const PARTNER_TAX_IDS = ['comboDeduction','pensionContrib','yellowUmbrella','oth
 state.coop = { on:false, active:0, partners:[] };
 let partnerSeq = 0;
 function coopOn(){ return !!(state.coop && state.coop.on && state.coop.partners.length>=2); }
-function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'', pastIncome1:'', pastRural1:'' }; }
+function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'', pastIncome1:'', pastRural1:'', pastRural2:'' }; }
 function partnerVal(p, id){ const v = p.inputs ? p.inputs[id] : undefined; return v==null ? 0 : (Number(v)||0); }
 function activePartner(){ return state.coop.partners[state.coop.active] || null; }
 function bindMoneyInput(el){
@@ -2239,7 +2239,7 @@ function setCoopMode(on){
       p0.inputs.nolP = num('nol');
       p0.other = Object.assign({}, domOtherSrc());
       p0.pastTax1 = document.getElementById('pastTax1').value; p0.pastTax2 = document.getElementById('pastTax2').value;
-      p0.pastIncome1 = document.getElementById('pastIncome1').value; p0.pastRural1 = document.getElementById('pastRural1').value;
+      p0.pastIncome1 = document.getElementById('pastIncome1').value; p0.pastRural1 = document.getElementById('pastRural1').value; p0.pastRural2 = document.getElementById('pastRural2').value;
       PY_IDS.forEach(id=>{ const el=document.getElementById(id+'_py'); if (el) p0.inputs[id+'_py'] = unfmtMoney(el.value); });
       state.coop.partners.push(p0);
     }
@@ -2248,7 +2248,7 @@ function setCoopMode(on){
   state.coop.on = on;
   document.getElementById('coopBox').style.display = on ? '' : 'none';
   document.getElementById('pastTaxCoop').style.display = on ? '' : 'none';
-  ['pastTax1','pastTax2','pastIncome1','pastRural1'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
+  ['pastTax1','pastTax2','pastIncome1','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop();
   renderAll();
 }
@@ -2287,10 +2287,11 @@ function renderPastTaxCoop(){
   if (!coopOn()){ el.style.display='none'; return; }
   el.style.display='';
   const {N1,N2} = getYears();
-  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 전년 신고 결과 — 위 표의 사업소득금액·국세·농특세 칸은 합계로 자동 계산됩니다. 소득공제·세액공제 등 전년 상세는 STEP 4 구성원 블록의 전년 열에 입력</div>
-    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세</th><th>${N1}년 사업소득금액<br><small>구성원 귀속분(신고서)</small></th><th>${N1}년 국세<br><small>결정세액</small></th><th>${N1}년 농특세</th></tr>${
+  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 과거 신고 결과(국세·농특세 입력, 지방소득세 10%는 자동) — 위 표의 사업소득금액·국세·농특세 칸은 합계로 자동 계산됩니다. 소득공제·세액공제 등 전년 상세는 STEP 4 구성원 블록의 전년 열에 입력</div>
+    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세<br><small>결정세액</small></th><th>${N2}년 농특세</th><th>${N1}년 사업소득금액<br><small>구성원 귀속분(신고서)</small></th><th>${N1}년 국세<br><small>결정세액</small></th><th>${N1}년 농특세</th></tr>${
     state.coop.partners.map(p=> `<tr><th>${escAttr(p.name||'-')}</th>
       <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastTax2!==''&&p.pastTax2!=null ? fmtMoney(unfmtMoney(p.pastTax2)) : ''}" oninput="updatePartner('${p.id}','pastTax2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastRural2!==''&&p.pastRural2!=null ? fmtMoney(unfmtMoney(p.pastRural2)) : ''}" oninput="updatePartner('${p.id}','pastRural2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
       <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastIncome1!==''&&p.pastIncome1!=null ? fmtMoney(unfmtMoney(p.pastIncome1)) : ''}" oninput="updatePartner('${p.id}','pastIncome1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
       <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastTax1!==''&&p.pastTax1!=null ? fmtMoney(unfmtMoney(p.pastTax1)) : ''}" oninput="updatePartner('${p.id}','pastTax1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
       <td><input type="text" inputmode="decimal" class="money-input" value="${p.pastRural1!==''&&p.pastRural1!=null ? fmtMoney(unfmtMoney(p.pastRural1)) : ''}" oninput="updatePartner('${p.id}','pastRural1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td></tr>`).join('')}</table>`;
@@ -2299,7 +2300,7 @@ function renderPastTaxCoop(){
 /* 구성원별 전년 입력의 합계를 1장 비교용 칸(pastTax1/2 · pastIncome1 · pastRural1)에 반영 — 입력 중 표를 다시 그리지 않도록 분리 */
 function syncPastTaxSums(){
   if (!coopOn()) return;
-  ['pastTax1','pastTax2','pastIncome1','pastRural1'].forEach(f=>{
+  ['pastTax1','pastTax2','pastIncome1','pastRural1','pastRural2'].forEach(f=>{
     const any = state.coop.partners.some(p=> p[f]!=='' && p[f]!=null);
     const sum = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p[f]||''), 0);
     const el = document.getElementById(f); if (el) el.value = any ? fmtMoney(sum) : '';
@@ -3811,7 +3812,7 @@ function loadWork(data){
   if (s1 && Object.keys(state.years).length) s1.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0;">※ 저장된 작업 파일의 손익 자료가 반영되어 있습니다. 엑셀을 다시 올리면 해당 연도 자료가 교체됩니다.</div>';
   renderExtraBizList();
   const coopRadio = document.querySelector(`input[name=bizMode][value=${state.coop.on?'coop':'single'}]`); if (coopRadio) coopRadio.checked = true;
-  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2','pastIncome1','pastRural1'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly=true; el.classList.add('ro'); } }); }
+  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2','pastIncome1','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly=true; el.classList.add('ro'); } }); }
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderPastTaxCoop();
   renderAll();
 }
