@@ -233,8 +233,7 @@ table.income-matrix.vform td.py{background:#F7F7F9;}
 table.income-matrix.vform td.py input{background:#F1F2F5!important;border-color:#D5D8DF!important;}
 table.income-matrix.vform td.memo{text-align:left;font-size:11.5px;color:var(--sub);}
 table.income-matrix.vform tbody th small{display:block;font-weight:400;color:var(--sub);font-size:10.5px;}
-#partnerBlocks .coop .py{display:none;}
-#partnerBlocks .coop table.income-matrix.vform th:first-child{width:44%;}
+
 table.income-matrix input[type=number]{width:100%;box-sizing:border-box;text-align:right;font-size:12.5px;padding:6px 7px;margin:0;}
 table.income-matrix tbody + thead th{border-top:2px solid var(--line);}
 .im-subhead{display:flex;gap:3px;margin-top:4px;align-items:center;}
@@ -2179,7 +2178,7 @@ const PARTNER_TAX_IDS = ['comboDeduction','pensionContrib','yellowUmbrella','oth
 state.coop = { on:false, active:0, partners:[] };
 let partnerSeq = 0;
 function coopOn(){ return !!(state.coop && state.coop.on && state.coop.partners.length>=2); }
-function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'' }; }
+function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'', pastIncome1:'', pastRural1:'' }; }
 function partnerVal(p, id){ const v = p.inputs ? p.inputs[id] : undefined; return v==null ? 0 : (Number(v)||0); }
 function activePartner(){ return state.coop.partners[state.coop.active] || null; }
 function bindMoneyInput(el){
@@ -2187,6 +2186,8 @@ function bindMoneyInput(el){
   el.addEventListener('blur', ()=>{ const v = unfmtMoney(el.value); el.value = el.value.trim()==='' ? '' : fmtMoney(v); });
 }
 const PARTNER_BLOCK_IDS = PARTNER_TAX_IDS.concat(['nolP']);
+/* 구성원 블록의 N-1년(전년 신고) 열: 같은 id에 _py 접미사 (nolP_py는 nol_py로 저장) */
+const PARTNER_PY_IDS = PARTNER_TAX_IDS.concat(['adjIn','adjOut','nol']).map(id=> id+'_py');
 /* 구성원별 입력 블록: #partnerArea(템플릿)를 복제해 id에 __p{i} 접미사를 붙이고 구성원 입력값과 연결 */
 function renderPartnerBlocks(){
   const wrap = document.getElementById('partnerBlocks'), tpl = document.getElementById('partnerArea');
@@ -2211,6 +2212,14 @@ function renderPartnerBlocks(){
       el.addEventListener('input', ()=>{ p.inputs[id] = unfmtMoney(el.value); renderAll(); });
       if (el.classList.contains('money-input')) bindMoneyInput(el);
     });
+    // 전년(N-1) 열: 구성원별로 따로 입력 → 구성원별 세액표의 전년 열과 비교
+    [['nolP_py','nol_py']].concat(PARTNER_PY_IDS.map(id=> [id,id])).forEach(([domId,key])=>{
+      const el = c.querySelector('#'+domId+'__p'+i); if (!el) return;
+      const v = partnerVal(p, key);
+      el.value = v ? fmtMoney(v) : '0';
+      el.addEventListener('input', ()=>{ p.inputs[key] = unfmtMoney(el.value); renderAll(); });
+      if (el.classList.contains('money-input')) bindMoneyInput(el);
+    });
     wrap.appendChild(c);
   });
 }
@@ -2229,6 +2238,8 @@ function setCoopMode(on){
       p0.inputs.nolP = num('nol');
       p0.other = Object.assign({}, domOtherSrc());
       p0.pastTax1 = document.getElementById('pastTax1').value; p0.pastTax2 = document.getElementById('pastTax2').value;
+      p0.pastIncome1 = document.getElementById('pastIncome1').value; p0.pastRural1 = document.getElementById('pastRural1').value;
+      PY_IDS.forEach(id=>{ const el=document.getElementById(id+'_py'); if (el) p0.inputs[id+'_py'] = unfmtMoney(el.value); });
       state.coop.partners.push(p0);
     }
     while (state.coop.partners.length<2) state.coop.partners.push(newPartner('', 50));
@@ -2236,7 +2247,7 @@ function setCoopMode(on){
   state.coop.on = on;
   document.getElementById('coopBox').style.display = on ? '' : 'none';
   document.getElementById('pastTaxCoop').style.display = on ? '' : 'none';
-  ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly = on; el.classList.toggle('ro', on); });
+  ['pastTax1','pastTax2','pastIncome1','pastRural1'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop();
   renderAll();
 }
@@ -2253,7 +2264,7 @@ function updatePartner(id, field, val){
   if (field==='share') p.share = Math.max(Math.min(parseFloat(String(val).replace(/[^0-9.]/g,''))||0, 100), 0);
   else p[field] = val;
   if (field==='name' || field==='share'){ updatePartnerBlockHeads(); renderCoopOtherIncome(); renderExtraBizList(); }
-  renderShareHint(); if (field!=='name' && field!=='share') renderPastTaxCoop(); renderAll();
+  renderShareHint(); if (field!=='name' && field!=='share') syncPastTaxSums(); renderAll();
 }
 function shareTotal(){ return state.coop.partners.reduce((a,p)=> a + (Number(p.share)||0), 0); }
 function renderShareHint(){
@@ -2275,16 +2286,22 @@ function renderPastTaxCoop(){
   if (!coopOn()){ el.style.display='none'; return; }
   el.style.display='';
   const {N1,N2} = getYears();
-  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 국세(결정세액) — 위 표의 국세 칸은 합계로 자동 계산됩니다</div>
-    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세</th><th>${N1}년 국세</th></tr>${
+  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 전년 신고 결과 — 위 표의 사업소득금액·국세·농특세 칸은 합계로 자동 계산됩니다. 소득공제·세액공제 등 전년 상세는 STEP 4 구성원 블록의 전년 열에 입력</div>
+    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세</th><th>${N1}년 사업소득금액<br><small>구성원 귀속분(신고서)</small></th><th>${N1}년 국세<br><small>결정세액</small></th><th>${N1}년 농특세</th></tr>${
     state.coop.partners.map(p=> `<tr><th>${escAttr(p.name||'-')}</th>
       <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax2||'')}" oninput="updatePartner('${p.id}','pastTax2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
-      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax1||'')}" oninput="updatePartner('${p.id}','pastTax1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td></tr>`).join('')}</table>`;
-  // 합계를 pastTax1/2에 반영
-  [['pastTax1','pastTax1'],['pastTax2','pastTax2']].forEach(([id,f])=>{
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastIncome1||'')}" oninput="updatePartner('${p.id}','pastIncome1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax1||'')}" oninput="updatePartner('${p.id}','pastTax1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastRural1||'')}" oninput="updatePartner('${p.id}','pastRural1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td></tr>`).join('')}</table>`;
+  syncPastTaxSums();
+}
+/* 구성원별 전년 입력의 합계를 1장 비교용 칸(pastTax1/2 · pastIncome1 · pastRural1)에 반영 — 입력 중 표를 다시 그리지 않도록 분리 */
+function syncPastTaxSums(){
+  if (!coopOn()) return;
+  ['pastTax1','pastTax2','pastIncome1','pastRural1'].forEach(f=>{
     const any = state.coop.partners.some(p=> p[f]!=='' && p[f]!=null);
     const sum = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p[f]||''), 0);
-    document.getElementById(id).value = any ? fmtMoney(sum) : '';
+    const el = document.getElementById(f); if (el) el.value = any ? fmtMoney(sum) : '';
   });
 }
 
@@ -2873,21 +2890,18 @@ function buildEstimateDetail(){
 
 /* 보고서 표 3: 예상 종합소득세 (사무소 엑셀 "세액예상" 시트 양식) */
 /* 전년(N-1) 신고 결과 열: 1장 비교용 입력값(매출·사업소득금액·국세·농특세)을 그대로 사용 */
-function prevYearCol(){
+const PY_IDS = ['adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction','crChild','crBook','crStd','empCredit','empCreditCarry','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit','penalty','midterm','withhold','withholdLocal'];
+/* src = { sales, income, nat, rural, py(id) } */
+function buildPrevYear(src){
   const {N1} = getYears();
-  const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
-  const py = id=>{ const el=document.getElementById(id+'_py'); return el ? (Number(unfmtMoney(el.value))||0) : 0; };
-  const mainSale = (state.years[N1] && state.years[N1]['Ⅰ. 매출액']) || null;
-  const sales = val('pastSales1')!==null ? val('pastSales1') : mainSale;
-  const income = val('pastIncome1'), nat = val('pastTax1'), rural = val('pastRural1')||0;
-  const pyIds = ['adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction','crChild','crBook','crStd','empCredit','empCreditCarry','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit','penalty','midterm','withhold','withholdLocal'];
-  const anyPy = pyIds.some(id=> py(id)!==0);
+  const { sales, income, nat } = src, rural = src.rural||0, py = src.py;
+  const anyPy = PY_IDS.some(id=> py(id)!==0);
   if (sales===null && income===null && nat===null && !anyPy) return null;
   const local = nat===null ? null : Math.floor(nat*0.1/10)*10;
   const o = { year:N1, sales, income, nat, rural, local, total: natToTotal(nat, rural),
     margin: (sales>0 && income!==null) ? (income/sales*100).toFixed(1)+'%' : null,
     rate: (nat!==null && income>0) ? ((nat+local+rural)/income*100).toFixed(1)+'%' : null };
-  pyIds.forEach(id=> o[id] = py(id));
+  PY_IDS.forEach(id=> o[id] = py(id));
   // 노란우산: 전년 사업소득금액 기준 구간 한도 적용 (사업소득금액 미입력 시 납입액 그대로)
   const yu = income!==null ? yellowUmbrellaDeduction(o.yellowUmbrella, income, 0) : { deduction:o.yellowUmbrella, limit:null };
   o.dedYellow = yu.deduction; o.yuLimit = yu.limit;
@@ -2901,12 +2915,38 @@ function prevYearCol(){
   o.netPayable = (o.total!==null) ? o.total - o.midterm - o.withhold - o.withholdLocal : null;
   return o;
 }
+/* 구성원별 전년 열: 구성원 블록의 N-1년 입력(p.inputs[id+'_py']) + 구성원별 N-1년 사업소득금액·국세 */
+function partnerPrevYear(p){
+  const pv = (k)=> (p[k]!==undefined && p[k]!==null && p[k]!=='') ? unfmtMoney(p[k]) : null;
+  return buildPrevYear({ sales:null, income: pv('pastIncome1'), nat: pv('pastTax1'), rural: pv('pastRural1')||0,
+    py: id=> Number(p.inputs && p.inputs[id+'_py'] || 0) });
+}
+/* 단독: STEP 4의 N-1년 열 + 1장 비교 입력. 공동: 구성원별 전년 열을 합산(세율·마진율은 합산값으로 재계산) */
+function prevYearCol(){
+  const {N1} = getYears();
+  const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
+  const mainSale = (state.years[N1] && state.years[N1]['Ⅰ. 매출액']) || null;
+  const sales = val('pastSales1')!==null ? val('pastSales1') : mainSale;
+  if (!coopOn()){
+    return buildPrevYear({ sales, income: val('pastIncome1'), nat: val('pastTax1'), rural: val('pastRural1')||0,
+      py: id=>{ const el=document.getElementById(id+'_py'); return el ? (Number(unfmtMoney(el.value))||0) : 0; } });
+  }
+  const parts = state.coop.partners.map(partnerPrevYear).filter(Boolean);
+  if (!parts.length) return null;
+  const sumKey = k=> parts.some(x=> x[k]!==null && x[k]!==undefined) ? parts.reduce((a,x)=> a + (Number(x[k])||0), 0) : null;
+  const o = { year:N1, sales, coopSum:true };
+  ['income','nat','rural','local','total','dedYellow','dedTotal','adj','taxBase','calcTax','crTotal','payable','netPayable'].concat(PY_IDS).forEach(k=> o[k] = sumKey(k));
+  o.margin = (sales>0 && o.income!==null) ? (o.income/sales*100).toFixed(1)+'%' : null;
+  o.rate = (o.total!==null && o.income>0) ? (o.total/o.income*100).toFixed(1)+'%' : null;
+  o.rate55 = null;   // 구성원별 세율이 달라 합계에는 표시하지 않음
+  return o;
+}
 function marginalRateFor(base){
   const br=[[14000000,.06],[50000000,.15],[88000000,.24],[150000000,.35],[300000000,.38],[500000000,.40],[1000000000,.42],[Infinity,.45]];
   for (const [lim,r] of br) if (base<=lim) return r; return .45;
 }
-function buildTaxTable(sc){
-  const pv = prevYearCol();
+function buildTaxTable(sc, pvOverride){
+  const pv = pvOverride!==undefined ? pvOverride : prevYearCol();
   const pvCell = v=> `<td class="pv">${v==null ? '<span class="dim">-</span>' : (typeof v==='number' ? won(v) : v)}</td>`;
   const row = (cls, label, fn, note, pvv)=> `<tr class="${cls}"><td>${label}</td>${pv ? pvCell(pvv===undefined ? null : pvv) : ''}${sc.map(x=> `<td>${fn(x.s, x)}</td>`).join('')}<td class="memo">${note||''}</td></tr>`;
   const any = (fn, pvv)=> sc.some(x=> fn(x.s)) || !!(pv && pvv);
@@ -2923,7 +2963,7 @@ function buildTaxTable(sc){
   if (any(s=> s.dedOther, pv&&pv.otherDeduction)) h += row('', '기타공제', s=> won(s.dedOther), '', pv&&pv.otherDeduction);
   if (pv) h += row('', '소득공제 합계', s=> won(s.comboDeduction), '', pv.dedTotal);
   h += row('strong', '과세표준', s=> won(s.taxBase), sc[0].s.methodUsed + (pv&&pv.taxBase!==null ? ` · ${pv.year}년은 사업소득금액−이월결손금−소득공제로 추정` : ''), pv&&pv.taxBase);
-  h += row('', '(×) 세율', s=> s.rate==null ? '구성원별' : (s.rate*100).toFixed(0)+'%', '소득세법 §55', pv&&pv.rate55!==null ? (pv.rate55*100).toFixed(0)+'%' : null);
+  h += row('', '(×) 세율', s=> s.rate==null ? '구성원별' : (s.rate*100).toFixed(0)+'%', '소득세법 §55', pv&&pv.rate55!=null ? (pv.rate55*100).toFixed(0)+'%' : (pv&&pv.coopSum ? '구성원별' : null));
   h += row('strong', '산출세액', s=> won(s.calcTax), '', pv&&pv.calcTax);
   h += row('', '중소기업특별세액감면', s=> won(s.reduction), '조특법 §7');
   sc[0].s.creditItems.forEach((c,i)=>{
@@ -3434,7 +3474,7 @@ function renderPartnerBreak(sc){
   for (let i=0;i<n;i++){
     const p = sc[0].s.partners[i].partner;
     const psc = sc.map(x=> Object.assign({}, x, { s: x.s.partners[i] }));
-    h += `<table class="rep-table tax pb"><caption><div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div></caption>${buildTaxTable(psc)}</table>`;
+    h += `<table class="rep-table tax pb"><caption><div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div></caption>${buildTaxTable(psc, partnerPrevYear(p))}</table>`;
   }
   box.innerHTML = h;
   // 인쇄용: 구성원 제목·머리글·첫 행을 한 묶음으로(제목만 쪽 끝에 남지 않게)
@@ -3768,7 +3808,7 @@ function loadWork(data){
   if (s1 && Object.keys(state.years).length) s1.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0;">※ 저장된 작업 파일의 손익 자료가 반영되어 있습니다. 엑셀을 다시 올리면 해당 연도 자료가 교체됩니다.</div>';
   renderExtraBizList();
   const coopRadio = document.querySelector(`input[name=bizMode][value=${state.coop.on?'coop':'single'}]`); if (coopRadio) coopRadio.checked = true;
-  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly=true; el.classList.add('ro'); }); }
+  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2','pastIncome1','pastRural1'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly=true; el.classList.add('ro'); } }); }
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderPastTaxCoop();
   renderAll();
 }
