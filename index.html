@@ -421,8 +421,10 @@ table.rep-table tr.extra td.memo{color:#B4232C;font-weight:400;}
 .plr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .plr-item{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;break-inside:avoid;}
 .plr-item.full{grid-column:1 / -1;}
-.plr-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;font-weight:700;color:var(--navy);}
-.plr-h .amt{font-family:'Noto Serif KR',serif;font-size:14px;color:#1c2733;white-space:nowrap;}
+.plr-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;font-weight:700;color:var(--navy);flex-wrap:wrap;}
+.plr-h>span:first-child{white-space:nowrap;flex:0 0 auto;}
+.plr-h .amt{font-family:'Noto Serif KR',serif;font-size:14px;color:#1c2733;white-space:normal;text-align:right;flex:1 1 auto;}
+.plr-h .amt .plr-flag{white-space:nowrap;}
 .plr-sub{font-size:11px;color:var(--sub);margin:3px 0 6px;line-height:1.5;}
 .plr-q{font-size:12px;color:#8a4b00;background:#FFF6E5;border-left:3px solid var(--brass);padding:6px 9px;border-radius:0 6px 6px 0;line-height:1.55;}
 .plr-q b{color:#6b3a00;}
@@ -3388,7 +3390,7 @@ function renderPLReview(sc){
         <div class="plr-q"><b>인건비 지출이 이 정도면 괜찮을까요?</b> 직원 수·근무시간 대비 적정한지, 일용직·프리랜서 지급분의 원천세 신고와 지급명세서 제출이 모두 되어 있는지 확인해 주세요. 신고되지 않은 인건비는 경비로 인정되지 않습니다.</div>
       </div>
       <div class="plr-item">
-        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원${welfareIns>0?` <span style="font-weight:400;color:var(--sub);font-size:11px;">(장부 ${won(welfareRaw)} − 4대보험료 ${won(welfareIns)})</span>`:''} ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>
+        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원 ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>${welfareIns>0?`<div style="font-size:11px;color:var(--sub);margin-top:2px;">장부 복리후생비 ${won(welfareRaw)}원 − 4대보험료 ${won(welfareIns)}원 (보험료로 재분류)</div>`:''}
         <div class="plr-sub">식대·간식·회식·경조사·직원 선물 등. 사무소 기준: 인건비(급여·상여 등)의 <b>10% 내외</b>. 직원 수에 비해 크면 대표자 개인 지출이 섞였는지 봅니다.</div>
         <div class="plr-q"><b>종합소득세 신고 시 복리후생비는 인건비의 10% 내외로 조절하여 신고할 예정입니다.</b>${welfareRate!==null && welfareRate>10 ? ` 현재 추정액 ${won(welfare)}원은 인건비의 ${welfareRate.toFixed(1)}%로, 10% 기준(약 ${won(Math.round(laborCore*0.1))}원)을 <b>${won(Math.round(welfare - laborCore*0.1))}원</b> 초과합니다. 초과분은 증빙·사용 내역을 확인해 개인 지출은 경비에서 제외합니다.` : ''} 직원이 없는 사업장의 복리후생비, 주말·심야 식대, 1인 결제 반복은 개인 지출로 보아 부인될 수 있습니다.</div>
       </div>
