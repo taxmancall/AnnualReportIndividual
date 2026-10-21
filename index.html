@@ -907,7 +907,7 @@ table.rep-table.loan td.num{text-align:right;}
       <thead><tr><th>항목</th><th class="py"><span class="yN1">N-1</span>년 신고<br><small>작년 신고서 값(비교용)</small></th><th><span class="yN">N</span>년 입력</th><th>비고</th></tr></thead>
       <tbody>
         <tr><th>가산세·추가납부세액</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="penalty_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="penalty" value="0"></td><td class="memo"></td></tr>
-        <tr><th>중간예납세액</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="midterm_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="midterm" value="0"></td><td class="memo"></td></tr>
+        <tr><th>중간예납세액</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="midterm_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="midterm" value="0"></td><td class="memo"><span class="mt-hint" id="midtermHint"></span></td></tr>
         <tr><th>기납부(원천징수)세액 - 국세</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="withhold_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="withhold" value="0"></td><td class="memo"></td></tr>
         <tr><th>기납부세액 - 지방소득세</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="withholdLocal_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="withholdLocal" value="0"></td><td class="memo"></td></tr>
       </tbody>
@@ -2964,6 +2964,26 @@ function prevYearCol(){
   o.rate55 = null;   // 구성원별 세율이 달라 합계에는 표시하지 않음
   return o;
 }
+/* 다음 연도 중간예납 추정(소득세법 §65): 중간예납기준액(직전 연도 결정세액 + 가산세·추가납부 − 원천징수세액
+   = 직전 중간예납 + 확정신고 납부세액) × 1/2. 50만원 미만은 징수하지 않음(소액부징수). 10원 미만 절사 */
+function midtermFromPrev(pv){
+  if (!pv || pv.nat==null) return null;
+  const base = (Number(pv.nat)||0) + (Number(pv.penalty)||0) - (Number(pv.withhold)||0);
+  const half = Math.floor(Math.max(base,0)/2/10)*10;
+  return { base, half, amt: half < 500000 ? 0 : half };
+}
+function renderMidtermHints(){
+  const one = (el, pv, targetId)=>{
+    if (!el) return;
+    const m = midtermFromPrev(pv);
+    if (!m){ el.innerHTML = ''; return; }
+    el.innerHTML = `${pv.year}년 신고 기준 추정: (결정세액 ${won(pv.nat)}${pv.penalty?` + 가산세 ${won(pv.penalty)}`:''} − 원천징수 ${won(pv.withhold||0)}) ÷ 2 = <b>${won(m.half)}</b>`
+      + (m.amt===0 && m.half>0 ? ' → 50만원 미만 소액부징수, 0원' : '')
+      + ` <button type="button" class="small-btn" style="padding:1px 7px;font-size:11px;" onclick="(function(){const t=document.getElementById('${targetId}'); t.value=fmtMoney(${m.amt}); t.dispatchEvent(new Event('input'));})()">적용</button>`;
+  };
+  if (coopOn()) state.coop.partners.forEach((p,i)=> one(document.getElementById('midtermHint__p'+i), partnerPrevYear(p), 'midterm__p'+i));
+  else one(document.getElementById('midtermHint'), prevYearCol(), 'midterm');
+}
 function marginalRateFor(base){
   const br=[[14000000,.06],[50000000,.15],[88000000,.24],[150000000,.35],[300000000,.38],[500000000,.40],[1000000000,.42],[Infinity,.45]];
   for (const [lim,r] of br) if (base<=lim) return r; return .45;
@@ -3621,6 +3641,7 @@ function renderReport(sc){
 
   document.querySelectorAll('#incomeTable tr').forEach(tr=>{ if (tr.cells[2] && tr.cells[2].tagName==='TD') tr.cells[2].classList.add('memo'); });
   setTableWithCaption('scenarioTable', buildTaxTable(sc), 3);
+  try { renderMidtermHints(); } catch(e){}
   { const nt = document.getElementById('taxEstNote'); if (nt){ const {N} = getYears(); let isDil=false; try { isDil = diligentCheck(sc[0].s).isTarget; } catch(e){}
       nt.innerHTML = `※ 위 표의 <b>결정세액·중간예납세액·기납부(원천징수)세액·납부할 세액은 추정치</b>입니다(기준일까지 실적을 연간 환산). 실제 세액은 <b>${N+1}년 5월${isDil ? '(성실신고확인대상자 6월)' : ''} 종합소득세 신고·납부 시 확정</b>되며, 중간예납세액은 ${N}년 11월 고지분, 원천징수세액은 연말 지급명세서 기준으로 최종 반영됩니다.`; } }
   { const cap = document.querySelector('#scenarioTable tr.cap-row h2'); if (cap){ let tag = cap.querySelector('.coop-tag'); if (!tag){ tag = document.createElement('span'); tag.className='coop-tag'; cap.appendChild(tag); } tag.textContent = sc[0].s.coop ? ' — 구성원 합계' : ''; } }
