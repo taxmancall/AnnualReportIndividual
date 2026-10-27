@@ -2889,10 +2889,11 @@ function buildPLCompare(sc){
   const labor = sgaNames.filter(isLaborItem);
   const insur = sgaNames.filter(n=> !isLaborItem(n) && isInsuranceItem(n));
   const etc = sgaNames.filter(n=> !isLaborItem(n) && !isInsuranceItem(n));
-  // 인건비 합계 = 임원·직원급여 + 상여·잡급 + 사업소득인건비 + 퇴직급여(퇴직금) + 4대보험료 회사부담분
+  // 인건비 합계 = 임원·직원급여 + 상여·잡급 + 사업소득인건비 + 퇴직급여(퇴직금)
+  // 4대보험료 회사부담분은 가결산 때만 추가되는 경우가 많아 전년 대비 비교가 왜곡되므로 인건비 합계에서 제외하고 합계 아래에 따로 표시
   pushItems('Ⅳ. 판매비와 관리비', labor);
+  if (labor.length > 1) push('sub', '인건비 합계 (급여·잡급·사업소득인건비·퇴직급여)', sumVals('Ⅳ. 판매비와 관리비', labor));
   pushItems('Ⅳ. 판매비와 관리비', insur);
-  if (labor.length + insur.length > 1) push('sub', '인건비 합계 (급여·잡급·사업소득인건비·퇴직급여·4대보험 포함)', sumVals('Ⅳ. 판매비와 관리비', labor.concat(insur)));
   pushItems('Ⅳ. 판매비와 관리비', etc);
   if (sc.some(x=> x.extra!==0)){ const neg = sc.some(x=> x.extra<0), pos = sc.some(x=> x.extra>0); push('item extra'+(neg&&!pos?' neg':''), neg&&pos ? '경비 조정(+부족경비 / −감축)' : (neg ? '경비 감축(정리 예정)' : '부족경비(추가 집행 예정)'), estOnly(x=> x.extra), neg ? '남은 기간 경비 조정 가정액(음수는 감축)' : '남은 기간 추가 집행 가정액'); }
   push('strong', '영업이익', totalVals('Ⅴ. 영업이익','op','opIncome'));
