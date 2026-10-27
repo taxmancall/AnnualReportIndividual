@@ -1589,7 +1589,7 @@ renderExtraBizList();
 ============================================================ */
 const ADJ_SECTIONS = ["Ⅰ. 매출액","Ⅱ. 매출원가","Ⅳ. 판매비와 관리비","Ⅵ. 영업외수익","Ⅶ. 영업외비용"];
 const ASIS_SGA_KEYWORDS = ['상여','잡급','감가상각','무형자산상각','무형고정자산상각'];
-const LABOR_KEYWORDS = ['직원급여','임원급여','급여','상여금','잡급','사업소득급여','퇴직급여'];
+const LABOR_KEYWORDS = ['직원급여','임원급여','급여','상여금','잡급','일용급여','사업소득급여','사업소득인건비','퇴직급여','퇴직금','인건비'];
 const INSURANCE_KEYWORDS = ['4대보험','사대보험','사회보험','국민연금','건강보험','장기요양','고용보험','산재보험','고용산재'];
 
 function esc(s){
@@ -2770,7 +2770,7 @@ function chartConfigScenario(sc){
    보고서 표 1: 과목별 손익 비교 (사무소 엑셀 "보고서" 시트 양식)
    열: N-2 · N-1 확정 / N 실적(기준월) / N ①·②·③ 추정, 각 열 옆에 매출 대비 비율, 맨 끝 비고
 ============================================================ */
-function isLaborItem(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || n.endsWith('급여'); }
+function isLaborItem(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || /(급여|인건비|퇴직금|상여금?)$/.test(n); }
 function isInsuranceItem(name){ const n = normLabel(name); return INSURANCE_KEYWORDS.some(k=> n.includes(k)); }
 
 function buildPLCompare(sc){
@@ -2844,10 +2844,10 @@ function buildPLCompare(sc){
   const labor = sgaNames.filter(isLaborItem);
   const insur = sgaNames.filter(n=> !isLaborItem(n) && isInsuranceItem(n));
   const etc = sgaNames.filter(n=> !isLaborItem(n) && !isInsuranceItem(n));
+  // 인건비 합계 = 임원·직원급여 + 상여·잡급 + 사업소득인건비 + 퇴직급여(퇴직금) + 4대보험료 회사부담분
   pushItems('Ⅳ. 판매비와 관리비', labor);
-  if (labor.length>1) push('sub', '인건비 합계', sumVals('Ⅳ. 판매비와 관리비', labor));
   pushItems('Ⅳ. 판매비와 관리비', insur);
-  if (insur.length>1) push('sub', '4대보험료 합계', sumVals('Ⅳ. 판매비와 관리비', insur));
+  if (labor.length + insur.length > 1) push('sub', '인건비 합계 (급여·잡급·사업소득인건비·퇴직급여·4대보험 포함)', sumVals('Ⅳ. 판매비와 관리비', labor.concat(insur)));
   pushItems('Ⅳ. 판매비와 관리비', etc);
   if (sc.some(x=> x.extra!==0)){ const neg = sc.some(x=> x.extra<0), pos = sc.some(x=> x.extra>0); push('item extra'+(neg&&!pos?' neg':''), neg&&pos ? '경비 조정(+부족경비 / −감축)' : (neg ? '경비 감축(정리 예정)' : '부족경비(추가 집행 예정)'), estOnly(x=> x.extra), neg ? '남은 기간 경비 조정 가정액(음수는 감축)' : '남은 기간 추가 집행 가정액'); }
   push('strong', '영업이익', totalVals('Ⅴ. 영업이익','op','opIncome'));
