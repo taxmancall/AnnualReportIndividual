@@ -224,19 +224,7 @@ canvas{max-width:100%;}
 .im-toolbar{display:flex;align-items:center;gap:12px;margin:2px 0 8px;flex-wrap:wrap;}
 .im-toolbar span{font-size:11.5px;color:var(--sub);}
 table.income-matrix th small{font-weight:400;color:var(--sub);font-size:10.5px;}
-table.income-matrix.vform{min-width:0;table-layout:fixed;margin:4px 0 6px;}
-table.pc-grid{table-layout:auto;}
-table.pc-grid thead th{font-size:11.5px;}
-table.pc-grid td.auto{font-weight:700;color:var(--navy);}
-table.income-matrix.vform th:first-child{width:34%;}
-table.income-matrix.vform td.py,table.income-matrix.vform th.py{width:22%;}
-table.income-matrix.vform td:nth-child(3){width:22%;}
-table.income-matrix.vform thead th.py{background:#E6E8EC;color:#4a5160;}
-table.income-matrix.vform td.py{background:#F7F7F9;}
-table.income-matrix.vform td.py input{background:#F1F2F5!important;border-color:#D5D8DF!important;}
-table.income-matrix.vform td.memo{text-align:left;font-size:11.5px;color:var(--sub);}
-table.income-matrix.vform tbody th small{display:block;font-weight:400;color:var(--sub);font-size:10.5px;}
-
+table.income-matrix.ded-matrix,table.income-matrix.cr-matrix{min-width:680px;}
 table.income-matrix input[type=number]{width:100%;box-sizing:border-box;text-align:right;font-size:12.5px;padding:6px 7px;margin:0;}
 table.income-matrix tbody + thead th{border-top:2px solid var(--line);}
 .im-subhead{display:flex;gap:3px;margin-top:4px;align-items:center;}
@@ -423,10 +411,8 @@ table.rep-table tr.extra td.memo{color:#B4232C;font-weight:400;}
 .plr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .plr-item{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;break-inside:avoid;}
 .plr-item.full{grid-column:1 / -1;}
-.plr-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;font-weight:700;color:var(--navy);flex-wrap:wrap;}
-.plr-h>span:first-child{white-space:nowrap;flex:0 0 auto;}
-.plr-h .amt{font-family:'Noto Serif KR',serif;font-size:14px;color:#1c2733;white-space:normal;text-align:right;flex:1 1 auto;}
-.plr-h .amt .plr-flag{white-space:nowrap;}
+.plr-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;font-weight:700;color:var(--navy);}
+.plr-h .amt{font-family:'Noto Serif KR',serif;font-size:14px;color:#1c2733;white-space:nowrap;}
 .plr-sub{font-size:11px;color:var(--sub);margin:3px 0 6px;line-height:1.5;}
 .plr-q{font-size:12px;color:#8a4b00;background:#FFF6E5;border-left:3px solid var(--brass);padding:6px 9px;border-radius:0 6px 6px 0;line-height:1.55;}
 .plr-q b{color:#6b3a00;}
@@ -545,10 +531,6 @@ table.rep-table.loan td.num{text-align:right;}
   table.rep-table{break-inside:auto;}
   table.rep-table.loan,table.rep-table.yearcmp,#incomeTable{break-inside:avoid;}
   #scenarioTable{break-inside:auto;}
-  .rep-table th.pv,.rep-table td.pv{background:#F3F4F7;color:#4a5160;}
-  .rep-table th.pv{background:#3a4356;color:#dfe4ee;}
-  .rep-table td.pv .dim{color:#b6bcc8;}
-  .rep-table th .thsub{font-size:10px;font-weight:400;opacity:.8;}
   .loan-sub + ul,.loan-sub + table,.loan-sub + div{break-before:avoid;}
   #repLoanSection .checklist-intro{break-after:avoid;}
   table.rep-table.loan.ins{break-inside:auto;}
@@ -609,7 +591,6 @@ table.rep-table.loan td.num{text-align:right;}
     <div class="topbar-actions no-print">
       <button class="small-btn ghost" onclick="document.getElementById('workFile').click()" title="💾 작업 저장으로 만든 .json 파일만 불러올 수 있습니다 (엑셀·PDF 불가)">📂 작업 불러오기(.json)</button>
       <button class="small-btn ghost" onclick="saveWork()" title="입력값·업로드한 손익·연간 추정 워크시트를 파일로 저장합니다">💾 작업 저장(.json)</button>
-      <button class="small-btn ghost xl-btn" onclick="exportExcel()" title="연간 추정 손익 · 3개년 비교 · 세액 계산을 수식이 걸린 엑셀(.xlsx)로 저장합니다">📗 엑셀 다운로드(.xlsx)</button>
       <button class="btn-primary" onclick="printWithWork()" title="PDF 인쇄창을 열고, 수정용 작업 파일(.json)도 함께 저장합니다">🖨️ PDF로 다운로드(인쇄) + 작업파일 저장</button>
     </div>
   </div>
@@ -662,11 +643,10 @@ table.rep-table.loan td.num{text-align:right;}
     <div class="grid cols-4">
       <div class="field"><label>대표자 성명</label><input type="text" id="ownerName" placeholder="홍길동"></div>
       <div class="field"><label>상호(메인 사업장명)</label><input type="text" id="bizName" placeholder="OO상회"></div>
-      <div class="field"><label>개업일(사업자등록증)</label><input type="date" id="openDate"></div>
       <div class="field"><label>결산(가결산) 연도 N</label><input type="number" id="targetYear" value="2026"></div>
+      <div class="field"><label>기준일자(마감일)</label><input type="date" id="baseDate"></div>
     </div>
     <div class="grid cols-4" style="margin-top:12px;">
-      <div class="field"><label>기준일자(마감일)</label><input type="date" id="baseDate"></div>
       <div class="field"><label>기준월수(1월~기준월)</label><input type="number" id="baseMonths" value="11" min="1" max="12"></div>
       <div class="field"><label>귀속연도(과세기간)</label><input type="text" id="taxPeriod" value=""></div>
       <div class="field">
@@ -711,23 +691,19 @@ table.rep-table.loan td.num{text-align:right;}
     </div>
     <div style="margin-top:14px;">
       <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">과거 2개년 종합소득세 신고 결과 <span style="font-weight:400;color:var(--sub);font-size:12px;">(보고서 첫 장 비교표용 · 메인 사업장 기준, 신고서 기준으로 입력)</span></div>
-      <div id="pastTaxSingle">
       <table class="income-matrix" style="min-width:0;">
-        <tr><th>귀속연도</th><th>메인 사업장 매출</th><th>메인 사업소득금액<br><span style="font-weight:400;font-size:11px;">(신고서 기준)</span></th><th>타소득금액<br><span style="font-weight:400;font-size:11px;">(근로·연금·임대·기타·금융 등, 신고서)</span></th><th>국세(종합소득세 결정세액)<br><span style="font-weight:400;font-size:11px;">입력 시 지방소득세 10%를 더해 표시</span></th><th>농어촌특별세<br><span style="font-weight:400;font-size:11px;">(감면·공제분 20%, 있으면 입력)</span></th></tr>
+        <tr><th>귀속연도</th><th>메인 사업장 매출</th><th>메인 사업소득금액<br><span style="font-weight:400;font-size:11px;">(신고서 기준)</span></th><th>국세(종합소득세 결정세액)<br><span style="font-weight:400;font-size:11px;">입력 시 지방소득세 10%를 더해 표시</span></th><th>농어촌특별세<br><span style="font-weight:400;font-size:11px;">(감면·공제분 20%, 있으면 입력)</span></th></tr>
         <tr><th><span class="yN2">N-2</span>년</th>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastSales2" placeholder="미입력 시 메인 손익 매출"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome2"></td>
-          <td><input type="text" inputmode="decimal" class="money-input" id="pastOther2" placeholder="0"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastTax2"> <span id="pastTaxHint2" style="font-size:11px;color:var(--sub);"></span></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastRural2" placeholder="0"></td></tr>
         <tr><th><span class="yN1">N-1</span>년</th>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastSales1" placeholder="미입력 시 메인 손익 매출"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastIncome1"></td>
-          <td><input type="text" inputmode="decimal" class="money-input" id="pastOther1" placeholder="0"></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastTax1"> <span id="pastTaxHint1" style="font-size:11px;color:var(--sub);"></span></td>
           <td><input type="text" inputmode="decimal" class="money-input" id="pastRural1" placeholder="0"></td></tr>
       </table>
-      </div>
       <div id="pastTaxCoop" style="display:none;"></div>
     </div>
     <div style="margin-top:10px;font-size:12px;color:var(--sub);">자동조회 감면율(메인 사업장): <b id="rateDisplay" style="color:var(--brass);">-</b> <span style="color:#999;">(조특법 §7①, 2025.1.1. 개정 반영)</span></div>
@@ -774,14 +750,12 @@ table.rep-table.loan td.num{text-align:right;}
       <tr><td class="ev-l">근로소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evWage" value="0"></td><td class="ev-n">직원 급여·상여 (지급명세서 제출분)</td></tr>
       <tr><td class="ev-l">사업소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evBizInc" value="0"></td><td class="ev-n">프리랜서 3.3% 원천징수 지급액</td></tr>
       <tr><td class="ev-l">일용소득</td><td><input type="text" inputmode="decimal" class="money-input" id="evDaily" value="0"></td><td class="ev-n">일용근로자 지급액</td></tr>
-      <tr><th colspan="3" class="ev-grp">기타 (적격증빙 외 전부 — 감가상각비·4대보험료·세금과공과·보험료 등 증빙 불요 경비)</th></tr>
+      <tr><th colspan="3" class="ev-grp">기타 (적격증빙 외 전부 — 감가상각비·4대보험료·세금과공과·임시계정·무증빙 포함)</th></tr>
       <tr><td class="ev-l">기타금액</td><td><input type="text" inputmode="decimal" class="money-input" id="evOther" value="0"></td><td class="ev-n">위하고 집계의 기타 합계. 비워 두면 <b>장부 경비 − 적격증빙</b>으로 자동 계산 (<span id="evOtherAuto">0</span>)</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;">↳ 복리후생비 계정에 포함된 4대보험료</td><td><input type="text" inputmode="decimal" class="money-input" id="evWelfareIns" value="0"></td><td class="ev-n">위하고 전표상 건강·장기요양·고용·산재보험(직원분·대표 본인분)이 <b>복리후생비</b>로 분개된 금액. 증빙 불요 경비로 집계하고, 복리후생비 10% 검토에서도 제외. 국민연금(세금과공과)·계정명이 '건강보험' 등인 경우는 자동 집계되므로 입력하지 않음</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 증빙 불요 경비</td><td id="evAutoNonEv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoNonEvList">감가상각비·4대보험·세금과공과·보험료·퇴직급여·이자 등 — 손익계산서에서 자동</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">※ 재고 증감(기초·기말)</td><td id="evAutoInv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoInvNote">기말재고 증가분은 매입 세금계산서를 받았어도 당기 경비 아님 → 기타가 음수가 될 수 있음(정상)</td></tr>
-      <tr id="evRestRow" style="display:none;"><td class="ev-l" style="padding-left:22px;color:#9E3B33;">↳ 확인 필요 차이</td><td id="evAutoRest" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n" id="evAutoRestNote">기타 − 증빙 불요 − 재고 변동. 입력한 증빙·자동 집계로 설명되지 않는 금액 → 아래 후보 확인</td></tr>
-      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">※ 임시계정(장부 과목)</td><td id="evAutoTemp" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n" id="evAutoTempList">임시계정·가지급금 등 — 손익계산서에서 자동 · 카드·통장 등 위 증빙 유형에 이미 포함된 금액이라 합계에 더하지 않음 · 개인 지출 의심</td></tr>
-      <tr class="ev-sum"><td class="ev-l">합계</td><td id="evTotalCell" style="text-align:right;font-weight:700;">0</td><td class="ev-n">장부 경비(당기 매입+판관비 실적) <b id="evBookCell">0</b> · 적격증빙 <b id="evQualCell">0</b> <span id="evMismatch"></span></td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 증빙 불요 경비</td><td id="evAutoNonEv" style="text-align:right;color:var(--sub);">0</td><td class="ev-n" id="evAutoNonEvList">감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익계산서에서 자동</td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 임시계정</td><td id="evAutoTemp" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n" id="evAutoTempList">임시계정·가지급금 등 — 손익계산서에서 자동 · 개인 지출 의심</td></tr>
+      <tr><td class="ev-l" style="padding-left:22px;color:var(--sub);">↳ 무증빙·미분류</td><td id="evAutoRest" style="text-align:right;color:#9E3B33;font-weight:700;">0</td><td class="ev-n">기타금액 − 증빙 불요 − 임시계정</td></tr>
+      <tr class="ev-sum"><td class="ev-l">합계</td><td id="evTotalCell" style="text-align:right;font-weight:700;">0</td><td class="ev-n">장부 경비(매출원가+판관비 실적) <b id="evBookCell">0</b> · 적격증빙 <b id="evQualCell">0</b> <span id="evMismatch"></span></td></tr>
     </table>
     <div id="evHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:8px 0 0;"></div>
   </div>
@@ -851,68 +825,52 @@ table.rep-table.loan td.num{text-align:right;}
     <p class="hint">사무소 엑셀 양식(세액예상 시트)의 순서대로 입력합니다. 해당 없는 항목은 0으로 두세요.</p>
 
     <div class="step-subhead first">가감금액 (세무조정)</div>
-    <table class="income-matrix vform">
-      <thead><tr><th>항목</th><th class="py"><span class="yN1">N-1</span>년 신고<br><small>작년 신고서 값(비교용)</small></th><th><span class="yN">N</span>년 입력</th><th>비고</th></tr></thead>
-      <tbody>
-        <tr><th>사업소득금액 조정 가산</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="adjIn_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="adjIn" value="0"></td><td class="memo">필요경비불산입 등</td></tr>
-        <tr><th>사업소득금액 조정 차감</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="adjOut_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="adjOut" value="0"></td><td class="memo">필요경비산입 등</td></tr>
-        <tr><th>이월결손금 공제 <span id="nolCoopNote" style="display:none;color:var(--sub);font-weight:400;">— 공동사업은 아래 구성원별 칸에 입력</span></th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="nol_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="nol" value="0"></td><td class="memo">사업소득, 소득세법 §45</td></tr>
-      </tbody>
-    </table>
+    <div class="grid cols-3">
+      <div class="field"><label>사업소득금액 조정 가산(필요경비불산입 등)</label><input type="text" inputmode="decimal" class="money-input" id="adjIn" value="0"></div>
+      <div class="field"><label>사업소득금액 조정 차감(필요경비산입 등)</label><input type="text" inputmode="decimal" class="money-input" id="adjOut" value="0"></div>
+      <div class="field"><label>이월결손금 공제(사업소득, §45) <span id="nolCoopNote" style="display:none;color:var(--sub);font-weight:400;">— 공동사업은 아래 구성원별 칸에 입력</span></label><input type="text" inputmode="decimal" class="money-input" id="nol" value="0"></div>
+    </div>
 
     <div id="partnerArea">
     <div class="pblock-head"></div>
-    <div class="nol-p" style="display:none;">
-    <table class="income-matrix vform">
-      <thead><tr><th>항목</th><th class="py"><span class="yN1">N-1</span>년 신고<br><small>작년 신고서 값(비교용)</small></th><th><span class="yN">N</span>년 입력</th><th>비고</th></tr></thead>
+    <div class="grid cols-3 nol-p" style="display:none;">
+      <div class="field"><label>이월결손금 공제 (이 구성원 귀속, 소득세법 §45)</label><input type="text" inputmode="decimal" class="money-input" id="nolP" value="0"></div>
+    </div>
+    <div class="step-subhead">소득공제 <span class="pwho"></span></div>
+    <div class="im-wrap">
+    <table class="income-matrix ded-matrix">
+      <thead><tr><th></th><th>소득공제<br>(인적공제 등)</th><th>국민연금 공제<br><small>(대표자 본인 납입분)</small></th><th>노란우산공제<br><small>(조특법 §86의3)</small></th><th>기타공제</th><th>합계</th></tr></thead>
       <tbody>
-        <tr><th>이월결손금 공제 (이 구성원 귀속)</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="nolP_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="nolP" value="0"></td><td class="memo">소득세법 §45</td></tr>
+        <tr><th>입력액<br><small>(노란우산은 납입액)</small></th>
+          <td><input type="text" inputmode="decimal" class="money-input" id="comboDeduction" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="pensionContrib" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></td>
+          <td><input type="text" inputmode="decimal" class="money-input" id="otherDeduction" value="0"></td>
+          <td class="auto dim">-</td></tr>
+        <tr><th>공제 한도</th><td class="auto dim">-</td><td class="auto dim">-</td><td class="auto" id="dmYuLimit">0</td><td class="auto dim">-</td><td class="auto dim">-</td></tr>
+        <tr class="im-total"><th>공제액</th><td id="dmCombo">0</td><td id="dmPension">0</td><td id="dmYu">0</td><td id="dmOther">0</td><td id="dmTotal">0</td></tr>
       </tbody>
     </table>
     </div>
-    <div class="step-subhead">소득공제 <span class="pwho"></span></div>
-    <table class="income-matrix vform">
-      <thead><tr><th>항목</th><th class="py"><span class="yN1">N-1</span>년 신고<br><small>작년 신고서 값(비교용)</small></th><th><span class="yN">N</span>년 입력</th><th>비고</th></tr></thead>
-      <tbody>
-        <tr><th>소득공제(인적공제 등)</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="comboDeduction_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="comboDeduction" value="0"></td><td class="memo">기본공제·추가공제 등 합계</td></tr>
-        <tr><th>국민연금 공제<br><small>대표자 본인 납입분</small></th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="pensionContrib_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="pensionContrib" value="0"></td><td class="memo">소득세법 §51의3</td></tr>
-        <tr><th>노란우산공제 납입액<br><small>조특법 §86의3</small></th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="yellowUmbrella" value="0"></td><td class="memo">한도 <b id="dmYuLimit">0</b> → 공제 <b id="dmYu">0</b></td></tr>
-        <tr><th>기타공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="otherDeduction_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="otherDeduction" value="0"></td><td class="memo"></td></tr>
-        <tr class="im-total"><th>소득공제 합계</th><td class="py auto" id="dmTotal_py">0</td><td class="auto" id="dmTotal">0</td><td class="memo">노란우산은 한도 적용 후 금액</td></tr>
-      </tbody>
-    </table>
     <div id="yuHint" style="font-size:12px;color:var(--sub);line-height:1.6;margin:6px 0 4px;"></div>
 
     <div class="step-subhead">세액공제 · 감면 <span class="pwho"></span> <span style="font-weight:400;color:var(--sub);font-size:12px;">(중소기업특별세액감면은 STEP 1 정보로 자동 계산)</span></div>
-    <table class="income-matrix vform">
-      <thead><tr><th>항목</th><th class="py"><span class="yN1">N-1</span>년 신고<br><small>작년 신고서 값(비교용)</small></th><th><span class="yN">N</span>년 입력</th><th>비고</th></tr></thead>
-      <tbody>
-        <tr><th>① 자녀·출산 세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crChild_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crChild" value="0"></td><td class="memo"></td></tr>
-        <tr><th>② 기장세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crBook_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crBook" value="0"></td><td class="memo"></td></tr>
-        <tr><th>③ 표준·근로소득 세액공제 등</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crStd_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crStd" value="0"></td><td class="memo"></td></tr>
-        <tr><th>④ 통합고용(고용증대) 당기분</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="empCredit_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="empCredit" value="0"></td><td class="memo">조특법 §29의8</td></tr>
-        <tr><th>⑤ 통합고용(고용증대) 이월분</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="empCreditCarry_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="empCreditCarry" value="0"></td><td class="memo">조특법 §144</td></tr>
-        <tr><th>⑥ 성실신고 확인비용</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crDiligent_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crDiligent" value="0"></td><td class="memo"></td></tr>
-        <tr><th>⑦ 사회보험료 세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crSocial_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crSocial" value="0"></td><td class="memo">조특법 §30의4</td></tr>
-        <tr><th>⑧ 의료비 세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crMedical_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crMedical" value="0"></td><td class="memo"></td></tr>
-        <tr><th>⑨ 교육비 세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crEdu_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crEdu" value="0"></td><td class="memo"></td></tr>
-        <tr><th>⑩ 퇴직연금(연금계좌) 세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="crPension_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crPension" value="0"></td><td class="memo"></td></tr>
-        <tr><th>기타 세액공제</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="otherCredit_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="otherCredit" value="0"></td><td class="memo"></td></tr>
-        <tr class="im-total"><th>세액공제 입력 합계</th><td class="py auto" id="dmCrTotal_py">0</td><td class="auto" id="dmCrTotal">0</td><td class="memo">중특감면·최저한세 적용 전 단순 합계</td></tr>
-        <tr><th>직전연도 대비 인원감소(명)</th><td class="py"><input type="number" id="decreasedEmp_py" value="0"></td><td><input type="number" id="decreasedEmp" value="0"></td><td class="memo">중소기업특별세액감면 한도</td></tr>
-      </tbody>
+    <div class="im-wrap">
+    <table class="income-matrix cr-matrix">
+      <thead><tr><th></th><th>① 자녀·출산</th><th>② 기장</th><th>③ 표준·근로소득<br>세액공제 등</th><th>④ 통합고용(고용증대)<br>당기분</th><th>⑤ 통합고용(고용증대)<br>이월분</th><th>⑥ 성실신고<br>확인비용</th></tr></thead>
+      <tbody><tr><th>세액공제액</th><td><input type="text" inputmode="decimal" class="money-input" id="crChild" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crBook" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crStd" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="empCredit" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="empCreditCarry" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crDiligent" value="0"></td></tr></tbody>
+      <thead><tr><th></th><th>⑦ 사회보험료</th><th>⑧ 의료비</th><th>⑨ 교육비</th><th>⑩ 퇴직연금<br>(연금계좌)</th><th>기타 세액공제</th><th>직전연도 대비 인원감소(명)<br><small>중특감면 한도</small></th></tr></thead>
+      <tbody><tr><th>세액공제액</th><td><input type="text" inputmode="decimal" class="money-input" id="crSocial" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crMedical" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crEdu" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="crPension" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="otherCredit" value="0"></td><td><input type="number" id="decreasedEmp" value="0"></td></tr></tbody>
     </table>
+    </div>
 
     <div class="step-subhead">가산세 · 기납부세액 <span class="pwho"></span></div>
-    <table class="income-matrix vform">
-      <thead><tr><th>항목</th><th class="py"><span class="yN1">N-1</span>년 신고<br><small>작년 신고서 값(비교용)</small></th><th><span class="yN">N</span>년 입력</th><th>비고</th></tr></thead>
-      <tbody>
-        <tr><th>가산세·추가납부세액</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="penalty_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="penalty" value="0"></td><td class="memo"></td></tr>
-        <tr><th>중간예납세액</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="midterm_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="midterm" value="0"></td><td class="memo"><span class="mt-hint" id="midtermHint"></span></td></tr>
-        <tr><th>기납부(원천징수)세액 - 국세</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="withhold_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="withhold" value="0"></td><td class="memo"></td></tr>
-        <tr><th>기납부세액 - 지방소득세</th><td class="py"><input type="text" inputmode="decimal" class="money-input" id="withholdLocal_py" value="0"></td><td><input type="text" inputmode="decimal" class="money-input" id="withholdLocal" value="0"></td><td class="memo"></td></tr>
-      </tbody>
-    </table>
+    <div class="grid cols-4">
+      <div class="field"><label>가산세·추가납부세액</label><input type="text" inputmode="decimal" class="money-input" id="penalty" value="0"></div>
+      <div class="field"><label>중간예납세액</label><input type="text" inputmode="decimal" class="money-input" id="midterm" value="0"></div>
+      <div class="field"><label>기납부(원천징수)세액 - 국세</label><input type="text" inputmode="decimal" class="money-input" id="withhold" value="0"></div>
+      <div class="field"><label>기납부세액 - 지방소득세</label><input type="text" inputmode="decimal" class="money-input" id="withholdLocal" value="0"></div>
+    </div>
     </div>
     <div id="partnerBlocks"></div>
     <label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12.5px;margin:10px 0 0;">
@@ -965,8 +923,7 @@ table.rep-table.loan td.num{text-align:right;}
     <button class="small-btn ghost" onclick="saveWork()" title="입력값·업로드한 손익·연간 추정 워크시트를 파일로 저장합니다">💾 작업 저장(.json)</button>
     <button class="small-btn ghost" onclick="document.getElementById('workFile').click()" title="💾 작업 저장으로 만든 .json 파일만 불러올 수 있습니다 (엑셀·PDF 불가)">📂 작업 불러오기(.json)</button>
     <input type="file" id="workFile" accept=".json,application/json" style="display:none">
-    <button class="small-btn ghost xl-btn" onclick="exportExcel()" title="연간 추정 손익 · 3개년 비교 · 세액 계산을 수식이 걸린 엑셀(.xlsx)로 저장합니다">📗 엑셀 다운로드(.xlsx)</button>
-      <button class="btn-primary" onclick="printWithWork()" title="PDF 인쇄창을 열고, 수정용 작업 파일(.json)도 함께 저장합니다">🖨️ PDF로 다운로드(인쇄) + 작업파일 저장</button>
+    <button class="btn-primary" onclick="printWithWork()" title="PDF 인쇄창을 열고, 수정용 작업 파일(.json)도 함께 저장합니다">🖨️ PDF로 다운로드(인쇄) + 작업파일 저장</button>
   </div>
 
   <!-- ===================== PRINTABLE REPORT ===================== -->
@@ -1012,7 +969,6 @@ table.rep-table.loan td.num{text-align:right;}
     <div class="rep-section">
       <h2 class="c-amber"><span class="h2-badge">🧮</span>3. <span class="yN">N</span>년 예상 종합소득세 - ①안(연간 추정) vs ②·③안(부족경비 반영)</h2>
       <table class="rep-table tax" id="scenarioTable"></table>
-      <div id="taxEstNote" class="pb-title"></div>
       <div id="partnerBreak"></div>
     </div>
 
@@ -1175,7 +1131,6 @@ function getYears(){
 function updateYearLabels(){
   const {N,N1,N2} = getYears();
   document.querySelectorAll('.yN').forEach(el=> el.textContent = N);
-  document.querySelectorAll('.yN1').forEach(el=> el.textContent = N-1);
   document.querySelectorAll('.yN1').forEach(el=> el.textContent = N1);
   document.querySelectorAll('.yN2').forEach(el=> el.textContent = N2);
   document.getElementById('uploadYearHint').textContent = `${N}·${N1}·${N2}`;
@@ -1255,28 +1210,11 @@ function normLabel(s){
   return (s==null ? '' : s.toString()).replace(/[\s　]+/g,'');
 }
 /* 대과목(Ⅰ~Ⅹ) 행이면 ACCOUNT_LABELS 인덱스를 돌려준다. 과목명 표기(소득세/법인세 등)와 무관하게 로마숫자로 판정 */
-const SECTION_NAME_KEYS = [['매출액'],['매출원가'],['매출총이익','매출총손익'],['판매비와관리비','판매비및관리비','판매관리비','판관비'],
-  ['영업이익','영업손익'],['영업외수익'],['영업외비용'],['법인세차감전이익','소득세차감전이익','법인세비용차감전순이익','소득세비용차감전순이익','세전이익','법인세차감전순이익','소득세차감전순이익','법인세차감전순손익','소득세차감전순손익'],['법인세등','소득세등','법인세비용','소득세비용'],['당기순이익','당기순손익']];
-const ROMAN_LATIN = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
 function sectionIndex(name){
   const n = normLabel(name);
-  if (n.length < 2) return -1;
-  // 1) 유니코드 로마숫자(Ⅰ~Ⅹ) + '.'  — 위하고 기본 양식
-  if (n.charAt(1) === '.'){
-    const code = n.charCodeAt(0) - 0x2160;
-    if (code >= 0 && code <= 9) return code;
-  }
-  // 2) 라틴 I·II… 또는 1~10 + 구분자(. ) ) + 과목명 — 엑셀 저장 방식에 따라 로마숫자가 라틴/숫자로 바뀌는 경우
-  const m = n.match(/^(VIII|VII|VI|IV|IX|III|II|I|X|10|[1-9])[.)]?(.+)$/);
-  if (m){
-    const num = ROMAN_LATIN.indexOf(m[1]); const idx = num>=0 ? num : (parseInt(m[1],10)-1);
-    const rest = m[2].replace(/[()]/g,'');
-    if (idx>=0 && idx<=9 && SECTION_NAME_KEYS[idx].some(k=> rest===k)) return idx;
-  }
-  // 3) 번호 없이 과목명만 정확히 일치(매출액, 매출원가, 판매비와관리비 …)
-  const bare = n.replace(/[()]/g,'');
-  for (let i=0;i<SECTION_NAME_KEYS.length;i++) if (SECTION_NAME_KEYS[i].some(k=> bare===k)) return i;
-  return -1;
+  if (n.length < 2 || n.charAt(1) !== '.') return -1;
+  const code = n.charCodeAt(0) - 0x2160;
+  return (code >= 0 && code <= 9) ? code : -1;
 }
 function guessYearsFromSheet(rows){
   const years = [];
@@ -1340,18 +1278,6 @@ function detectCols(rows){
   }
   return cols;
 }
-/* 셀 값 → 숫자: 숫자형 그대로, "307,195,320" / "(1,234)" / "-1,234" / "1,234원" 같은 문자열도 숫자로. 그 외 null */
-function cellNum(v){
-  if (typeof v === 'number') return isFinite(v) ? v : null;
-  if (v==null) return null;
-  let t = String(v).trim(); if (t==='' || t==='-') return null;
-  let neg = false;
-  if (/^\(.*\)$/.test(t)){ neg = true; t = t.slice(1,-1); }
-  if (/^[-△▲]/.test(t)){ neg = true; t = t.slice(1); }
-  t = t.replace(/[,\s원]/g,'');
-  if (!/^\d+(\.\d+)?$/.test(t)) return null;
-  const n = parseFloat(t); return neg ? -n : n;
-}
 function extractFromRows(rows){
   const cur = {}, pri = {};
   const K = detectCols(rows);
@@ -1359,33 +1285,14 @@ function extractFromRows(rows){
     const idx = sectionIndex(row[0]);
     if (idx >= 0){
       const label = ACCOUNT_LABELS[idx];
-      // 대과목 합계는 소계 열(c2)이 원칙이나, 양식에 따라 상세 열(c1)에만 찍히는 경우가 있어 c2 → c1 순으로 본다
-      const cVal = cellNum(row[K.c2]) ?? cellNum(row[K.c1]); const eVal = cellNum(row[K.p2]) ?? cellNum(row[K.p1]);
-      if (cVal !== null) cur[label] = cVal;
-      if (eVal !== null) pri[label] = eVal;
+      const cVal = row[K.c2]; const eVal = row[K.p2];
+      if (typeof cVal === 'number') cur[label] = cVal;
+      if (typeof eVal === 'number') pri[label] = eVal;
     }
   });
   const years = guessYearsFromSheet(rows);
   const detail = extractDetailFromRows(rows, cur, pri, K);
-  // 대과목 합계가 비어 있거나 0인데 하위 항목이 있으면(위하고 양식에 따라 매출액 행에 금액이 안 찍히는 경우) 하위 합으로 보정
-  ACCOUNT_LABELS.forEach(label=>{
-    const items = detail[label] || [];
-    if (!items.length || items.length===1 && items[0].name===label.replace(/^[Ⅰ-Ⅹ]+\.\s*/,'')) return;
-    const sc = items.reduce((a,it)=> a + (it.cur||0), 0), sp = items.reduce((a,it)=> a + (it.pri||0), 0);
-    if (!cur[label] && sc) cur[label] = sc;
-    if (!pri[label] && sp) pri[label] = sp;
-  });
-  // 그래도 매출액이 없으면 손익 구조로 역산: 매출 = 세전이익 + 매출원가 + 판관비 − 영업외수익 + 영업외비용 (업로드 칸에 '확인 필요' 표시)
-  const derived = { cur:false, pri:false };
-  [[cur,'cur'],[pri,'pri']].forEach(([o,k])=>{
-    const S='Ⅰ. 매출액', C='Ⅱ. 매출원가', G='Ⅳ. 판매비와 관리비', OI='Ⅵ. 영업외수익', OE='Ⅶ. 영업외비용', P='Ⅷ. 법인세차감전이익', OP='Ⅴ. 영업이익';
-    if (o[S]) return;
-    let v = null;
-    if (typeof o[P]==='number') v = o[P] + (o[C]||0) + (o[G]||0) - (o[OI]||0) + (o[OE]||0);
-    else if (typeof o[OP]==='number') v = o[OP] + (o[C]||0) + (o[G]||0);
-    if (v!==null && v>0){ o[S] = v; derived[k] = true; }
-  });
-  return { cur, pri, cols: K, curYear: years[0] || null, priYear: years[1] || null, detail, rows, curPeriod: guessCurPeriod(rows), salesDerived: derived };
+  return { cur, pri, cols: K, curYear: years[0] || null, priYear: years[1] || null, detail, rows, curPeriod: guessCurPeriod(rows) };
 }
 /* 위하고 손익계산서(과목별)는 리프(말단) 항목은 "당기상세/전기상세" 열에,
    Ⅰ~Ⅹ 대과목 및 중간 소계행(예: 상품매출원가)은 그 오른쪽 "당기소계/전기소계" 열에 금액이 찍힌다(열 위치는 detectCols).
@@ -1403,12 +1310,12 @@ function extractDetailFromRows(rows, topCur, topPri, K){
     if (idx >= 0){ section = ACCOUNT_LABELS[idx]; return; }
     if (!section) return;
     if (rawName==null || nName==='') return;
-    const v1 = cellNum(row[K.c1]), v3 = cellNum(row[K.p1]);
-    if (v1 === null && v3 === null) return; // 리프가 아닌(=중간 소계) 행은 제외
+    const v1 = row[K.c1], v3 = row[K.p1];
+    if (typeof v1 !== 'number' && typeof v3 !== 'number') return; // 리프가 아닌(=중간 소계) 행은 제외
     detail[section].push({
       name: rawName.toString().trim(),
-      cur: v1 ?? 0,
-      pri: v3 ?? 0
+      cur: (typeof v1==='number') ? v1 : 0,
+      pri: (typeof v3==='number') ? v3 : 0
     });
   });
   ACCOUNT_LABELS.forEach(section=>{
@@ -1429,8 +1336,9 @@ function fullTableHTML(rows, K){
     const nName = normLabel(name);
     if (nName==='과목') return '';
     const isHeader = sectionIndex(name) >= 0;
-    const v1=cellNum(row[K.c1]), v2=cellNum(row[K.c2]), v3=cellNum(row[K.p1]), v4=cellNum(row[K.p2]);
-    const curVal = v2 ?? v1; const priVal = v4 ?? v3;
+    const v1=row[K.c1], v2=row[K.c2], v3=row[K.p1], v4=row[K.p2];
+    const curVal = (typeof v2==='number') ? v2 : (typeof v1==='number' ? v1 : null);
+    const priVal = (typeof v4==='number') ? v4 : (typeof v3==='number' ? v3 : null);
     if (curVal===null && priVal===null && !isHeader) return '';
     const style = isHeader ? 'font-weight:700;background:#F1ECDD;' : '';
     return `<tr style="${style}"><td style="text-align:left;">${name}</td>
@@ -1442,12 +1350,6 @@ function fullTableHTML(rows, K){
     ${trs}
   </table>`;
 }
-function salesWarn(parsed, k){
-  const o = k==='cur' ? parsed.cur : parsed.pri;
-  if (parsed.salesDerived && parsed.salesDerived[k]) return ` <span style="color:#b45309;font-size:11px;">⚠ 매출액 행을 읽지 못해 세전이익+원가+판관비로 역산 — 원본과 대조하세요</span>`;
-  if (!o['Ⅰ. 매출액'] && (o['Ⅳ. 판매비와 관리비'] || o['Ⅱ. 매출원가'])) return ` <span style="color:#9E3B33;font-size:11px;">⚠ 매출액이 0으로 읽혔습니다 — 아래 원본 표에서 매출액 행을 확인하세요</span>`;
-  return '';
-}
 function renderSlot(slotEl, parsed, fileLabel){
   const curY = parsed.curYear || '';
   const priY = parsed.priYear || '';
@@ -1455,10 +1357,10 @@ function renderSlot(slotEl, parsed, fileLabel){
     <div class="filepill">✔ ${fileLabel} 인식 완료</div>
     <table>
       <tr><td>당기</td><td class="yr-input"><input type="number" id="${slotEl.id}_curYear" value="${curY}"></td>
-          <td>매출 ${won(parsed.cur['Ⅰ. 매출액']||0)}원${salesWarn(parsed,'cur')}</td>
+          <td>매출 ${won(parsed.cur['Ⅰ. 매출액']||0)}원</td>
           <td><button class="small-btn" onclick="commitYear('${slotEl.id}','cur')">이 연도로 반영</button></td></tr>
       <tr><td>전기</td><td class="yr-input"><input type="number" id="${slotEl.id}_priYear" value="${priY}"></td>
-          <td>매출 ${won(parsed.pri['Ⅰ. 매출액']||0)}원${salesWarn(parsed,'pri')}</td>
+          <td>매출 ${won(parsed.pri['Ⅰ. 매출액']||0)}원</td>
           <td><button class="small-btn" onclick="commitYear('${slotEl.id}','pri')">이 연도로 반영</button></td></tr>
     </table>
     <details class="raw-detail" open>
@@ -1589,7 +1491,7 @@ renderExtraBizList();
 ============================================================ */
 const ADJ_SECTIONS = ["Ⅰ. 매출액","Ⅱ. 매출원가","Ⅳ. 판매비와 관리비","Ⅵ. 영업외수익","Ⅶ. 영업외비용"];
 const ASIS_SGA_KEYWORDS = ['상여','잡급','감가상각','무형자산상각','무형고정자산상각'];
-const LABOR_KEYWORDS = ['직원급여','임원급여','급여','상여금','잡급','사업소득급여','퇴직급여'];
+const LABOR_KEYWORDS = ['직원급여','임원급여','급여','상여금','잡급','일용급여','사업소득급여','사업소득인건비','퇴직급여','퇴직금','인건비'];
 const INSURANCE_KEYWORDS = ['4대보험','사대보험','사회보험','국민연금','건강보험','장기요양','고용보험','산재보험','고용산재'];
 
 function esc(s){
@@ -2189,7 +2091,7 @@ const PARTNER_TAX_IDS = ['comboDeduction','pensionContrib','yellowUmbrella','oth
 state.coop = { on:false, active:0, partners:[] };
 let partnerSeq = 0;
 function coopOn(){ return !!(state.coop && state.coop.on && state.coop.partners.length>=2); }
-function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'', pastIncome1:'', pastIncome2:'', pastOther1:'', pastOther2:'', pastRural1:'', pastRural2:'' }; }
+function newPartner(name, share){ partnerSeq++; return { id:'p'+partnerSeq, name:name||'', share:share||0, inputs:{}, other:{}, pastTax1:'', pastTax2:'' }; }
 function partnerVal(p, id){ const v = p.inputs ? p.inputs[id] : undefined; return v==null ? 0 : (Number(v)||0); }
 function activePartner(){ return state.coop.partners[state.coop.active] || null; }
 function bindMoneyInput(el){
@@ -2197,8 +2099,6 @@ function bindMoneyInput(el){
   el.addEventListener('blur', ()=>{ const v = unfmtMoney(el.value); el.value = el.value.trim()==='' ? '' : fmtMoney(v); });
 }
 const PARTNER_BLOCK_IDS = PARTNER_TAX_IDS.concat(['nolP']);
-/* 구성원 블록의 N-1년(전년 신고) 열: 같은 id에 _py 접미사 (nolP_py는 nol_py로 저장) */
-const PARTNER_PY_IDS = PARTNER_TAX_IDS.concat(['adjIn','adjOut','nol']).map(id=> id+'_py');
 /* 구성원별 입력 블록: #partnerArea(템플릿)를 복제해 id에 __p{i} 접미사를 붙이고 구성원 입력값과 연결 */
 function renderPartnerBlocks(){
   const wrap = document.getElementById('partnerBlocks'), tpl = document.getElementById('partnerArea');
@@ -2223,14 +2123,6 @@ function renderPartnerBlocks(){
       el.addEventListener('input', ()=>{ p.inputs[id] = unfmtMoney(el.value); renderAll(); });
       if (el.classList.contains('money-input')) bindMoneyInput(el);
     });
-    // 전년(N-1) 열: 구성원별로 따로 입력 → 구성원별 세액표의 전년 열과 비교
-    [['nolP_py','nol_py']].concat(PARTNER_PY_IDS.map(id=> [id,id])).forEach(([domId,key])=>{
-      const el = c.querySelector('#'+domId+'__p'+i); if (!el) return;
-      const v = partnerVal(p, key);
-      el.value = v ? fmtMoney(v) : '0';
-      el.addEventListener('input', ()=>{ p.inputs[key] = unfmtMoney(el.value); renderAll(); });
-      if (el.classList.contains('money-input')) bindMoneyInput(el);
-    });
     wrap.appendChild(c);
   });
 }
@@ -2249,8 +2141,6 @@ function setCoopMode(on){
       p0.inputs.nolP = num('nol');
       p0.other = Object.assign({}, domOtherSrc());
       p0.pastTax1 = document.getElementById('pastTax1').value; p0.pastTax2 = document.getElementById('pastTax2').value;
-      p0.pastIncome1 = document.getElementById('pastIncome1').value; p0.pastRural1 = document.getElementById('pastRural1').value; p0.pastRural2 = document.getElementById('pastRural2').value; p0.pastIncome2 = document.getElementById('pastIncome2').value; p0.pastOther1 = document.getElementById('pastOther1').value; p0.pastOther2 = document.getElementById('pastOther2').value;
-      PY_IDS.forEach(id=>{ const el=document.getElementById(id+'_py'); if (el) p0.inputs[id+'_py'] = unfmtMoney(el.value); });
       state.coop.partners.push(p0);
     }
     while (state.coop.partners.length<2) state.coop.partners.push(newPartner('', 50));
@@ -2258,7 +2148,7 @@ function setCoopMode(on){
   state.coop.on = on;
   document.getElementById('coopBox').style.display = on ? '' : 'none';
   document.getElementById('pastTaxCoop').style.display = on ? '' : 'none';
-  ['pastTax1','pastTax2','pastIncome1','pastIncome2','pastOther1','pastOther2','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly = on; el.classList.toggle('ro', on); } });
+  ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly = on; el.classList.toggle('ro', on); });
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop();
   renderAll();
 }
@@ -2274,8 +2164,8 @@ function updatePartner(id, field, val){
   const p = state.coop.partners.find(x=> x.id===id); if (!p) return;
   if (field==='share') p.share = Math.max(Math.min(parseFloat(String(val).replace(/[^0-9.]/g,''))||0, 100), 0);
   else p[field] = val;
-  if (field==='name' || field==='share'){ updatePartnerBlockHeads(); renderCoopOtherIncome(); renderExtraBizList(); renderPastTaxCoop(); }
-  renderShareHint(); if (field!=='name' && field!=='share') syncPastTaxSums(); renderAll();
+  if (field==='name' || field==='share'){ updatePartnerBlockHeads(); renderCoopOtherIncome(); renderExtraBizList(); }
+  renderShareHint(); if (field!=='name' && field!=='share') renderPastTaxCoop(); renderAll();
 }
 function shareTotal(){ return state.coop.partners.reduce((a,p)=> a + (Number(p.share)||0), 0); }
 function renderShareHint(){
@@ -2293,38 +2183,20 @@ function renderPartnerTable(){
   renderShareHint();
 }
 function renderPastTaxCoop(){
-  const el = document.getElementById('pastTaxCoop'), single = document.getElementById('pastTaxSingle'); if (!el) return;
-  if (!coopOn()){ el.style.display='none'; if (single) single.style.display=''; return; }
-  el.style.display=''; if (single) single.style.display='none';
+  const el = document.getElementById('pastTaxCoop'); if (!el) return;
+  if (!coopOn()){ el.style.display='none'; return; }
+  el.style.display='';
   const {N1,N2} = getYears();
-  const ps = state.coop.partners;
-  const fv = v=> (v!==''&&v!=null) ? fmtMoney(unfmtMoney(v)) : '';
-  const inp = (p,f,ph)=> `<td><input type="text" inputmode="decimal" class="money-input" value="${fv(p[f])}" placeholder="${ph||''}" oninput="updatePartner('${p.id}','${f}',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>`;
-  const salesCell = (id)=>{ const m = document.getElementById(id); return `<td><input type="text" inputmode="decimal" class="money-input" value="${m?m.value:''}" placeholder="미입력 시 손익 매출" oninput="(function(v){ const t=document.getElementById('${id}'); t.value=v; t.dispatchEvent(new Event('input')); })(this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>`; };
-  const yearRow = (y, k)=> `<tr><th>${y}년</th>${salesCell('pastSales'+k)}${ps.map(p=> inp(p,'pastIncome'+k) + inp(p,'pastOther'+k,'0') + inp(p,'pastTax'+k) + inp(p,'pastRural'+k,'0')).join('')}<td class="auto" id="pcSumInc${k}">-</td><td class="auto" id="pcSumTax${k}">-</td></tr>`;
-  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">공동사업: 과거 신고 결과도 <b>구성원별 신고서 기준</b>으로 입력합니다. 매출은 사업장 전체 금액 1개, 사업소득금액(안분분)·타소득금액(본인 근로·연금·임대 등)·국세(결정세액)·농특세는 구성원마다 입력하면 지방소득세 10%를 더한 실부담 세금과 합계가 자동 계산됩니다. 과거에 단독이었으면 그 해는 당시 대표 칸에만 넣고 나머지는 비워 두세요. (전년 소득공제·세액공제 상세는 STEP 4 구성원 블록의 전년 열)</div>
-    <div class="im-wrap"><table class="income-matrix pc-grid" style="min-width:${Math.max(760, 300 + ps.length*430)}px;">
-      <thead><tr><th rowspan="2">귀속연도</th><th rowspan="2">사업장 매출<br><small>전체</small></th>${ps.map(p=> `<th colspan="4">👤 ${escAttr(p.name||'구성원')} <small>지분 ${p.share}%</small></th>`).join('')}<th colspan="2">합계(자동)</th></tr>
-      <tr>${ps.map(()=> `<th>사업소득금액<br><small>안분분(신고서)</small></th><th>타소득금액<br><small>본인 근로·연금 등</small></th><th>국세<br><small>결정세액</small></th><th>농특세</th>`).join('')}<th>종합소득금액</th><th>실부담 세금<br><small>국세+지방세+농특세</small></th></tr></thead>
-      <tbody>${yearRow(N2,2)}${yearRow(N1,1)}</tbody></table></div>`;
-  syncPastTaxSums();
-}
-/* 구성원별 전년 입력의 합계를 1장 비교용 칸(pastTax1/2 · pastIncome1 · pastRural1)에 반영 — 입력 중 표를 다시 그리지 않도록 분리 */
-function syncPastTaxSums(){
-  if (!coopOn()) return;
-  ['pastTax1','pastTax2','pastIncome1','pastIncome2','pastOther1','pastOther2','pastRural1','pastRural2'].forEach(f=>{
+  el.innerHTML = `<div style="font-size:12px;color:var(--sub);margin:6px 0 4px;">구성원별 국세(결정세액) — 위 표의 국세 칸은 합계로 자동 계산됩니다</div>
+    <table class="income-matrix" style="min-width:0;"><tr><th>구성원</th><th>${N2}년 국세</th><th>${N1}년 국세</th></tr>${
+    state.coop.partners.map(p=> `<tr><th>${escAttr(p.name||'-')}</th>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax2||'')}" oninput="updatePartner('${p.id}','pastTax2',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td>
+      <td><input type="text" inputmode="decimal" class="money-input" value="${escAttr(p.pastTax1||'')}" oninput="updatePartner('${p.id}','pastTax1',this.value)" onblur="this.value=this.value?fmtMoney(unfmtMoney(this.value)):''"></td></tr>`).join('')}</table>`;
+  // 합계를 pastTax1/2에 반영
+  [['pastTax1','pastTax1'],['pastTax2','pastTax2']].forEach(([id,f])=>{
     const any = state.coop.partners.some(p=> p[f]!=='' && p[f]!=null);
     const sum = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p[f]||''), 0);
-    const el = document.getElementById(f); if (el) el.value = any ? fmtMoney(sum) : '';
-  });
-  [1,2].forEach(k=>{
-    const inc = state.coop.partners.reduce((a,p)=> a + unfmtMoney(p['pastIncome'+k]||'') + unfmtMoney(p['pastOther'+k]||''), 0);
-    const anyInc = state.coop.partners.some(p=> (p['pastIncome'+k]!=='' && p['pastIncome'+k]!=null) || (p['pastOther'+k]!=='' && p['pastOther'+k]!=null));
-    const tax = state.coop.partners.reduce((a,p)=>{ const n = unfmtMoney(p['pastTax'+k]||''); return a + (p['pastTax'+k] ? natToTotal(n, unfmtMoney(p['pastRural'+k]||'')) : 0); }, 0);
-    const anyTax = state.coop.partners.some(p=> p['pastTax'+k]!=='' && p['pastTax'+k]!=null);
-    const a1 = document.getElementById('pcSumInc'+k), a2 = document.getElementById('pcSumTax'+k);
-    if (a1) a1.textContent = anyInc ? won(inc) : '-';
-    if (a2) a2.textContent = anyTax ? won(tax) : '-';
+    document.getElementById(id).value = any ? fmtMoney(sum) : '';
   });
 }
 
@@ -2401,8 +2273,6 @@ function renderYuHint(sc){
   setT('dmCombo', won(s1.dedBasic)); setT('dmPension', won(s1.dedPension)); setT('dmYu', won(s1.dedYellow));
   setT('dmOther', won(s1.dedOther)); setT('dmTotal', won(s1.comboDeduction));
   setT('dmYuLimit', won(Math.min(s1.yuLimit, s1.yuCap)));
-  setT('dmCrTotal', won(['crChild','crBook','crStd','empCredit','empCreditCarry','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit'].reduce((a,id)=> a+num(id), 0)));
-  { const pv = prevYearCol(); setT('dmTotal_py', pv ? won(pv.dedTotal) : '0'); setT('dmCrTotal_py', pv ? won(pv.crTotal) : '0'); }
   const paid = num('yellowUmbrella');
   const lines = sc.map(x=>{
     const s = x.s;
@@ -2513,13 +2383,13 @@ function renderCoopSplitPreview(sc){
   const s1 = sc[0].s;
   if (!s1.coop){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='';
-  el.innerHTML = `<div class="coop-split-t">👥 공동사업 안분 — 메인 사업소득금액 ${won(s1.mainBizIncome)}원만 지분율로 안분(소득세법 §43②). 임대·근로·연금·기타·금융소득과 귀속 서브 사업장은 안분 없이 해당 구성원에게만 합산</div>
+  el.innerHTML = `<div class="coop-split-t">👥 공동사업 안분 (①안 종합소득금액 ${won(s1.incomeTotal)}원 × 지분율, 소득세법 §43)</div>
     <table class="income-matrix" style="min-width:0;">
-      <tr><th>구성원</th><th>지분율</th><th>안분 총수입금액(메인)</th><th>안분 사업소득금액(메인)</th><th>본인 귀속 타소득·서브 사업장<br><small>(안분 없음)</small></th><th>종합소득금액<br><small>안분 사업소득 + 본인 소득</small></th></tr>
-      ${s1.partners.map(r=> `<tr><th>${escAttr(r.partner.name||'-')}</th><td>${r.partner.share}%</td><td>${won(r.sales)}</td><td>${won(r.mainBizIncome)}</td><td>${won(r.incomeTotal - r.mainBizIncome)}</td><td><b>${won(r.incomeTotal)}</b></td></tr>`).join('')}
-      <tr class="im-total"><th>합계</th><td>${shareTotal()}%</td><td>${won(s1.sales)}</td><td>${won(s1.mainBizIncome)}</td><td>${won(s1.incomeTotal - s1.mainBizIncome)}</td><td>${won(s1.incomeTotal)}</td></tr>
+      <tr><th>구성원</th><th>지분율</th><th>안분 종합소득금액</th><th>안분 사업소득금액(메인)</th><th>안분 총수입금액(메인)</th></tr>
+      ${s1.partners.map(r=> `<tr><th>${escAttr(r.partner.name||'-')}</th><td>${r.partner.share}%</td><td>${won(r.incomeTotal)}</td><td>${won(r.mainBizIncome)}</td><td>${won(r.sales)}</td></tr>`).join('')}
+      <tr class="im-total"><th>합계</th><td>${shareTotal()}%</td><td>${won(s1.incomeTotal)}</td><td>${won(s1.mainBizIncome)}</td><td>${won(s1.sales)}</td></tr>
     </table>
-    <div style="font-size:11.5px;color:var(--sub);margin-top:4px;">이후 소득공제·세액공제·이월결손금·기납부세액은 STEP 4의 구성원별 블록에 각자 입력하고, 세액은 구성원별로 계산해 합산합니다.</div>`;
+    <div style="font-size:11.5px;color:var(--sub);margin-top:4px;">이후 소득공제·세액공제·기납부세액은 STEP 4에서 구성원 탭을 바꿔 각자 입력하고, 세액은 구성원별로 계산해 합산합니다.</div>`;
 }
 
 function renderIncomePreview(s){
@@ -2770,7 +2640,7 @@ function chartConfigScenario(sc){
    보고서 표 1: 과목별 손익 비교 (사무소 엑셀 "보고서" 시트 양식)
    열: N-2 · N-1 확정 / N 실적(기준월) / N ①·②·③ 추정, 각 열 옆에 매출 대비 비율, 맨 끝 비고
 ============================================================ */
-function isLaborItem(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || n.endsWith('급여'); }
+function isLaborItem(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || /(급여|인건비|퇴직금|상여금?)$/.test(n); }
 function isInsuranceItem(name){ const n = normLabel(name); return INSURANCE_KEYWORDS.some(k=> n.includes(k)); }
 
 function buildPLCompare(sc){
@@ -2844,10 +2714,10 @@ function buildPLCompare(sc){
   const labor = sgaNames.filter(isLaborItem);
   const insur = sgaNames.filter(n=> !isLaborItem(n) && isInsuranceItem(n));
   const etc = sgaNames.filter(n=> !isLaborItem(n) && !isInsuranceItem(n));
+  // 인건비 합계 = 임원·직원급여 + 상여·잡급 + 사업소득인건비 + 퇴직급여(퇴직금) + 4대보험료 회사부담분
   pushItems('Ⅳ. 판매비와 관리비', labor);
-  if (labor.length>1) push('sub', '인건비 합계', sumVals('Ⅳ. 판매비와 관리비', labor));
   pushItems('Ⅳ. 판매비와 관리비', insur);
-  if (insur.length>1) push('sub', '4대보험료 합계', sumVals('Ⅳ. 판매비와 관리비', insur));
+  if (labor.length + insur.length > 1) push('sub', '인건비 합계 (급여·잡급·사업소득인건비·퇴직급여·4대보험 포함)', sumVals('Ⅳ. 판매비와 관리비', labor.concat(insur)));
   pushItems('Ⅳ. 판매비와 관리비', etc);
   if (sc.some(x=> x.extra!==0)){ const neg = sc.some(x=> x.extra<0), pos = sc.some(x=> x.extra>0); push('item extra'+(neg&&!pos?' neg':''), neg&&pos ? '경비 조정(+부족경비 / −감축)' : (neg ? '경비 감축(정리 예정)' : '부족경비(추가 집행 예정)'), estOnly(x=> x.extra), neg ? '남은 기간 경비 조정 가정액(음수는 감축)' : '남은 기간 추가 집행 가정액'); }
   push('strong', '영업이익', totalVals('Ⅴ. 영업이익','op','opIncome'));
@@ -2912,129 +2782,47 @@ function buildEstimateDetail(){
 }
 
 /* 보고서 표 3: 예상 종합소득세 (사무소 엑셀 "세액예상" 시트 양식) */
-/* 전년(N-1) 신고 결과 열: 1장 비교용 입력값(매출·사업소득금액·국세·농특세)을 그대로 사용 */
-const PY_IDS = ['adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction','crChild','crBook','crStd','empCredit','empCreditCarry','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit','penalty','midterm','withhold','withholdLocal'];
-/* src = { sales, income, nat, rural, py(id) } */
-function buildPrevYear(src){
-  const {N1} = getYears();
-  const { sales, nat } = src, rural = src.rural||0, py = src.py;
-  const biz = src.income, other = src.other || 0;          // 신고서 사업소득금액(메인) · 타소득금액
-  const income = (biz===null && !other) ? null : (biz||0) + other;   // 종합소득금액 = 사업 + 타소득
-  const anyPy = PY_IDS.some(id=> py(id)!==0);
-  if (sales===null && income===null && nat===null && !anyPy) return null;
-  const local = nat===null ? null : Math.floor(nat*0.1/10)*10;
-  const o = { year:N1, sales, income, biz, other, nat, rural, local, total: natToTotal(nat, rural),
-    margin: (sales>0 && biz!==null) ? (biz/sales*100).toFixed(1)+'%' : null,
-    rate: (nat!==null && income>0) ? ((nat+local+rural)/income*100).toFixed(1)+'%' : null };
-  PY_IDS.forEach(id=> o[id] = py(id));
-  // 노란우산: 전년 사업소득금액 기준 구간 한도 적용 (사업소득금액 미입력 시 납입액 그대로)
-  const yu = biz!==null ? yellowUmbrellaDeduction(o.yellowUmbrella, biz, 0) : { deduction:o.yellowUmbrella, limit:null };
-  o.dedYellow = yu.deduction; o.yuLimit = yu.limit;
-  o.dedTotal = o.comboDeduction + o.pensionContrib + o.dedYellow + o.otherDeduction;
-  o.adj = o.adjIn - o.adjOut - o.nol + other;
-  o.taxBase = income!==null ? Math.max(income - o.nol - o.dedTotal, 0) : null;
-  o.calcTax = o.taxBase!==null ? nationalIncomeTax(o.taxBase) : null;
-  o.rate55 = o.taxBase!==null ? marginalRateFor(o.taxBase) : null;
-  o.crTotal = ['crChild','crBook','crStd','empCredit','empCreditCarry','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit'].reduce((a,id)=> a+o[id], 0);
-  o.payable = nat!==null ? nat - o.midterm - o.withhold : null;
-  o.netPayable = (o.total!==null) ? o.total - o.midterm - o.withhold - o.withholdLocal : null;
-  return o;
-}
-/* 구성원별 전년 열: 구성원 블록의 N-1년 입력(p.inputs[id+'_py']) + 구성원별 N-1년 사업소득금액·국세 */
-function partnerPrevYear(p){
-  const pv = (k)=> (p[k]!==undefined && p[k]!==null && p[k]!=='') ? unfmtMoney(p[k]) : null;
-  return buildPrevYear({ sales:null, income: pv('pastIncome1'), other: pv('pastOther1')||0, nat: pv('pastTax1'), rural: pv('pastRural1')||0,
-    py: id=> Number(p.inputs && p.inputs[id+'_py'] || 0) });
-}
-/* 단독: STEP 4의 N-1년 열 + 1장 비교 입력. 공동: 구성원별 전년 열을 합산(세율·마진율은 합산값으로 재계산) */
-function prevYearCol(){
-  const {N1} = getYears();
-  const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
-  const mainSale = (state.years[N1] && state.years[N1]['Ⅰ. 매출액']) || null;
-  const sales = val('pastSales1')!==null ? val('pastSales1') : mainSale;
-  if (!coopOn()){
-    return buildPrevYear({ sales, income: val('pastIncome1'), other: val('pastOther1')||0, nat: val('pastTax1'), rural: val('pastRural1')||0,
-      py: id=>{ const el=document.getElementById(id+'_py'); return el ? (Number(unfmtMoney(el.value))||0) : 0; } });
-  }
-  const parts = state.coop.partners.map(partnerPrevYear).filter(Boolean);
-  if (!parts.length) return null;
-  const sumKey = k=> parts.some(x=> x[k]!==null && x[k]!==undefined) ? parts.reduce((a,x)=> a + (Number(x[k])||0), 0) : null;
-  const o = { year:N1, sales, coopSum:true };
-  ['income','biz','other','nat','rural','local','total','dedYellow','dedTotal','adj','taxBase','calcTax','crTotal','payable','netPayable'].concat(PY_IDS).forEach(k=> o[k] = sumKey(k));
-  o.margin = (sales>0 && o.biz!==null) ? (o.biz/sales*100).toFixed(1)+'%' : null;
-  o.rate = (o.total!==null && o.income>0) ? (o.total/o.income*100).toFixed(1)+'%' : null;
-  o.rate55 = null;   // 구성원별 세율이 달라 합계에는 표시하지 않음
-  return o;
-}
-/* 다음 연도 중간예납 추정(소득세법 §65): 중간예납기준액(직전 연도 결정세액 + 가산세·추가납부 − 원천징수세액
-   = 직전 중간예납 + 확정신고 납부세액) × 1/2. 50만원 미만은 징수하지 않음(소액부징수). 10원 미만 절사 */
-function midtermFromPrev(pv){
-  if (!pv || pv.nat==null) return null;
-  const base = (Number(pv.nat)||0) + (Number(pv.penalty)||0) - (Number(pv.withhold)||0);
-  const half = Math.floor(Math.max(base,0)/2/10)*10;
-  return { base, half, amt: half < 500000 ? 0 : half };
-}
-function renderMidtermHints(){
-  const one = (el, pv, targetId)=>{
-    if (!el) return;
-    const m = midtermFromPrev(pv);
-    if (!m){ el.innerHTML = ''; return; }
-    el.innerHTML = `${pv.year}년 신고 기준 추정: (결정세액 ${won(pv.nat)}${pv.penalty?` + 가산세 ${won(pv.penalty)}`:''} − 원천징수 ${won(pv.withhold||0)}) ÷ 2 = <b>${won(m.half)}</b>`
-      + (m.amt===0 && m.half>0 ? ' → 50만원 미만 소액부징수, 0원' : '')
-      + ` <button type="button" class="small-btn" style="padding:1px 7px;font-size:11px;" onclick="(function(){const t=document.getElementById('${targetId}'); t.value=fmtMoney(${m.amt}); t.dispatchEvent(new Event('input'));})()">적용</button>`;
-  };
-  if (coopOn()) state.coop.partners.forEach((p,i)=> one(document.getElementById('midtermHint__p'+i), partnerPrevYear(p), 'midterm__p'+i));
-  else one(document.getElementById('midtermHint'), prevYearCol(), 'midterm');
-}
-function marginalRateFor(base){
-  const br=[[14000000,.06],[50000000,.15],[88000000,.24],[150000000,.35],[300000000,.38],[500000000,.40],[1000000000,.42],[Infinity,.45]];
-  for (const [lim,r] of br) if (base<=lim) return r; return .45;
-}
-function buildTaxTable(sc, pvOverride){
-  const pv = pvOverride!==undefined ? pvOverride : prevYearCol();
-  const pvCell = v=> `<td class="pv">${v==null ? '<span class="dim">-</span>' : (typeof v==='number' ? won(v) : v)}</td>`;
-  const row = (cls, label, fn, note, pvv)=> `<tr class="${cls}"><td>${label}</td>${pv ? pvCell(pvv===undefined ? null : pvv) : ''}${sc.map(x=> `<td>${fn(x.s, x)}</td>`).join('')}<td class="memo">${note||''}</td></tr>`;
-  const any = (fn, pvv)=> sc.some(x=> fn(x.s)) || !!(pv && pvv);
-  let h = `<thead><tr><th>구분</th>${pv ? `<th class="pv">${pv.year}년<br><span class="thsub">신고 결과</span></th>` : ''}${sc.map(x=> `<th>${x.key}안${extraHead(x.extra)}</th>`).join('')}<th style="text-align:left;">비고</th></tr></thead><tbody>`;
-  h += row('', '매출(메인 사업장)', s=> won(s.sales), '연간 추정 매출', pv&&pv.sales);
+function buildTaxTable(sc){
+  const row = (cls, label, fn, note)=> `<tr class="${cls}"><td>${label}</td>${sc.map(x=> `<td>${fn(x.s, x)}</td>`).join('')}<td class="memo">${note||''}</td></tr>`;
+  const any = (fn)=> sc.some(x=> fn(x.s));
+  let h = `<thead><tr><th>구분</th>${sc.map(x=> `<th>${x.key}안${extraHead(x.extra)}</th>`).join('')}<th style="text-align:left;">비고</th></tr></thead><tbody>`;
+  h += row('', '매출(메인 사업장)', s=> won(s.sales), '연간 추정 매출');
   h += row('', '경비(메인 사업장)', s=> won(s.sales - s.pretax), '매출 − 당기순이익 (매출원가·판관비 등, 부족경비 포함)');
   h += row('', '당기순이익(메인 사업장)', s=> won(s.pretax), '연간 추정 손익 − 부족경비');
-  h += row('', '가감금액', s=> won(s.taxAdj + s.otherMerged), '세무조정 + 타소득합산', pv&&(pv.adj||null));
-  h += row('strong', '종합소득금액', s=> won(s.incomeTotal), pv ? `${pv.year}년은 신고서 사업소득금액${pv.other ? ' ' + won(pv.biz||0) + ' + 타소득금액 ' + won(pv.other) : ''}` : '', pv&&pv.income);
-  h += row('', '마진율', s=> s.sales>0 ? (s.incomeTotal/s.sales*100).toFixed(1)+'%' : '-', '종합소득금액 ÷ 매출', pv&&pv.margin);
-  h += row('', '소득공제(인적공제 등)', s=> won(s.dedBasic), '', pv&&pv.comboDeduction);
-  if (any(s=> s.dedPension, pv&&pv.pensionContrib)) h += row('', '국민연금 공제', s=> won(s.dedPension), '소득세법 §51의3', pv&&pv.pensionContrib);
-  if (any(s=> s.yuPaid, pv&&pv.yellowUmbrella)) h += row('', '노란우산공제', s=> won(s.dedYellow) + (s.yuOver>0 ? `<br><span style="font-size:11px;color:var(--sub);">(납입 ${won(s.yuPaid)} · 한도 ${won(Math.min(s.yuLimit,s.yuCap))})</span>` : ''), '조특법 §86의3 · 납입액과 구간별 한도 중 적은 금액', pv&&(won(pv.dedYellow) + (pv.yellowUmbrella>pv.dedYellow ? `<br><span style="font-size:11px;color:var(--sub);">(납입 ${won(pv.yellowUmbrella)})</span>` : '')));
-  if (any(s=> s.dedOther, pv&&pv.otherDeduction)) h += row('', '기타공제', s=> won(s.dedOther), '', pv&&pv.otherDeduction);
-  if (pv) h += row('', '소득공제 합계', s=> won(s.comboDeduction), '', pv.dedTotal);
-  h += row('strong', '과세표준', s=> won(s.taxBase), sc[0].s.methodUsed + (pv&&pv.taxBase!==null ? ` · ${pv.year}년은 사업소득금액−이월결손금−소득공제로 추정` : ''), pv&&pv.taxBase);
-  h += row('', '(×) 세율', s=> s.rate==null ? '구성원별' : (s.rate*100).toFixed(0)+'%', '소득세법 §55', pv&&pv.rate55!=null ? (pv.rate55*100).toFixed(0)+'%' : (pv&&pv.coopSum ? '구성원별' : null));
-  h += row('strong', '산출세액', s=> won(s.calcTax), '', pv&&pv.calcTax);
+  h += row('', '가감금액', s=> won(s.taxAdj + s.otherMerged), '세무조정 + 타소득합산');
+  h += row('strong', '종합소득금액', s=> won(s.incomeTotal));
+  h += row('', '마진율', s=> s.sales>0 ? (s.incomeTotal/s.sales*100).toFixed(1)+'%' : '-', '종합소득금액 ÷ 매출');
+  h += row('', '소득공제(인적공제 등)', s=> won(s.dedBasic));
+  if (any(s=> s.dedPension)) h += row('', '국민연금 공제', s=> won(s.dedPension), '소득세법 §51의3');
+  if (any(s=> s.yuPaid)) h += row('', '노란우산공제', s=> won(s.dedYellow) + (s.yuOver>0 ? `<br><span style="font-size:11px;color:var(--sub);">(납입 ${won(s.yuPaid)} · 한도 ${won(Math.min(s.yuLimit,s.yuCap))})</span>` : ''), '조특법 §86의3 · 납입액과 구간별 한도 중 적은 금액');
+  if (any(s=> s.dedOther)) h += row('', '기타공제', s=> won(s.dedOther));
+  h += row('strong', '과세표준', s=> won(s.taxBase), sc[0].s.methodUsed);
+  h += row('', '(×) 세율', s=> s.rate==null ? '구성원별' : (s.rate*100).toFixed(0)+'%', '소득세법 §55');
+  h += row('strong', '산출세액', s=> won(s.calcTax));
   h += row('', '중소기업특별세액감면', s=> won(s.reduction), '조특법 §7');
   sc[0].s.creditItems.forEach((c,i)=>{
-    const pvv = pv && c.id ? pv[c.id] : null;
-    if (sc.some(x=> x.s.creditItems[i].amt) || pvv) h += row('', c.label, s=> won(s.creditItems[i].amt), '', pvv);
+    if (sc.some(x=> x.s.creditItems[i].amt)) h += row('', c.label, s=> won(s.creditItems[i].amt));
   });
-  if (any(s=> s.empCredit, pv&&pv.empCredit)) h += row('', '④ 통합고용(고용증대) 세액공제', s=> won(s.empCredit), '조특법 §29의8', pv&&pv.empCredit);
-  if (any(s=> s.empCreditCarry, pv&&pv.empCreditCarry)) h += row('', '⑤ 통합고용(고용증대) 세액공제 이월분', s=> won(s.empCreditCarry), '조특법 §144', pv&&pv.empCreditCarry);
-  if (any(s=> s.socialCredit, pv&&pv.crSocial)) h += row('', '⑦ 사회보험료 세액공제', s=> won(s.socialCredit), '조특법 §30의4', pv&&pv.crSocial);
+  if (any(s=> s.empCredit)) h += row('', '④ 통합고용(고용증대) 세액공제', s=> won(s.empCredit), '조특법 §29의8');
+  if (any(s=> s.empCreditCarry)) h += row('', '⑤ 통합고용(고용증대) 세액공제 이월분', s=> won(s.empCreditCarry), '조특법 §144');
+  if (any(s=> s.socialCredit)) h += row('', '⑦ 사회보험료 세액공제', s=> won(s.socialCredit), '조특법 §30의4');
   if (sc[0].s.minTaxOn && any(s=> s.minTaxSubject)){
     h += row('', '최저한세', s=> won(s.minTax), '조특법 §132②');
     h += row('', '최저한세 반영(감면·공제 배제)', s=> s.minTaxExcluded ? '-'+won(s.minTaxExcluded) : '0', '이월 가능한 공제부터 배제');
   }
   if (any(s=> s.empCarryNext)) h += row('', '다음 연도 이월 세액공제(통합고용·사회보험료)', s=> won(s.empCarryNext), '당기 미공제분');
-  h += row('', '세액감면·공제 적용액 합계', s=> won(s.totalCredit), pv ? `${pv.year}년은 입력한 세액공제 합계(감면 제외)` : '', pv&&pv.crTotal);
-  if (any(s=> s.penalty, pv&&pv.penalty)) h += row('', '가산세·추가납부세액', s=> won(s.penalty), '', pv&&pv.penalty);
-  h += row('strong', '결정세액(종합소득세)', s=> won(s.decided), pv ? `${pv.year}년은 신고서의 결정세액 입력값` : '', pv&&pv.nat);
-  if (any(s=> s.midterm, pv&&pv.midterm)) h += row('', '중간예납세액', s=> won(s.midterm), '', pv&&pv.midterm);
-  if (any(s=> s.withhold, pv&&pv.withhold)) h += row('', '기납부(원천징수)세액', s=> won(s.withhold), '', pv&&pv.withhold);
-  h += row('', '국세 납부할 세액', s=> won(s.decided - s.midterm - s.withhold), '', pv&&pv.payable);
-  h += row('', '개인지방소득세', s=> won(s.localDecided), '결정세액의 10%', pv&&pv.local);
-  if (any(s=> s.withholdLocal, pv&&pv.withholdLocal)) h += row('', '지방소득세 기납부세액', s=> won(s.withholdLocal), '', pv&&pv.withholdLocal);
-  if (any(s=> s.ruralTax) || (pv&&pv.rural)) h += row('', '농어촌특별세', s=> won(s.ruralTax), '통합고용 공제액의 20%', pv&&(pv.rural||null));
-  h += row('strong', '총부담세액', s=> won(s.totalBurden), '소득세+지방소득세+농특세', pv&&pv.total);
-  h += row('strong', '총 납부할 세액', s=> won(s.netPayable), '기납부세액 차감 후', pv&&pv.netPayable);
-  h += row('', '세부담율', s=> (s.burdenRate*100).toFixed(1)+'%', '총부담세액 ÷ 종합소득금액', pv&&pv.rate);
+  h += row('', '세액감면·공제 적용액 합계', s=> won(s.totalCredit));
+  if (any(s=> s.penalty)) h += row('', '가산세·추가납부세액', s=> won(s.penalty));
+  h += row('strong', '결정세액(종합소득세)', s=> won(s.decided));
+  if (any(s=> s.midterm)) h += row('', '중간예납세액', s=> won(s.midterm));
+  if (any(s=> s.withhold)) h += row('', '기납부(원천징수)세액', s=> won(s.withhold));
+  h += row('', '국세 납부할 세액', s=> won(s.decided - s.midterm - s.withhold));
+  h += row('', '개인지방소득세', s=> won(s.localDecided), '결정세액의 10%');
+  if (any(s=> s.withholdLocal)) h += row('', '지방소득세 기납부세액', s=> won(s.withholdLocal));
+  if (any(s=> s.ruralTax)) h += row('', '농어촌특별세', s=> won(s.ruralTax), '통합고용 공제액의 20%');
+  h += row('strong', '총부담세액', s=> won(s.totalBurden), '소득세+지방소득세+농특세');
+  h += row('strong', '총 납부할 세액', s=> won(s.netPayable), '기납부세액 차감 후');
+  h += row('', '세부담율', s=> (s.burdenRate*100).toFixed(1)+'%', '총부담세액 ÷ 종합소득금액');
   return h + '</tbody>';
 }
 
@@ -3273,8 +3061,7 @@ function plrClassify(name){
   return 'other';
 }
 /* 증빙별 경비 집계: 기준일까지 실적 경비와 비교 */
-/* 보험료: 금융·보험용역은 정규증빙 수취 의무 면제(소득세법 시행령 §208의2①) → 증빙 불요 경비로 분류 */
-const NON_EVIDENCE_KEYS = ['감가상각','무형자산상각','상각비','국민연금','건강보험','고용보험','산재보험','4대보험','사대보험','사회보험','장기요양','퇴직급여','퇴직연금','세금과공과','공과금','이자비용','대손상각','대손','잡손실','충당금','재고자산평가','외환차손','기부금','보험료'];
+const NON_EVIDENCE_KEYS = ['감가상각','무형자산상각','상각비','국민연금','건강보험','고용보험','산재보험','4대보험','사대보험','사회보험','장기요양','퇴직급여','퇴직연금','세금과공과','공과금','이자비용','대손상각','대손','잡손실','충당금','재고자산평가','외환차손','기부금'];
 const TEMP_KEYS = ['임시계정','가지급','미결산','대표자','개인'];
 /* 손익계산서 실적(기준일까지)에서 자동 집계: 증빙 불요 경비(감가상각·4대보험·세금과공과 등), 임시계정(미정리·개인 지출 의심), 재고 변동 */
 function plExpenseBreakdown(){
@@ -3291,7 +3078,7 @@ function plExpenseBreakdown(){
   });
   adjItems(N, 'Ⅱ. 매출원가').forEach(it=>{
     const n = normLabel(it.name), v = (Number(it.cur)||0) * (it.sign||1);
-    if (n.includes('기초') || n.includes('기말')){ out.inventory += v; (out.invItems = out.invItems||[]).push({ name:it.name, amt:(Number(it.cur)||0) }); }
+    if (n.includes('기초') || n.includes('기말')) out.inventory += v;
   });
   return out;
 }
@@ -3305,29 +3092,18 @@ function evidenceStats(){
   const qualified = ev.taxInv+ev.inv+ev.card+ev.cash+ev.wedding+labor;
   const hasDetail = hasAdjDetail(N);
   const actSales = hasDetail ? sectionActual(N,'Ⅰ. 매출액') : ((state.years[N]||{})['Ⅰ. 매출액']||0);
+  const bookExp = hasDetail ? (sectionActual(N,'Ⅱ. 매출원가') + sectionActual(N,'Ⅳ. 판매비와 관리비')) : (((state.years[N]||{})['Ⅱ. 매출원가']||0) + ((state.years[N]||{})['Ⅳ. 판매비와 관리비']||0));
   const br = plExpenseBreakdown();
-  /* 증빙은 '산 것(매입)' 기준이므로 장부도 매출원가가 아니라 '당기 매입 + 판관비'로 비교한다.
-     가결산 실적은 매출원가를 반영하지 않고(기말재고 = 기초 + 매입 → 매출원가 0) 판관비만 장부금액인 경우가 많아,
-     매출원가 기준으로 비교하면 매입 증빙만큼 어긋난다. 매출원가 − (기초 − 기말) = 당기 매입 */
-  const cogsAct = hasDetail ? sectionActual(N,'Ⅱ. 매출원가') : ((state.years[N]||{})['Ⅱ. 매출원가']||0);
-  const sgaAct = hasDetail ? sectionActual(N,'Ⅳ. 판매비와 관리비') : ((state.years[N]||{})['Ⅳ. 판매비와 관리비']||0);
-  const purchases = cogsAct - (br.inventory||0);
-  const bookExp = purchases + sgaAct;
   // 비적격 묶음(기타금액): 직접 입력하면 그 값(감가상각·4대보험·임시계정 포함 금액), 비우면 장부 경비 − 적격증빙
-  /* 재고가 있는 업종은 매입 세금계산서 전액이 증빙에 잡히지만 기말재고 증가분은 당기 경비가 아니므로
-     장부 경비 < 적격증빙 이 될 수 있다 → 기타(장부 경비 − 적격증빙)는 음수 허용, 재고 변동은 별도 행으로 표시 */
-  const bucket = ev.other>0 ? ev.other : (bookExp - qualified);
-  const welfareIns = num('evWelfareIns');   // 복리후생비 계정에 섞인 4대보험료(증빙 불요)
-  const inventory = br.inventory;            // 기초 − 기말 (참고용 — 비교 기준이 매입이므로 계산에는 쓰지 않음)
-  const nonEv = br.nonEvTotal + welfareIns;
-  // 임시계정은 '계정과목'이라 카드·세금계산서 등 증빙 유형과 겹친다(카드로 쓴 뒤 과목 미정리 등). 합계에 더하지 않고 장부 금액 그대로 '그중 정리 필요'로 표시
-  const temp = br.tempTotal;
-  const other = bucket - nonEv;   // 기타 중 미식별(±) — STEP 2-1에서만 '확인 필요 차이'로 표시
+  const bucket = ev.other>0 ? ev.other : Math.max(bookExp - qualified, 0);
+  // 묶음 내역: 증빙 불요(감가상각·4대보험·세금과공과 등 + 재고변동), 임시계정, 나머지 = 무증빙·미분류
+  const nonEv = Math.min(br.nonEvTotal + br.inventory, bucket);
+  const temp = Math.min(br.tempTotal, Math.max(bucket - nonEv, 0));
+  const other = Math.max(bucket - nonEv - temp, 0);
   const remainderCalc = other;
   const total = qualified + bucket;
-  const mismatch = bookExp - total;   // 기타금액을 직접 입력한 경우에만 0이 아닐 수 있음
-  const tempBook = temp, tempOverlap = 0;
-  return { ev, labor, qualified, bucket, nonEv, welfareIns, nonEvItems: br.nonEv, inventory, invItems: br.invItems||[], cogsAct, sgaAct, purchases, temp, tempBook, tempOverlap, tempItems: br.temp, other, otherAuto: ev.other<=0, remainderCalc, total, bookExp, mismatch, actSales, entered: qualified>0 };
+  const mismatch = bookExp - total;   // 0이면 장부와 일치
+  return { ev, labor, qualified, bucket, nonEv, nonEvItems: br.nonEv, inventory: br.inventory, temp, tempItems: br.temp, other, otherAuto: ev.other<=0, remainderCalc, total, bookExp, mismatch, actSales, entered: qualified>0 };
 }
 /* 인건비 증빙칸: 손익계산서 실적(기준일까지)에서 자동 채움 — 직원급여·상여(근로), 사업소득급여·외주(사업), 잡급·일용(일용) */
 function laborFromPL(){
@@ -3373,28 +3149,14 @@ function renderEvidenceHint(){
   const e = evidenceStats();
   const st = (id,v)=>{ const el=document.getElementById(id); if (el) el.textContent = v; };
   st('evTotalCell', won(e.total)); st('evBookCell', won(e.bookExp)+'원'); st('evQualCell', won(e.qualified)+'원'); st('evCardNet', won(e.ev.card)+'원');
-  st('evAutoNonEv', won(e.nonEv)); st('evAutoInv', '비교 제외'); st('evAutoTemp', won(e.temp)); st('evOtherAuto', won(e.bookExp - e.qualified)+'원');
-  st('evAutoNonEvList', (e.nonEvItems.length||e.inventory) ? (e.nonEvItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.welfareIns ? ` · 복리후생비 내 4대보험료 ${won(e.welfareIns)}` : '')) : '감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익 업로드 후 자동 (해당 과목 없음)');
+  st('evAutoNonEv', won(e.nonEv)); st('evAutoTemp', won(e.temp)); st('evAutoRest', won(e.other)); st('evOtherAuto', won(Math.max(e.bookExp - e.qualified,0))+'원');
+  st('evAutoNonEvList', (e.nonEvItems.length||e.inventory) ? (e.nonEvItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + (e.inventory ? ` · 재고 변동 ${won(e.inventory)}` : '')) : '감가상각비·4대보험·세금과공과·퇴직급여·이자 등 — 손익 업로드 후 자동 (해당 과목 없음)');
   st('evAutoTempList', e.tempItems.length ? e.tempItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ') + ' — 개인 지출 의심, 정리 필요' : '임시계정·가지급금 등 미정리 금액 — 해당 과목 없음');
   const mm = document.getElementById('evMismatch');
-  const restBig = e.entered && Math.abs(e.other) >= Math.max(100000, e.bookExp*0.005);
-  { const rr = document.getElementById('evRestRow'); if (rr) rr.style.display = restBig ? '' : 'none'; }
-  st('evAutoRest', won(e.other));
-  { const n = document.getElementById('evAutoInvNote'); if (n){
-      const buy = e.ev.taxInv + e.ev.inv;
-      const parts = e.invItems.map(it=> `${it.name} ${won(it.amt)}`).join(' · ');
-      const noCogs = Math.abs(e.cogsAct) < 1 && e.purchases > 0;
-      n.innerHTML = (parts ? `손익계산서 실적: ${parts}. ` : '') + `증빙 비교는 <b>당기 매입 ${won(e.purchases)}</b> 기준이라 재고 증감은 제외합니다(계산에 미반영).`
-        + (noCogs ? ` <span style="color:#b45309;">가결산 실적에 매출원가가 반영되지 않았습니다(기말재고 = 기초 + 매입). 연간 추정 매출원가는 워크시트의 기말재고 예상액으로 계산됩니다.</span>` : ''); } }
-  { const rn = document.getElementById('evAutoRestNote'); if (rn) rn.innerHTML = e.other>0
-      ? `장부 경비 중 입력 증빙·자동 집계로 설명 안 되는 금액. 후보: 복리후생비에 섞인 4대보험료(위 칸 입력), 계정명이 다른 감가상각비·퇴직급여, 세금계산서 없는 임차료, 카드·현금영수증 입력 누락, 근로·일용 지급액과 손익 급여 차이`
-      : `입력 증빙이 장부 경비보다 많은 금액. 후보: 고정자산(비품·시설) 매입 세금계산서가 포함됨, 불공제·개인 사용 카드 포함, 부가세 포함 금액으로 입력, 손익 급여보다 큰 근로·일용 지급액`; }
-  if (mm) mm.innerHTML = Math.abs(e.mismatch) >= 1 ? `<span style="color:#9E3B33;">· 장부와 ${won(e.mismatch)}원 차이 (입력 확인)</span>`
-    : restBig ? `<span style="color:#b45309;">· 합계는 장부와 일치(기타가 차액) — 단, 확인 필요 차이 ${won(e.other)}원</span>`
-    : '<span style="color:#2E6B4F;">· 장부와 일치</span>';
+  if (mm) mm.innerHTML = Math.abs(e.mismatch) < 1 ? '<span style="color:#2E6B4F;">· 장부와 일치</span>' : `<span style="color:#9E3B33;">· 장부와 ${won(e.mismatch)}원 차이 (입력 확인)</span>`;
   const el = document.getElementById('evHint'); if (!el) return;
   if (!e.entered){ el.innerHTML = '증빙 금액을 입력하면 장부 경비의 증빙별 구성이 여기와 보고서(1-1 검토 항목)에 표시됩니다.'; return; }
-  el.innerHTML = `장부 경비 ${won(e.bookExp)}원 = 적격증빙 <b>${won(e.qualified)}원</b>(${e.bookExp>0?(e.qualified/e.bookExp*100).toFixed(1):'-'}%) + 기타 ${won(e.bucket)}원 (그중 증빙 불요 ${won(e.nonEv)}) · 임시계정(장부 과목, 정리 필요) <b style="color:#9E3B33;">${won(e.temp)}</b>`
+  el.innerHTML = `장부 경비 ${won(e.bookExp)}원 = 적격증빙 <b>${won(e.qualified)}원</b>(${e.bookExp>0?(e.qualified/e.bookExp*100).toFixed(1):'-'}%) + 기타 ${won(e.bucket)}원 [증빙 불요 ${won(e.nonEv)} · 임시계정 <b style="color:#9E3B33;">${won(e.temp)}</b> · 무증빙·미분류 <b style="color:#9E3B33;">${won(e.other)}</b>]`
     + ` · 카드 사용액 ${won(e.ev.card)}원(실적 매출 ${won(e.actSales)}원의 ${e.actSales>0?(e.ev.card/e.actSales*100).toFixed(1):'-'}%)`;
 }
 function evidenceReviewHTML(sc){
@@ -3406,27 +3168,28 @@ function evidenceReviewHTML(sc){
   const rows = [
     ['세금계산서', e.ev.taxInv, 'q'],['계산서', e.ev.inv, 'q'],['신용카드(사업용)'+(e.ev.cardDeduct>0?` — 사용액 ${won(e.ev.cardGross)} 중 세금·보험료 납부 ${won(e.ev.cardDeduct)} 제외`:''), e.ev.card, 'q'],['현금영수증', e.ev.cash, 'q'],['청첩장·부고장(경조사비)', e.ev.wedding, 'q'],
     ['근로소득(급여)', e.ev.wage, 'q'],['사업소득(프리랜서)', e.ev.bizInc, 'q'],['일용소득', e.ev.daily, 'q'],
-    ['기타 (장부 경비 − 적격증빙)', e.bucket, 'n'],
-    ['↳ 그중 증빙 불요 경비(감가상각·4대보험·세금과공과·보험료 등)', e.nonEv, 's2'],
-    ['※ 임시계정(미정리·개인 지출 의심) — 장부 과목 기준, 위 증빙 유형에 포함된 금액', e.temp, 's']
-  ].filter(r=> r[1]!==0 || ['세금계산서','신용카드(사업용)','현금영수증','근로소득(급여)'].includes(r[0]));
-  const mx = Math.max(...rows.map(r=> Math.abs(r[1])), 1);
-  const bars = rows.map(r=> `<tr${r[2]==='s'?' style="color:#9E3B33;font-size:11.5px;"':(r[2]==='s2'?' style="color:var(--sub);font-size:11.5px;"':'')}><td>${r[0]}</td><td>${won(r[1])}</td><td>${pct(r[1], e.bookExp)}</td><td style="text-align:left;">${r[2]==='s2'?'':`<div class="ev-bar ${r[2]==='q'?'q':(r[2]==='n'?'ne':'nq')}" style="width:${Math.max(Math.abs(r[1])/mx*100,1).toFixed(0)}%"></div>`}</td></tr>`).join('');
+    ['증빙 불요 경비(감가상각·4대보험·세금과공과 등)', e.nonEv, 'n'],
+    ['임시계정(미정리·개인 지출 의심)', e.temp, 'x'],
+    ['무증빙·미분류', e.other, 'x']
+  ].filter(r=> r[1]>0 || ['세금계산서','신용카드(사업용)','현금영수증','근로소득(급여)'].includes(r[0]));
+  const mx = Math.max(...rows.map(r=> r[1]), 1);
+  const bars = rows.map(r=> `<tr><td>${r[0]}</td><td>${won(r[1])}</td><td>${pct(r[1], e.bookExp)}</td><td style="text-align:left;"><div class="ev-bar ${r[2]==='q'?'q':(r[2]==='n'?'ne':'nq')}" style="width:${Math.max(r[1]/mx*100,1).toFixed(0)}%"></div></td></tr>`).join('');
   const cardRatio = e.actSales>0 ? e.ev.card/e.actSales*100 : null;
   const qRatio = e.bookExp>0 ? e.qualified/e.bookExp*100 : null;
-  const badRatio = e.bookExp>0 ? e.temp/e.bookExp*100 : null;
+  const badRatio = e.bookExp>0 ? (e.temp+e.other)/e.bookExp*100 : null;
   const msgs = [];
   if (e.ev.card===0) msgs.push(`<b>사업용 카드 사용액이 0원입니다.</b> 카드로 쓴 경비가 전혀 집계되지 않았다는 뜻으로, 경비가 부족한 가장 큰 원인입니다. 사업용 카드를 홈택스에 등록하고 사업 지출은 카드·현금영수증으로 결제해 주세요.`);
   else if (cardRatio!==null && cardRatio<5) msgs.push(`<b>카드 사용액이 실적 매출의 ${cardRatio.toFixed(1)}%에 불과합니다.</b> 소모품·광고·접대·차량 등 일상 경비가 카드로 잡히지 않고 있어 경비 자체가 부족합니다.`);
-  if (e.temp>0) msgs.push(`<b>임시계정 ${won(e.temp)}원</b>은 카드·통장으로 나갔지만 용도(과목)가 정리되지 않은 지출입니다. 사업 관련이면 과목을 정리해 경비로, 개인 지출이면 인출금으로 빼야 합니다. 그대로 두면 경비에서 부인될 수 있습니다.`);
+  if (e.temp>0) msgs.push(`<b>임시계정 ${won(e.temp)}원</b>은 용도가 정리되지 않은 지출입니다. 사업 관련이면 과목을 정리해 경비로, 개인 지출이면 인출금으로 빼야 합니다. 그대로 두면 경비에서 부인될 수 있습니다.`);
+  if (e.other>0) msgs.push(`무증빙·미분류 ${won(e.other)}원은 적격증빙이 없어 경비 인정이 어렵고, 건당 3만원 초과분은 증빙불비가산세(2%) 대상입니다.`);
   if (qRatio!==null && qRatio>=85) msgs.push(`적격증빙이 장부 경비의 ${qRatio.toFixed(0)}%를 차지해 증빙 상태는 양호합니다.`);
   return `<div class="plr-item full">
     <div class="plr-h"><span>⑦ 증빙별 경비 구성 (${N}.1.1~${baseMonths}월 말 실적)</span><span class="amt">적격증빙 ${won(e.qualified)}원 / 장부 경비 ${won(e.bookExp)}원 ${qRatio!==null?`<span class="plr-flag ${qRatio>=85?'ok':'warn'}">${qRatio.toFixed(1)}%</span>`:''}</span></div>
     <table class="plr-tbl">
       <tr><th>증빙 유형</th><th style="text-align:right;">금액</th><th style="text-align:right;">장부 경비 대비</th><th style="width:38%;">비중</th></tr>
       ${bars}
-      <tr class="sum"><td>합계 (= 장부 경비: 당기 매입 + 판관비 실적)</td><td>${won(e.total)}</td><td>${pct(e.total,e.bookExp)}</td><td style="text-align:left;color:${Math.abs(e.mismatch)<1?'#2E6B4F':'#9E3B33'};">${Math.abs(e.mismatch)<1?'장부와 일치':'장부와 '+won(e.mismatch)+'원 차이'}</td></tr>
-      <tr class="sum"><td>정리 필요 경비 (임시계정)</td><td>${won(e.temp)}</td><td>${badRatio!==null?badRatio.toFixed(1)+'%':'-'}</td><td style="text-align:left;color:${e.temp>0?'#9E3B33':'#2E6B4F'};">${e.temp>0?'과목 정리 필요':'없음'}</td></tr>
+      <tr class="sum"><td>합계 (= 장부 경비 매출원가+판관비 실적)</td><td>${won(e.total)}</td><td>${pct(e.total,e.bookExp)}</td><td style="text-align:left;color:${Math.abs(e.mismatch)<1?'#2E6B4F':'#9E3B33'};">${Math.abs(e.mismatch)<1?'장부와 일치':'장부와 '+won(e.mismatch)+'원 차이'}</td></tr>
+      <tr class="sum"><td>증빙이 약한 경비 (임시계정 + 무증빙·미분류)</td><td>${won(e.temp+e.other)}</td><td>${badRatio!==null?badRatio.toFixed(1)+'%':'-'}</td><td style="text-align:left;color:${(e.temp+e.other)>0?'#9E3B33':'#2E6B4F'};">${(e.temp+e.other)>0?'정리·보완 필요':'없음'}</td></tr>
     </table>
     <div class="plr-q">${msgs.map(m=> `<div>· ${m}</div>`).join('')}<div style="margin-top:4px;"><b>세금은 증빙 싸움입니다.</b> 모든 카드 사용이 경비는 아니지만, 카드·현금영수증 없이 쓴 사업 지출은 경비로 남지 않습니다. 남은 기간(${baseMonths>=12?'연말까지':baseMonths+1+'~12월'}) 지출은 사업용 카드와 세금계산서로 받아 주세요.</div></div>
   </div>`;
@@ -3452,10 +3215,8 @@ function renderPLReview(sc){
   const retire = sum(it=> normLabel(it.name).includes('퇴직'));
   const daily = sum(it=> nm(it, ['잡급','일용']));
   const free = sum(it=> nm(it, ['프리랜서','외주','용역','사업소득지급','사업소득급여']));
-  const welfareRaw = sum(it=> nm(it, ['복리후생']));
-  const welfareIns = Math.min(num('evWelfareIns'), welfareRaw);   // 복리후생비 계정에 분개된 4대보험료 → 보험료로 재분류
-  const welfare = welfareRaw - welfareIns;
-  const insur = sum(it=> isInsuranceItem(it.name)) + welfareIns;
+  const welfare = sum(it=> nm(it, ['복리후생']));
+  const insur = sum(it=> isInsuranceItem(it.name));
   const laborCore = salary + retire + daily + free;
   const laborAll = laborCore + welfare + insur;
   const welfareRate = laborCore>0 ? welfare/laborCore*100 : null;
@@ -3493,7 +3254,7 @@ function renderPLReview(sc){
         <div class="plr-q"><b>인건비 지출이 이 정도면 괜찮을까요?</b> 직원 수·근무시간 대비 적정한지, 일용직·프리랜서 지급분의 원천세 신고와 지급명세서 제출이 모두 되어 있는지 확인해 주세요. 신고되지 않은 인건비는 경비로 인정되지 않습니다.</div>
       </div>
       <div class="plr-item">
-        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원 ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>${welfareIns>0?`<div style="font-size:11px;color:var(--sub);margin-top:2px;">장부 복리후생비 ${won(welfareRaw)}원 − 4대보험료 ${won(welfareIns)}원 (보험료로 재분류)</div>`:''}
+        <div class="plr-h"><span>② 복리후생비</span><span class="amt">${won(welfare)}원 ${welfareRate!==null ? flag(welfareRate<=10, '인건비의 '+welfareRate.toFixed(1)+'%') : flag(null,'인건비 없음')}</span></div>
         <div class="plr-sub">식대·간식·회식·경조사·직원 선물 등. 사무소 기준: 인건비(급여·상여 등)의 <b>10% 내외</b>. 직원 수에 비해 크면 대표자 개인 지출이 섞였는지 봅니다.</div>
         <div class="plr-q"><b>종합소득세 신고 시 복리후생비는 인건비의 10% 내외로 조절하여 신고할 예정입니다.</b>${welfareRate!==null && welfareRate>10 ? ` 현재 추정액 ${won(welfare)}원은 인건비의 ${welfareRate.toFixed(1)}%로, 10% 기준(약 ${won(Math.round(laborCore*0.1))}원)을 <b>${won(Math.round(welfare - laborCore*0.1))}원</b> 초과합니다. 초과분은 증빙·사용 내역을 확인해 개인 지출은 경비에서 제외합니다.` : ''} 직원이 없는 사업장의 복리후생비, 주말·심야 식대, 1인 결제 반복은 개인 지출로 보아 부인될 수 있습니다.</div>
       </div>
@@ -3537,23 +3298,13 @@ function renderPartnerBreak(sc){
   for (let i=0;i<n;i++){
     const p = sc[0].s.partners[i].partner;
     const psc = sc.map(x=> Object.assign({}, x, { s: x.s.partners[i] }));
-    h += `<table class="rep-table tax pb"><caption><div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div></caption>${buildTaxTable(psc, partnerPrevYear(p))}</table>`;
+    h += `<table class="rep-table tax pb"><caption><div class="pb-head">👤 ${esc(p.name||'구성원'+(i+1))} <span class="pb-share">지분 ${p.share}%</span></div></caption>${buildTaxTable(psc)}</table>`;
   }
   box.innerHTML = h;
   // 인쇄용: 구성원 제목·머리글·첫 행을 한 묶음으로(제목만 쪽 끝에 남지 않게)
   box.querySelectorAll('table.pb').forEach(t=> groupHeadForPrint(t, 3, null));
 }
 
-/* 개업일 → 기준일자(없으면 오늘)까지 영업기간 'N년 M개월' */
-function openDurationText(){
-  const o = document.getElementById('openDate').value; if (!o) return '';
-  const od = new Date(o), bd = new Date(document.getElementById('baseDate').value || new Date());
-  if (isNaN(od) || isNaN(bd) || bd<od) return '';
-  let m = (bd.getFullYear()-od.getFullYear())*12 + (bd.getMonth()-od.getMonth());
-  if (bd.getDate() < od.getDate()) m--;
-  const y = Math.floor(m/12), r = m%12;
-  return `개업 ${y>0 ? y+'년 ' : ''}${r}개월차`;
-}
 function renderReport(sc){
   const s1 = sc[0].s, s2 = sc[1].s;
   const best = sc.reduce((a,b)=> b.s.totalBurden < a.s.totalBurden ? b : a, sc[0]);
@@ -3562,12 +3313,7 @@ function renderReport(sc){
   const coopTag = coopOn() ? ` · 공동사업 ${state.coop.partners.map(p=> `${p.name||'-'} ${p.share}%`).join(' / ')}` : '';
   document.getElementById('repCompanyName').textContent = `${bizName} (대표자 ${ownerName}${coopTag})`;
   document.getElementById('repMeta').textContent =
-    (()=>{
-      const od = document.getElementById('openDate').value, bd = document.getElementById('baseDate').value;
-      const N = getYears().N, oy = od ? parseInt(od.slice(0,4),10) : NaN;
-      const gi = (!isNaN(oy) && N>=oy) ? `(제${N-oy+1}기) ` : '';
-      return `기준일자: ${bd ? bd.replace(/-/g,'.') : '-'}` + (od ? ` · 개업연월일: ${od.replace(/-/g,'.')}` : '') + ` · 귀속연도${gi? " "+gi.trim() : ""}: ${document.getElementById('taxPeriod').value}`;
-    })();
+    `기준일자: ${document.getElementById('baseDate').value||'-'} · 귀속연도: ${document.getElementById('taxPeriod').value}`;
 
   const t = buildTrendData(s1);
   const {N,N1,N2} = getYears();
@@ -3643,9 +3389,6 @@ function renderReport(sc){
 
   document.querySelectorAll('#incomeTable tr').forEach(tr=>{ if (tr.cells[2] && tr.cells[2].tagName==='TD') tr.cells[2].classList.add('memo'); });
   setTableWithCaption('scenarioTable', buildTaxTable(sc), 3);
-  try { renderMidtermHints(); } catch(e){}
-  { const nt = document.getElementById('taxEstNote'); if (nt){ const {N} = getYears(); let isDil=false; try { isDil = diligentCheck(sc[0].s).isTarget; } catch(e){}
-      nt.innerHTML = `※ 위 표의 <b>결정세액·중간예납세액·기납부(원천징수)세액·납부할 세액은 추정치</b>입니다(기준일까지 실적을 연간 환산). 실제 세액은 <b>${N+1}년 5월${isDil ? '(성실신고확인대상자 6월)' : ''} 종합소득세 신고·납부 시 확정</b>되며, 중간예납세액은 ${N}년 11월 고지분, 원천징수세액은 연말 지급명세서 기준으로 최종 반영됩니다.`; } }
   { const cap = document.querySelector('#scenarioTable tr.cap-row h2'); if (cap){ let tag = cap.querySelector('.coop-tag'); if (!tag){ tag = document.createElement('span'); tag.className='coop-tag'; cap.appendChild(tag); } tag.textContent = sc[0].s.coop ? ' — 구성원 합계' : ''; } }
   renderPartnerBreak(sc);
 
@@ -3681,16 +3424,14 @@ function renderReport(sc){
  'adjIn','adjOut','nol','comboDeduction','pensionContrib','yellowUmbrella','otherDeduction',
  'decreasedEmp','empCredit','empCreditCarry','crChild','crBook','crStd','crDiligent','crSocial','crMedical','crEdu','crPension','otherCredit',
  'penalty','midterm','withhold','withholdLocal','extraExpense','extraExpense3',
- 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evCardDeduct','evWelfareIns']
+ 'rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross','evTaxInv','evInv','evCard','evCash','evWedding','evWage','evBizInc','evDaily','evOther','evCardDeduct']
  .forEach(id=> document.getElementById(id).addEventListener('input', renderAll));
-document.querySelectorAll('[id$="_py"]').forEach(el=> el.addEventListener('input', renderAll));
-document.getElementById('openDate').addEventListener('change', renderAll);
 document.getElementById('otherIncomeSeparate').addEventListener('change', renderAll);
 document.getElementById('otherExpAuto').addEventListener('change', renderAll);
 document.getElementById('minTaxOn').addEventListener('change', renderAll);
 document.getElementById('showLoan').addEventListener('change', renderAll);
 document.getElementById('loanTiming').addEventListener('change', renderAll);
-['pastSales1','pastIncome1','pastOther1','pastTax1','pastRural1','pastSales2','pastIncome2','pastOther2','pastTax2','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.addEventListener('input', renderAll); el.addEventListener('blur', renderAll);} });
+['pastSales1','pastIncome1','pastTax1','pastRural1','pastSales2','pastIncome2','pastTax2','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.addEventListener('input', renderAll); el.addEventListener('blur', renderAll);} });
 document.getElementById('showPct').addEventListener('change', e=>{ state.showPct = e.target.checked; renderAll(); });
 
 document.querySelectorAll('.money-input').forEach(el=>{
@@ -3874,7 +3615,7 @@ function loadWork(data){
   if (s1 && Object.keys(state.years).length) s1.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0;">※ 저장된 작업 파일의 손익 자료가 반영되어 있습니다. 엑셀을 다시 올리면 해당 연도 자료가 교체됩니다.</div>';
   renderExtraBizList();
   const coopRadio = document.querySelector(`input[name=bizMode][value=${state.coop.on?'coop':'single'}]`); if (coopRadio) coopRadio.checked = true;
-  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2','pastIncome1','pastIncome2','pastOther1','pastOther2','pastRural1','pastRural2'].forEach(id=>{ const el=document.getElementById(id); if (el){ el.readOnly=true; el.classList.add('ro'); } }); renderPastTaxCoop(); }
+  if (state.coop.on){ document.getElementById('coopBox').style.display=''; ['pastTax1','pastTax2'].forEach(id=>{ const el=document.getElementById(id); el.readOnly=true; el.classList.add('ro'); }); }
   renderPartnerTable(); renderPartnerBlocks(); renderCoopOtherIncome(); renderPastTaxCoop();
   renderAll();
 }
@@ -3909,461 +3650,5 @@ function t(){b.classList.toggle('show',(window.pageYOffset||document.documentEle
 window.addEventListener('scroll',t,{passive:true});t();
 b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
 </script>
-<script>
-/* ============================================================
-   엑셀 보고서 내보내기 (ExcelJS, 브라우저에서 생성)
-   시트: 1.연간추정손익 / 2.3개년비교 / 3.세액계산(공동이면 합계 + 구성원별) / 세율표
-   - 파란 글씨·노란 칸 = 입력값(수정 가능), 검은 글씨 = 수식, 초록 글씨 = 다른 시트 연결
-   - 모든 계산은 수식으로 넣고, 열었을 때 바로 보이도록 프로그램 계산값을 캐시값으로 함께 저장
-============================================================ */
-const EXCELJS_URLS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',
-  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
-  'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'
-];
-function ensureExcelJS(){
-  return new Promise((res, rej)=>{
-    if (window.ExcelJS) return res();
-    loadScriptFallback(EXCELJS_URLS, ok=> (ok && window.ExcelJS) ? res() : rej(new Error('엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.')));
-  });
-}
-const XL = { font:'맑은 고딕', num:'#,##0;-#,##0;"-"', pct:'0.0%;-0.0%;"-"', blue:'FF1D4ED8', green:'FF15803D', ink:'FF1C2733', sub:'FF6B7280',
-  inFill:'FFFFFBE6', head:'FF1F3A5F', sec:'FFF1ECDD', tot:'FFE8EEF4', pv:'FFF1F2F5', line:'FFD9D4C7', red:'FF9E3B33' };
-const xlCol = n=> { let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
-const xlQ = name=> `'${String(name).replace(/'/g,"''")}'`;
-const xlNum = v=> (typeof v==='number' && isFinite(v)) ? v : undefined;
-/* 셀 쓰기: o.f = 수식(= 없이), o.k = 'in'(입력) | 'link'(다른 시트) */
-function xc(ws, addr, value, o){
-  o = o || {};
-  const c = ws.getCell(addr);
-  const isF = o.f !== undefined && o.f !== null;
-  if (isF){ const r = xlNum(value); c.value = r===undefined ? { formula:o.f } : { formula:o.f, result:r }; }
-  else c.value = (value===undefined ? null : value);
-  const kind = o.k || (isF ? (o.link ? 'link' : 'f') : 'v');
-  c.font = { name:XL.font, size:o.size||10, bold:!!o.b, italic:!!o.i,
-    color:{ argb: o.color || (kind==='in' ? XL.blue : kind==='link' ? XL.green : XL.ink) } };
-  const fill = kind==='in' ? XL.inFill : o.fill;
-  if (fill) c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:fill } };
-  const numeric = isF || typeof value==='number';
-  if (o.nf) c.numFmt = o.nf; else if (numeric) c.numFmt = XL.num;
-  c.alignment = { vertical:'middle', horizontal: o.h || (numeric ? 'right' : 'left'), wrapText: !!o.wrap, indent: o.ind||0 };
-  if (o.bd) c.border = { top:{style:'hair',color:{argb:XL.line}}, bottom:{style:'thin',color:{argb:XL.line}} };
-  return c;
-}
-function xlHeadRow(ws, r, labels, startCol){
-  labels.forEach((t,i)=> xc(ws, xlCol((startCol||1)+i)+r, t, { b:true, color:'FFFFFFFF', fill:XL.head, h:'center', wrap:true }));
-  ws.getRow(r).height = 32;
-}
-function xlTitle(ws, text, sub){
-  xc(ws, 'A1', text, { b:true, size:14 });
-  if (sub) xc(ws, 'A2', sub, { color:XL.sub });
-  xc(ws, 'A3', '파란 글씨·노란 칸 = 입력값(바꾸면 자동 재계산) · 검은 글씨 = 수식 · 초록 글씨 = 다른 시트 연결', { color:XL.sub, size:9 });
-}
-function xlHeaderInfo(){
-  const v = id=> (document.getElementById(id)||{}).value || '';
-  const {N} = getYears();
-  return `${v('bizName')||'개인사업자'} · 대표자 ${v('ownerName')||'-'} · 기준일자 ${v('baseDate')||'-'} · 귀속 ${N}.01.01 ~ ${N}.12.31 · 원제우세무사사무소`;
-}
-
-/* ---------- 세율표 (소득세법 §55①) ---------- */
-function xlBuildRateSheet(ws){
-  ws.columns = [{width:18},{width:10},{width:16},{width:40}];
-  xlTitle(ws, '종합소득세 기본세율표', '소득세법 §55① · 산출세액 = 과세표준 × 세율 − 누진공제');
-  xlHeadRow(ws, 4, ['과세표준 하한(초과)','세율','누진공제','구간']);
-  const t = [[0,.06,0,'1,400만원 이하'],[14000000,.15,1260000,'1,400만원 초과 ~ 5,000만원'],[50000000,.24,5760000,'5,000만원 초과 ~ 8,800만원'],
-    [88000000,.35,15440000,'8,800만원 초과 ~ 1억5천만원'],[150000000,.38,19940000,'1억5천만원 초과 ~ 3억원'],[300000000,.40,25940000,'3억원 초과 ~ 5억원'],
-    [500000000,.42,35940000,'5억원 초과 ~ 10억원'],[1000000000,.45,65940000,'10억원 초과']];
-  t.forEach((r,i)=>{ const n=5+i; xc(ws,'A'+n,r[0],{k:'in',bd:true}); xc(ws,'B'+n,r[1],{k:'in',nf:'0%',bd:true}); xc(ws,'C'+n,r[2],{k:'in',bd:true}); xc(ws,'D'+n,r[3],{bd:true}); });
-  xc(ws,'A14','※ 경계값에서 두 구간 계산 결과가 같도록 누진공제가 정해져 있어, 하한값 기준 조회(VLOOKUP 근사 일치)로 계산합니다.',{color:XL.sub,size:9});
-  return { range: `${xlQ(ws.name)}!$A$5:$C$12` };
-}
-
-/* ---------- 1. 연간 추정 손익 ---------- */
-function xlBuildPL(ws, sc){
-  const {N} = getYears();
-  const m = num('baseMonths') || 12, mult = 12/m;
-  ws.columns = [{width:34},{width:16},{width:22},{width:16},{width:15},{width:16},{width:6},{width:40}];
-  xlTitle(ws, `${N}년도 연간 추정 손익 (실적 → 수정·가감 → 연간 추정)`, xlHeaderInfo());
-  xc(ws,'A5','기준월수 (1월 ~ 기준월)',{b:true}); xc(ws,'B5', m, {k:'in', nf:'0"개월"'});
-  xc(ws,'A6','연환산 배수 (12 ÷ 기준월수)'); xc(ws,'B6', mult, {f:'12/B5', nf:'0.0000'});
-  const H = 8;
-  xlHeadRow(ws, H, ['과목', `실적 (1~${m}월)`, '추정방식', '직접입력\n(연간 예상액)', '수정·가감 (±)', `연간 추정 (1~12월)`, '부호', '비고']);
-  ws.views = [{ state:'frozen', ySplit:H }];
-  const rows = {};
-  let r = H + 1;
-  const hasDetail = hasAdjDetail(N);
-  const y = state.years[N] || {};
-  const secs = [['Ⅰ. 매출액','sales'],['Ⅱ. 매출원가','cogs'],['Ⅲ. 매출총이익','gross'],['Ⅳ. 판매비와 관리비','sga'],['Ⅴ. 영업이익','op'],
-    ['Ⅵ. 영업외수익','noi'],['Ⅶ. 영업외비용','noe'],['Ⅷ. 소득세 차감전 이익 (당기순이익)','pretax']];
-  const cache = {};
-  secs.forEach(([S, k])=>{
-    if (k==='gross' || k==='op' || k==='pretax'){
-      const f = k==='gross' ? (c)=> `${c}${rows.sales}-${c}${rows.cogs}` : k==='op' ? (c)=> `${c}${rows.gross}-${c}${rows.sga}` : (c)=> `${c}${rows.op}+${c}${rows.noi}-${c}${rows.noe}`;
-      const vB = k==='gross' ? cache.salesB-cache.cogsB : k==='op' ? cache.grossB-cache.sgaB : cache.opB+cache.noiB-cache.noeB;
-      const vF = k==='gross' ? cache.salesF-cache.cogsF : k==='op' ? cache.grossF-cache.sgaF : cache.opF+cache.noiF-cache.noeF;
-      cache[k+'B'] = vB; cache[k+'F'] = vF;
-      xc(ws,'A'+r,S,{b:true,fill:XL.tot,bd:true}); xc(ws,'B'+r,vB,{f:f('B'),b:true,fill:XL.tot,bd:true});
-      ['C','D','E','G','H'].forEach(c=> xc(ws,c+r,null,{fill:XL.tot,bd:true}));
-      xc(ws,'F'+r,vF,{f:f('F'),b:true,fill:XL.tot,bd:true});
-      rows[k] = r++; return;
-    }
-    const items = hasDetail ? adjItems(N, S) : ((y[S]||0) ? [{ name:`${S.replace(/^[Ⅰ-Ⅹ]+\.\s*/,'')} (세부 과목 없음)`, cur:y[S], mode:'annualize', sign:1, blankAs:'annualize', delta:0 }] : []);
-    const secRow = r++; rows[k] = secRow;
-    const first = r;
-    items.forEach(it=>{
-      const cur = Number(it.cur)||0, d = Number(it.delta)||0;
-      const blank = it.blankAs==='annualize' ? `B${r}*$B$6` : `B${r}`;
-      const fF = it.mode==='annualize' ? `B${r}*$B$6+E${r}` : it.mode==='asis' ? `B${r}+E${r}` : `IF(D${r}="",${blank},D${r})+E${r}`;
-      xc(ws,'A'+r, it.name, {ind:1,bd:true});
-      xc(ws,'B'+r, cur, {k:'in',bd:true});
-      xc(ws,'C'+r, methodLabel(it).replace(' + 가감',''), {color:XL.sub,size:9,bd:true});
-      if (it.mode==='override') xc(ws,'D'+r, hasOverride(it) ? Number(it.override) : null, {k:'in',bd:true,nf:XL.num});
-      else xc(ws,'D'+r, null, {bd:true});
-      xc(ws,'E'+r, d, {k:'in',bd:true});
-      xc(ws,'F'+r, (hasDetail ? lineFinal(it, mult) : cur*mult), {f:fF,bd:true});
-      xc(ws,'G'+r, it.sign||1, {color:XL.sub,size:9,nf:'0;-0',h:'center',bd:true});
-      xc(ws,'H'+r, (it.sign<0?'차감항목 ':'') + (it.memo||''), {color:XL.sub,size:9,wrap:true,bd:true});
-      r++;
-    });
-    const last = r - 1;
-    const vB = hasDetail ? sectionActual(N,S) : (y[S]||0);
-    const vF = hasDetail ? sectionTotal(N,S,mult) : (y[S]||0)*mult;
-    cache[k+'B'] = vB; cache[k+'F'] = vF;
-    xc(ws,'A'+secRow, S, {b:true,fill:XL.sec,bd:true});
-    xc(ws,'B'+secRow, vB, items.length ? {f:`SUMPRODUCT(B${first}:B${last},G${first}:G${last})`,b:true,fill:XL.sec,bd:true} : {b:true,fill:XL.sec,bd:true});
-    ['C','D','E','G','H'].forEach(c=> xc(ws,c+secRow,null,{fill:XL.sec,bd:true}));
-    xc(ws,'F'+secRow, vF, items.length ? {f:`SUMPRODUCT(F${first}:F${last},G${first}:G${last})`,b:true,fill:XL.sec,bd:true} : {b:true,fill:XL.sec,bd:true});
-  });
-  // 경비 조정 시나리오 + 사업장 세무조정(공동이면 지분율로 안분)
-  r += 1;
-  xc(ws,'A'+r,'경비 조정 시나리오 (메인 사업장 판관비에 가감)',{b:true}); r++;
-  const e2 = num('extraExpense'), e3 = num('extraExpense3');
-  [['①안 (연간 추정 그대로)',0,false],['②안 경비 조정액 (+ 부족경비 / − 감축)',e2,true],['③안 경비 조정액 (+ 부족경비 / − 감축)',e3,true]].forEach(([lab,v,inp],i)=>{
-    xc(ws,'A'+r,lab,{bd:true}); xc(ws,'B'+r,v, inp ? {k:'in',bd:true} : {bd:true}); rows['extra'+(i+1)] = r++;
-  });
-  r += 1;
-  xc(ws,'A'+r,'세무조정 (사업장 전체)',{b:true}); r++;
-  xc(ws,'A'+r,'사업소득금액 조정 가산 (필요경비불산입 등)',{bd:true}); xc(ws,'B'+r,num('adjIn'),{k:'in',bd:true}); rows.adjIn = r++;
-  xc(ws,'A'+r,'사업소득금액 조정 차감 (필요경비산입 등)',{bd:true}); xc(ws,'B'+r,num('adjOut'),{k:'in',bd:true}); rows.adjOut = r++;
-  xc(ws,'A'+(r+1),'※ 실적·직접입력·수정가감·기준월수를 바꾸면 연간 추정과 세액계산 시트가 함께 다시 계산됩니다.',{color:XL.sub,size:9});
-  ws.pageSetup = { orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9 };
-  return rows;
-}
-
-/* ---------- 3. 세액 계산 (단독 또는 구성원 1인) ---------- */
-function xlBuildTax(ws, ctx, who){
-  const { sc, pl, plName, rate } = ctx;
-  const nS = sc.length;
-  const scCol = i=> xlCol(3+i);                 // ①=C, ②=D, ③=E
-  const noteCol = xlCol(3+nS);
-  ws.columns = [{width:36},{width:16}].concat(sc.map(()=>({width:17}))).concat([{width:44}]);
-  const {N, N1} = getYears();
-  xlTitle(ws, `${N}년 예상 종합소득세 — ${who.title}`, xlHeaderInfo());
-  const L = k=> `${xlQ(plName)}!$${k==='extra1'||k==='extra2'||k==='extra3'||k==='adjIn'||k==='adjOut'?'B':'F'}$${pl[k]}`;
-  // ── 입력값 블록 ──
-  const inRow = {};
-  let r = 5;
-  xc(ws,'A'+r,'■ 입력값 — 이 사람 기준 (파란 글씨 수정 가능)',{b:true}); r++;
-  const inp = (k, label, v, nf, note)=>{
-    xc(ws,'A'+r,label,{bd:true,ind:1}); xc(ws,'B'+r,v,{k:'in',bd:true,nf:nf||XL.num});
-    if (note) xc(ws,'C'+r,note,{color:XL.sub,size:9});
-    inRow[k] = r++;
-  };
-  const I = k=> `$B$${inRow[k]}`;
-  const g = who.get;
-  if (who.share!=null) inp('share','지분율 (손익분배비율)', who.share, '0.0%', '메인 사업소득금액(세무조정 포함)에 곱해 안분 — 소득세법 §43');
-  inp('rateMain','중소기업특별세액감면율 (메인)', reductionRateFor(document.getElementById('bizType').value, document.getElementById('bizSize').value, document.getElementById('bizRegion').value, bizLongOn()), '0.0%',
-      `${document.getElementById('bizType').value} · ${document.getElementById('bizSize').value} · ${document.getElementById('bizRegion').value}${bizLongOn()?' · 장수성실(×110%)':''} (조특법 §7)`);
-  inp('decreasedEmp','직전연도 대비 인원감소 (명)', g('decreasedEmp'), '0', '감면 한도 = 1억원 − 감소인원 × 500만원');
-  inp('minTaxOn','최저한세 적용 (1=적용, 0=미적용)', document.getElementById('minTaxOn').checked ? 1 : 0, '0', '조특법 §132②');
-  const subs = who.subs || [];
-  const subStart = r;
-  subs.forEach((b,i)=>{
-    xc(ws,'A'+r,`서브 사업장 ${i+1}: ${b.name}`,{bd:true,ind:1});
-    xc(ws,'B'+r,b.income,{k:'in',bd:true});
-    xc(ws,'C'+r,b.ratio,{k:'in',bd:true,nf:'0.0%'});
-    xc(ws,'D'+r,b.rate,{k:'in',bd:true,nf:'0.0%'});
-    xc(ws,'E'+r,'← 사업소득금액(전체) · 귀속비율 · 감면율',{color:XL.sub,size:9});
-    inRow['sub'+i] = r++;
-  });
-  const subEnd = r - 1;
-  inp('nol','이월결손금 공제 (사업소득, §45)', who.nol, null, who.share!=null ? '이 구성원 귀속분 — 사업소득금액 범위에서 차감' : '');
-  inp('rentalGross','부동산임대 총수입', who.other.rentalGross||0);
-  inp('rentalExpense','부동산임대 필요경비', who.other.rentalExpense||0);
-  inp('wageGross','근로 총급여액', who.other.wageGross||0, null, '근로소득공제(소득세법 §47) 자동');
-  inp('pensionGross','연금 총연금액', who.other.pensionGross||0, null, '연금소득공제(소득세법 §47의2) 자동');
-  const oi = computeOtherIncomes(who.other);
-  inp('otherGross','기타소득 총수입', oi.otherGross);
-  inp('otherExpense','기타소득 필요경비', oi.otherExpense);
-  inp('otherSep','기타소득 300만원 이하 분리과세 (1=선택)', who.other.otherIncomeSeparate ? 1 : 0, '0');
-  inp('fin','금융소득 (이자+배당) 총액', oi.finGross, null, '2천만원 초과 시 종합과세 + 비교과세(소득세법 §62)');
-  inp('comboDeduction','소득공제 (인적공제 등)', g('comboDeduction'));
-  inp('pensionContrib','국민연금 보험료 공제', g('pensionContrib'), null, '소득세법 §51의3');
-  inp('yellowUmbrella','노란우산공제 납입액', g('yellowUmbrella'), null, '공제액 = 납입액·구간 한도·사업소득금액 중 작은 금액 (조특법 §86의3)');
-  inp('otherDeduction','기타 소득공제', g('otherDeduction'));
-  CREDIT_FIELDS.forEach(([id,label])=> inp(id, label, g(id)));
-  inp('empCredit','④ 통합고용 세액공제 (당기분)', g('empCredit'), null, '조특법 §29의8 · 최저한세·농특세 대상');
-  inp('empCreditCarry','⑤ 통합고용 세액공제 (이월분)', g('empCreditCarry'), null, '조특법 §144');
-  inp('crSocial','⑦ 사회보험료 세액공제', g('crSocial'), null, '조특법 §30의4 · 최저한세 대상');
-  inp('penalty','가산세·추가납부세액', g('penalty'));
-  inp('midterm','중간예납세액', g('midterm'));
-  inp('withhold','기납부(원천징수)세액 — 국세', g('withhold'));
-  inp('withholdLocal','기납부세액 — 지방소득세', g('withholdLocal'));
-
-  // ── 계산 표 ──
-  r += 1;
-  const H = r;
-  xlHeadRow(ws, H, ['구분', `${N1}년\n신고 결과`].concat(sc.map(x=> `${x.key}안${extraHead(x.extra)}`)).concat(['비고']));
-  r = H + 1;
-  const T  = x=> `IF(${x}<=0,0,${x}*VLOOKUP(${x},${rate.range},2,TRUE)-VLOOKUP(${x},${rate.range},3,TRUE))`;
-  const TF = x=> `IF(${I('fin')}>20000000,MAX(${T(x)},2800000+${T(`MAX(${x}-20000000,0)`)}),${T(x)})`;
-  const sh = who.share!=null ? `*${I('share')}` : '';
-  const subInc = subs.length ? `SUMPRODUCT($B$${subStart}:$B$${subEnd},$C$${subStart}:$C$${subEnd})` : '0';
-  const subRed = subs.length ? `SUMPRODUCT(($B$${subStart}:$B$${subEnd}*$C$${subStart}:$C$${subEnd}>0)*$B$${subStart}:$B$${subEnd}*$C$${subStart}:$C$${subEnd}*$D$${subStart}:$D$${subEnd})` : '0';
-  const gw = I('wageGross'), gp = I('pensionGross');
-  const pv = who.pv;
-  /* 행 정의: k, 라벨, f(c, R) 수식, v(s) 캐시값, 스타일, pvF/pvV(전년 열), note */
-  const D = [
-    { k:'extra', label:'경비 조정액 (부족경비 + / 감축 −)', f:(c,R,i)=> `${xlQ(plName)}!$B$${pl['extra'+(i+1)]}`, link:true, v:(s,x)=> x.extra, note:'1.연간추정손익 시트의 시나리오 입력' },
-    { k:'sales', label:'매출 (메인 사업장)', f:(c)=> `${L('sales')}${sh}`, link:true, v:s=> s.sales, pv:'in', pvV:pv&&pv.sales, note: who.share!=null?'사업장 매출 × 지분율':'연간 추정 매출' },
-    { k:'cogs', label:'매출원가', f:(c)=> `${L('cogs')}${sh}`, link:true, v:s=> s.cogs, detail:true },
-    { k:'sga', label:'판매비와 관리비 (경비 조정 포함)', f:(c,R)=> `(${L('sga')}+${R('extra')})${sh}`, v:s=> s.sga, detail:true },
-    { k:'nonop', label:'영업외수익 − 영업외비용', f:(c)=> `(${L('noi')}-${L('noe')})${sh}`, link:true, v:s=> s.nonOpInc - s.nonOpExp, detail:true },
-    { k:'pretax', label:'당기순이익 (메인 사업장)', f:(c,R)=> `${R('sales')}-${R('cogs')}-${R('sga')}+${R('nonop')}`, v:s=> s.pretax, st:'b' },
-    { k:'expense', label:'경비 (매출 − 당기순이익)', f:(c,R)=> `${R('sales')}-${R('pretax')}`, v:s=> s.sales - s.pretax, detail:true },
-    { k:'adj', label:'세무조정 (가산 − 차감)', f:(c)=> `(${L('adjIn')}-${L('adjOut')})${sh}`, link:true, v:s=> (s.adjIn||0) - (s.adjOut||0) },
-    { k:'nol', label:'이월결손금 공제', f:(c,R)=> who.share!=null ? `MIN(MAX(${I('nol')},0),MAX(${R('pretax')}+${R('adj')}+${subInc},0))` : `${I('nol')}`, v:s=> s.nol||0, pv:'in', pvV:pv&&pv.nol },
-    { k:'mainBiz', label:'사업소득금액 (메인)', f:(c,R)=> `${R('pretax')}+${R('adj')}-${R('nol')}`, v:s=> s.mainBizIncome, st:'b', pv:'in', pvV:pv&&pv.biz, note: pv?`${N1}년은 신고서 사업소득금액`:'' },
-    { k:'sub', label:'서브 사업장 소득금액 (귀속분)', f:()=> subInc, v:s=> s.extraBizIncomeTotal },
-    { k:'biz', label:'사업소득금액 합계', f:(c,R)=> `${R('mainBiz')}+${R('sub')}`, v:s=> s.bizIncomeTotal, detail:true },
-    { k:'rental', label:'임대소득금액', f:()=> `MAX(${I('rentalGross')}-${I('rentalExpense')},0)`, v:s=> s.rentalIncome, detail:true, note:'결손금은 통산 불가(§45②) → 0 하한' },
-    { k:'wageDed', label:'근로소득공제', f:()=> `MIN(IF(${gw}<=0,0,IF(${gw}<=5000000,${gw}*0.7,IF(${gw}<=15000000,3500000+(${gw}-5000000)*0.4,IF(${gw}<=45000000,7500000+(${gw}-15000000)*0.15,IF(${gw}<=100000000,12000000+(${gw}-45000000)*0.05,14750000+(${gw}-100000000)*0.02))))),20000000)`, v:s=> s.wageDeduction, detail:true, note:'소득세법 §47 (한도 2천만원)' },
-    { k:'wage', label:'근로소득금액', f:(c,R)=> `MAX(${gw}-${R('wageDed')},0)`, v:s=> s.wageIncome, detail:true },
-    { k:'penDed', label:'연금소득공제', f:()=> `MIN(IF(${gp}<=0,0,IF(${gp}<=3500000,${gp},IF(${gp}<=7000000,3500000+(${gp}-3500000)*0.4,IF(${gp}<=14000000,4900000+(${gp}-7000000)*0.2,6300000+(${gp}-14000000)*0.1)))),9000000)`, v:s=> s.pensionDeductionAmt, detail:true, note:'소득세법 §47의2 (한도 900만원)' },
-    { k:'pension', label:'연금소득금액', f:(c,R)=> `MAX(${gp}-${R('penDed')},0)`, v:s=> s.pensionIncome, detail:true },
-    { k:'other', label:'기타소득금액 (종합과세분)', f:()=> `IF(AND(${I('otherSep')}=1,MAX(${I('otherGross')}-${I('otherExpense')},0)<=3000000),0,MAX(${I('otherGross')}-${I('otherExpense')},0))`, v:s=> s.otherIncomeIncluded, detail:true },
-    { k:'otherSum', label:'타소득금액 합계 (임대·근로·연금·기타)', f:(c,R)=> `${R('rental')}+${R('wage')}+${R('pension')}+${R('other')}`, v:s=> s.otherIncomeSum, pv:'in', pvV:pv&&pv.other },
-    { k:'fin', label:'금융소득 (종합과세분)', f:()=> `IF(${I('fin')}>20000000,${I('fin')},0)`, v:s=> s.finIncluded },
-    { k:'incomeTotal', label:'종합소득금액', f:(c,R)=> `${R('biz')}+${R('otherSum')}+${R('fin')}`, v:s=> s.incomeTotal, st:'tot', pv:'f', pvF:(R)=> `${R('mainBiz')}+${R('otherSum')}` },
-    { k:'margin', label:'마진율 (종합소득금액 ÷ 매출)', f:(c,R)=> `IF(${R('sales')}>0,${R('incomeTotal')}/${R('sales')},0)`, v:s=> s.sales>0 ? s.incomeTotal/s.sales : 0, nf:XL.pct, pv:'f', pvF:(R)=> `IF(${R('sales')}>0,${R('mainBiz')}/${R('sales')},"")`, note: pv?`${N1}년은 사업소득금액 ÷ 매출`:'' },
-    { k:'ded1', label:'소득공제 (인적공제 등)', f:()=> I('comboDeduction'), v:s=> s.dedBasic, pv:'in', pvV:pv&&pv.comboDeduction },
-    { k:'ded2', label:'국민연금 공제', f:()=> I('pensionContrib'), v:s=> s.dedPension, pv:'in', pvV:pv&&pv.pensionContrib },
-    { k:'yuLimit', label:'노란우산 공제 한도 (구간)', f:(c,R)=> `IF(${R('biz')}+${R('rental')}<=40000000,6000000,IF(${R('biz')}+${R('rental')}<=60000000,5000000,IF(${R('biz')}+${R('rental')}<=100000000,4000000,2000000)))`, v:s=> s.yuLimit, detail:true, note:'사업소득금액 4천만 이하 600만 · 6천만 이하 500만 · 1억 이하 400만 · 초과 200만' },
-    { k:'ded3', label:'노란우산공제', f:(c,R)=> `MAX(MIN(${I('yellowUmbrella')},${R('yuLimit')},MAX(${R('biz')},0)),0)`, v:s=> s.dedYellow, pv:'in', pvV:pv&&pv.dedYellow },
-    { k:'ded4', label:'기타공제', f:()=> I('otherDeduction'), v:s=> s.dedOther, pv:'in', pvV:pv&&pv.otherDeduction },
-    { k:'dedTotal', label:'소득공제 합계', f:(c,R)=> `${R('ded1')}+${R('ded2')}+${R('ded3')}+${R('ded4')}`, v:s=> s.comboDeduction, st:'b', pv:'f', pvF:(R)=> `${R('ded1')}+${R('ded2')}+${R('ded3')}+${R('ded4')}` },
-    { k:'taxBase', label:'과세표준', f:(c,R)=> `MAX(${R('incomeTotal')}-${R('dedTotal')},0)`, v:s=> s.taxBase, st:'tot', pv:'f', pvF:(R)=> `MAX(${R('incomeTotal')}-${R('nol')}-${R('dedTotal')},0)`, note: pv?`${N1}년은 종합소득금액 − 이월결손금 − 소득공제로 추정`:'' },
-    { k:'rate', label:'(×) 세율', f:(c,R)=> `IF(${R('taxBase')}<=0,0,VLOOKUP(${R('taxBase')},${rate.range},2,TRUE))`, v:s=> s.rate, nf:'0%', pv:'f', pvF:(R)=> `IF(${R('taxBase')}<=0,0,VLOOKUP(${R('taxBase')},${rate.range},2,TRUE))`, note:'소득세법 §55 (세율표 시트)' },
-    { k:'calcTax', label:'산출세액', f:(c,R)=> TF(R('taxBase')), v:s=> s.calcTax, st:'tot', pv:'f', pvF:(R)=> T(R('taxBase')), note:'금융소득 2천만원 초과 시 비교과세' },
-    { k:'denom', label:'감면 안분 기준 소득', f:(c,R)=> `MAX(${R('biz')},0)+${R('otherSum')}+IF(${I('fin')}>20000000,${I('fin')}-20000000,0)`, detail:true },
-    { k:'redRaw', label:'중소기업특별세액감면 (한도 전)', f:(c,R)=> `IF(${R('denom')}>0,${R('calcTax')}*(MAX(${R('mainBiz')},0)*${I('rateMain')}+${subRed})/${R('denom')},0)`, detail:true, note:'산출세액 × 사업장별 소득비율 × 감면율' },
-    { k:'redGross', label:'감면 (한도 적용)', f:(c,R)=> `MIN(${R('redRaw')},MAX(100000000-${I('decreasedEmp')}*5000000,0))`, v:s=> s.reductionGross, detail:true },
-    { k:'carryPool', label:'통합고용·사회보험료 세액공제 계', f:()=> `${I('empCredit')}+${I('empCreditCarry')}+${I('crSocial')}`, v:s=> s.empTotal + s.socialCredit, detail:true },
-    { k:'bizShare', label:'사업소득 비율 (최저한세용)', f:(c,R)=> `IF(${R('denom')}>0,MIN(MAX(${R('biz')},0)/${R('denom')},1),0)`, nf:'0.00%', detail:true },
-    { k:'minBase', label:'최저한세 기준 과세표준 (노란우산 공제 전)', f:(c,R)=> `MAX(${R('incomeTotal')}-(${R('dedTotal')}-${R('ded3')}),0)`, detail:true },
-    { k:'minCalc', label:'최저한세 기준 산출세액 (사업소득분)', f:(c,R)=> `${TF(R('minBase'))}*${R('bizShare')}`, v:s=> s.minTaxCalc, detail:true },
-    { k:'minTax', label:'최저한세 (3천만 이하 35% · 초과 45%)', f:(c,R)=> `MIN(${R('minCalc')},30000000)*0.35+MAX(${R('minCalc')}-30000000,0)*0.45`, v:s=> s.minTax, note:'조특법 §132②' },
-    { k:'minRoom', label:'감면·공제 가능 한도', f:(c,R)=> `MAX(${R('calcTax')}*${R('bizShare')}-${R('minTax')},0)`, v:s=> s.minTaxRoom, detail:true },
-    { k:'excl', label:'최저한세로 배제되는 감면·공제', f:(c,R)=> `IF(${I('minTaxOn')}=1,MAX(${R('redGross')}+${R('carryPool')}-${R('minRoom')},0),0)`, v:s=> s.minTaxExcluded, note:'이월 가능한 통합고용·사회보험료 공제부터 배제' },
-    { k:'exclEmp', label:'그중 이월 공제 배제분', f:(c,R)=> `MIN(${R('excl')},${R('carryPool')})`, v:s=> s.exclEmp, detail:true },
-    { k:'reduction', label:'중소기업특별세액감면', f:(c,R)=> `MIN(${R('redGross')}-(${R('excl')}-${R('exclEmp')}),${R('calcTax')})`, v:s=> s.reduction, note:'조특법 §7' },
-  ];
-  CREDIT_FIELDS.forEach(([id,label],i)=> D.push({ k:'cr_'+id, label, f:()=> I(id), v:s=> s.creditItems[i].amt, pv:'in', pvV:pv&&pv[id] }));
-  D.push(
-    { k:'otherCr', label:'위 세액공제 적용액', f:(c,R)=> `MIN(${CREDIT_FIELDS.map(([id])=> R('cr_'+id)).join('+')},${R('calcTax')}-${R('reduction')})`, v:s=> s.otherCredit, detail:true },
-    { k:'cr_emp', label:'④ 통합고용 세액공제 (당기분)', f:()=> I('empCredit'), v:s=> s.empCredit, pv:'in', pvV:pv&&pv.empCredit },
-    { k:'cr_empC', label:'⑤ 통합고용 세액공제 (이월분)', f:()=> I('empCreditCarry'), v:s=> s.empCreditCarry, pv:'in', pvV:pv&&pv.empCreditCarry },
-    { k:'cr_soc', label:'⑦ 사회보험료 세액공제', f:()=> I('crSocial'), v:s=> s.socialCredit, pv:'in', pvV:pv&&pv.crSocial },
-    { k:'poolUsed', label:'④⑤⑦ 적용액', f:(c,R)=> `MIN(${R('carryPool')}-${R('exclEmp')},${R('calcTax')}-${R('reduction')}-${R('otherCr')})`, v:s=> s.poolUsed, detail:true },
-    { k:'empUsed', label:'그중 통합고용 적용액 (농특세 대상)', f:(c,R)=> `${R('poolUsed')}-MIN(${I('crSocial')},${R('poolUsed')})`, v:s=> s.empUsed, detail:true },
-    { k:'carryNext', label:'다음 연도 이월 세액공제', f:(c,R)=> `${R('carryPool')}-${R('poolUsed')}`, v:s=> s.empCarryNext, detail:true },
-    { k:'totalCredit', label:'세액감면·공제 적용액 합계', f:(c,R)=> `${R('reduction')}+${R('otherCr')}+${R('poolUsed')}`, v:s=> s.totalCredit, st:'b', pv:'f',
-      pvF:(R)=> CREDIT_FIELDS.map(([id])=> R('cr_'+id)).concat([R('cr_emp'),R('cr_empC'),R('cr_soc')]).join('+'), note: pv?`${N1}년은 입력한 세액공제 합계(감면 제외)`:'' },
-    { k:'penalty', label:'가산세·추가납부세액', f:()=> I('penalty'), v:s=> s.penalty, pv:'in', pvV:pv&&pv.penalty },
-    { k:'decided', label:'결정세액 (종합소득세)', f:(c,R)=> `${R('calcTax')}-${R('totalCredit')}+${R('penalty')}`, v:s=> s.decided, st:'tot', pv:'in', pvV:pv&&pv.nat, note: pv?`${N1}년은 신고서 결정세액`:'' },
-    { k:'midterm', label:'중간예납세액', f:()=> I('midterm'), v:s=> s.midterm, pv:'in', pvV:pv&&pv.midterm },
-    { k:'withhold', label:'기납부(원천징수)세액', f:()=> I('withhold'), v:s=> s.withhold, pv:'in', pvV:pv&&pv.withhold },
-    { k:'natPay', label:'국세 납부할 세액', f:(c,R)=> `${R('decided')}-${R('midterm')}-${R('withhold')}`, v:s=> s.decided - s.midterm - s.withhold, pv:'f', pvF:(R)=> `${R('decided')}-${R('midterm')}-${R('withhold')}` },
-    { k:'local', label:'개인지방소득세', f:(c,R)=> `(${R('calcTax')}-${R('totalCredit')})*0.1`, v:s=> s.localDecided, pv:'f', pvF:(R)=> `ROUNDDOWN(${R('decided')}*0.1,-1)`, note:'결정세액의 10%' },
-    { k:'withholdLocal', label:'지방소득세 기납부세액', f:()=> I('withholdLocal'), v:s=> s.withholdLocal, pv:'in', pvV:pv&&pv.withholdLocal },
-    { k:'rural', label:'농어촌특별세', f:(c,R)=> `${R('empUsed')}*0.2`, v:s=> s.ruralTax, pv:'in', pvV:pv&&pv.rural, note:'통합고용 공제 적용액의 20%' },
-    { k:'totalBurden', label:'총부담세액', f:(c,R)=> `${R('decided')}+${R('local')}+${R('rural')}`, v:s=> s.totalBurden, st:'tot', pv:'f', pvF:(R)=> `${R('decided')}+${R('local')}+${R('rural')}`, note:'소득세 + 지방소득세 + 농특세' },
-    { k:'netPayable', label:'총 납부할 세액', f:(c,R)=> `${R('totalBurden')}-${R('midterm')}-${R('withhold')}-${R('withholdLocal')}`, v:s=> s.netPayable, st:'tot', pv:'f', pvF:(R)=> `${R('totalBurden')}-${R('midterm')}-${R('withhold')}-${R('withholdLocal')}`, note:'기납부세액 차감 후' },
-    { k:'burdenRate', label:'세부담율 (총부담세액 ÷ 종합소득금액)', f:(c,R)=> `IF(${R('incomeTotal')}>0,${R('totalBurden')}/${R('incomeTotal')},0)`, v:s=> s.incomeTotal>0 ? s.totalBurden/s.incomeTotal : 0, nf:XL.pct, pv:'f', pvF:(R)=> `IF(${R('incomeTotal')}>0,${R('totalBurden')}/${R('incomeTotal')},"")` }
-  );
-  const row = {};
-  D.forEach((d,i)=> row[d.k] = r + i);
-  D.forEach(d=>{
-    const rr = row[d.k];
-    const fill = d.st==='tot' ? XL.sec : null, b = d.st==='tot' || d.st==='b';
-    const base = { bd:true, b, fill, nf:d.nf, color: d.detail ? XL.sub : undefined, size: d.detail ? 9 : 10 };
-    xc(ws,'A'+rr, d.label, Object.assign({}, base, { nf:undefined, ind: d.detail ? 2 : 0 }));
-    // 전년(N-1) 열
-    const Rb = k=> `B${row[k]}`;
-    if (pv && d.pv==='in') xc(ws,'B'+rr, (d.pvV==null ? null : d.pvV), Object.assign({}, base, { k:'in', fill:XL.inFill, nf:d.nf||XL.num }));
-    else if (pv && d.pv==='f') xc(ws,'B'+rr, undefined, Object.assign({}, base, { f:d.pvF(Rb), fill:fill||XL.pv }));
-    else xc(ws,'B'+rr, null, Object.assign({}, base, { fill:fill||XL.pv }));
-    sc.forEach((x,i)=>{
-      const c = scCol(i), R = k=> `${c}${row[k]}`;
-      const s = who.pick(x);
-      const val = d.v ? d.v(s, x) : undefined;
-      xc(ws, c+rr, val, Object.assign({}, base, { f: d.f(c, R, i), link: !!d.link }));
-    });
-    xc(ws, noteCol+rr, d.note||'', { color:XL.sub, size:9, wrap:true, bd:true, fill });
-  });
-  const end = r + D.length;
-  xc(ws,'A'+(end+1),`※ 결정세액·중간예납세액·기납부세액·납부할 세액은 추정치입니다. 실제 세액은 ${N+1}년 5월(성실신고확인대상자 6월) 종합소득세 신고 시 확정됩니다.`,{color:XL.sub,size:9});
-  if (who.share==null) ws.views = [{ state:'frozen', xSplit:1, ySplit:0 }];
-  ws.pageSetup = { orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9 };
-  return { row, inRow, D, H, scCol, noteCol };
-}
-
-/* ---------- 3. 공동사업 합계 시트: 구성원 시트의 같은 칸을 더함 ---------- */
-function xlBuildTaxSum(ws, ctx, layout, partnerSheets, results){
-  const { sc } = ctx;
-  const {N, N1} = getYears();
-  const { row, D, H, scCol, noteCol } = layout;
-  ws.columns = [{width:36},{width:16}].concat(sc.map(()=>({width:17}))).concat([{width:44}]);
-  xlTitle(ws, `${N}년 예상 종합소득세 — 공동사업 구성원 합계`, xlHeaderInfo());
-  xc(ws,'A5','■ 구성원 (입력값은 각 구성원 시트에서 수정)',{b:true});
-  partnerSheets.forEach((p,i)=>{
-    xc(ws,'A'+(6+i), p.name, {bd:true,ind:1});
-    xc(ws,'B'+(6+i), p.share, { f:`${xlQ(p.sheet)}!$B$${layout.inRow.share}`, link:true, nf:'0.0%', bd:true });
-    xc(ws,'C'+(6+i), `→ 시트 "${p.sheet}"`, {color:XL.sub,size:9});
-  });
-  xc(ws,'A'+(6+partnerSheets.length),'공동사업: 메인 사업소득금액만 지분율로 안분하고, 타소득·개인 귀속 서브 사업장은 해당 구성원에게만 합산합니다(소득세법 §43).',{color:XL.sub,size:9});
-  for (let i = 8 + partnerSheets.length; i < H - 1; i++) ws.getRow(i).hidden = true;   // 구성원 시트의 입력 블록 자리(합계 시트는 비어 있음) 숨김
-  xlHeadRow(ws, H, ['구분', `${N1}년\n신고 결과(합계)`].concat(sc.map(x=> `${x.key}안${extraHead(x.extra)}`)).concat(['비고']));
-  const ratio = { margin:(c)=> `IF(${c}${row.sales}>0,${c}${row.incomeTotal}/${c}${row.sales},0)`, burdenRate:(c)=> `IF(${c}${row.incomeTotal}>0,${c}${row.totalBurden}/${c}${row.incomeTotal},0)`,
-    bizShare:null, rate:null };
-  D.forEach(d=>{
-    const rr = row[d.k];
-    const fill = d.st==='tot' ? XL.sec : null, b = d.st==='tot' || d.st==='b';
-    const base = { bd:true, b, fill, nf:d.nf, color: d.detail ? XL.sub : undefined, size: d.detail ? 9 : 10 };
-    xc(ws,'A'+rr, d.label, Object.assign({}, base, { nf:undefined, ind: d.detail ? 2 : 0 }));
-    const cols = ['B'].concat(sc.map((x,i)=> scCol(i)));
-    cols.forEach((c, ci)=>{
-      let f, v;
-      if (d.k==='rate' || d.k==='bizShare'){ xc(ws, c+rr, '구성원별', Object.assign({}, base, { h:'right', color:XL.sub, fill: ci===0 ? (fill||XL.pv) : fill })); return; }
-      if (d.k==='extra'){ if (ci===0){ xc(ws,c+rr,null,Object.assign({},base,{fill:fill||XL.pv})); return; } f = `${xlQ(partnerSheets[0].sheet)}!${c}${rr}`; v = sc[ci-1].extra; }
-      else if (ratio[d.k]){ f = ratio[d.k](c); if (ci===0) f = d.k==='margin' ? `IF(B${row.sales}>0,B${row.mainBiz}/B${row.sales},"")` : `IF(B${row.incomeTotal}>0,B${row.totalBurden}/B${row.incomeTotal},"")`; }
-      else f = partnerSheets.map(p=> `N(${xlQ(p.sheet)}!${c}${rr})`).join('+');
-      if (ci>0 && v===undefined && d.v) v = results.reduce((a, rs)=> a + (Number(d.v(rs[ci-1], sc[ci-1]))||0), 0);
-      if (ci>0 && ratio[d.k] && d.v) v = d.v(sc[ci-1].s, sc[ci-1]);
-      xc(ws, c+rr, v, Object.assign({}, base, { f, link: !ratio[d.k], fill: ci===0 ? (fill||XL.pv) : fill }));
-    });
-    xc(ws, noteCol+rr, d.k==='rate' ? '구성원별 세율 적용' : (d.note||''), { color:XL.sub, size:9, wrap:true, bd:true, fill });
-  });
-  ws.pageSetup = { orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9 };
-}
-
-/* ---------- 2. 3개년 비교 ---------- */
-function xlBuildCompare(ws, ctx, taxName, layout, sumVals){
-  const { sc } = ctx;
-  const {N, N1, N2} = getYears();
-  const { row, scCol } = layout;
-  ws.columns = [{width:22},{width:17},{width:17},{width:11},{width:16},{width:15},{width:14},{width:17},{width:34}];
-  xlTitle(ws, `${N2} · ${N1} · ${N}년 비교 (메인 사업장 기준)`, xlHeaderInfo());
-  xlHeadRow(ws, 5, ['구분','매출','사업소득금액\n(메인)','마진율','국세\n(결정세액)','지방소득세','농어촌특별세','실부담 세금\n(국세+지방+농특)','비고']);
-  const val = id=>{ const el=document.getElementById(id); return (el && el.value!=='') ? unfmtMoney(el.value) : null; };
-  const mainSale = y=> (state.years[y] && state.years[y]['Ⅰ. 매출액']) || null;
-  let r = 6;
-  const past = [[N2, 2], [N1, 1]];
-  const pastRows = {};
-  past.forEach(([y,k])=>{
-    const sales = val('pastSales'+k)!==null ? val('pastSales'+k) : mainSale(y);
-    const inc = val('pastIncome'+k), nat = val('pastTax'+k), rural = val('pastRural'+k)||0;
-    xc(ws,'A'+r, `${y}년 (신고)`, {b:true,bd:true});
-    xc(ws,'B'+r, sales, {k:'in',bd:true,nf:XL.num});
-    xc(ws,'C'+r, inc, {k:'in',bd:true,nf:XL.num});
-    xc(ws,'D'+r, (sales>0&&inc!=null)?inc/sales:undefined, {f:`IF(AND(N(B${r})>0,C${r}<>""),C${r}/B${r},"")`,nf:XL.pct,bd:true});
-    xc(ws,'E'+r, nat, {k:'in',bd:true,nf:XL.num});
-    xc(ws,'F'+r, nat==null?undefined:Math.floor(nat*0.1/10)*10, {f:`IF(E${r}="","",ROUNDDOWN(E${r}*0.1,-1))`,bd:true});
-    xc(ws,'G'+r, rural, {k:'in',bd:true,nf:XL.num});
-    xc(ws,'H'+r, nat==null?undefined:natToTotal(nat, rural), {f:`IF(E${r}="","",E${r}+F${r}+G${r})`,b:true,bd:true});
-    xc(ws,'I'+r, coopOn() ? '공동사업: 구성원 합계' : '신고서 기준', {color:XL.sub,size:9,bd:true});
-    pastRows[k] = r++;
-  });
-  const T = xlQ(taxName);
-  const curRows = [];
-  sc.forEach((x,i)=>{
-    const c = scCol(i), s = x.s;
-    xc(ws,'A'+r, `${N}년 ${x.key}안${x.extra?` (${extraLabel(x.extra)})`:''}`, {b:true,bd:true,fill:i===0?XL.sec:null});
-    xc(ws,'B'+r, s.sales, {f:`${T}!${c}${row.sales}`, link:true, bd:true});
-    xc(ws,'C'+r, sumVals ? sumVals.mainBiz[i] : s.mainBizIncome, {f:`${T}!${c}${row.mainBiz}`, link:true, bd:true});
-    xc(ws,'D'+r, undefined, {f:`IF(B${r}>0,C${r}/B${r},"")`, nf:XL.pct, bd:true});
-    xc(ws,'E'+r, s.decided, {f:`${T}!${c}${row.decided}`, link:true, bd:true});
-    xc(ws,'F'+r, s.localDecided, {f:`${T}!${c}${row.local}`, link:true, bd:true});
-    xc(ws,'G'+r, s.ruralTax, {f:`${T}!${c}${row.rural}`, link:true, bd:true});
-    xc(ws,'H'+r, s.totalBurden, {f:`E${r}+F${r}+G${r}`, b:true, bd:true});
-    xc(ws,'I'+r, i===0 ? '연간 추정 그대로' : extraDesc(x.extra), {color:XL.sub,size:9,bd:true,wrap:true});
-    curRows.push(r++);
-  });
-  r += 1;
-  xc(ws,'A'+r,`증감 (${N}년 ①안 − ${N1}년)`,{b:true}); r++;
-  const a = curRows[0], b = pastRows[1];
-  xc(ws,'A'+r,'증감액',{bd:true});
-  ['B','C','E','F','G','H'].forEach(c=> xc(ws,c+r, undefined, {f:`IF(${c}${b}="","",${c}${a}-${c}${b})`, bd:true}));
-  xc(ws,'D'+r, undefined, {f:`IF(OR(D${a}="",D${b}=""),"",D${a}-D${b})`, nf:'+0.0%;-0.0%;0.0%', bd:true});
-  xc(ws,'I'+r,'마진율은 %p 차이',{color:XL.sub,size:9,bd:true});
-  r++;
-  xc(ws,'A'+r,'증감률',{bd:true});
-  ['B','C','E','F','G','H'].forEach(c=> xc(ws,c+r, undefined, {f:`IF(N(${c}${b})=0,"",(${c}${a}-${c}${b})/ABS(${c}${b}))`, nf:'+0.0%;-0.0%;0.0%', bd:true}));
-  r += 2;
-  xc(ws,'A'+r,`※ ${N2}·${N1}년은 신고서 금액(입력값), ${N}년은 3.세액계산 시트의 추정 결과를 연결한 값입니다. 지방소득세 = 국세 × 10% (10원 미만 절사).`,{color:XL.sub,size:9});
-  ws.pageSetup = { orientation:'landscape', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9 };
-}
-
-/* ---------- 실행 ---------- */
-async function exportExcel(){
-  try { await ensureExcelJS(); } catch(e){ alert(e.message); return; }
-  try {
-    renderAll();
-    const sc = buildScenarios();
-    const wb = new ExcelJS.Workbook();
-    wb.creator = '원제우세무사사무소'; wb.created = new Date();
-    wb.calcProperties.fullCalcOnLoad = true;
-    const coop = coopOn();
-    const wsPL = wb.addWorksheet('1.연간추정손익');
-    const wsCmp = wb.addWorksheet('2.3개년비교');
-    const wsTax = wb.addWorksheet(coop ? '3.세액계산(합계)' : '3.세액계산');
-    const partnerWs = coop ? state.coop.partners.map((p,i)=> wb.addWorksheet(`3-${i+1}.세액_${String(p.name||'구성원'+(i+1)).replace(/[\\\/\?\*\[\]:']/g,'').slice(0,20)}`)) : [];
-    const wsRate = wb.addWorksheet('세율표');
-    const rate = xlBuildRateSheet(wsRate);
-    const pl = xlBuildPL(wsPL, sc);
-    const ctx = { sc, pl, plName: wsPL.name, rate };
-    const long = bizLongOn();
-    const subsFor = (pid)=> state.extraBiz.map(b=> ({ name: b.name || '서브 사업장', income: Number(b.income)||0,
-      ratio: pid==null ? 1 : (b.owner===pid ? 1 : ((!b.owner || b.owner==='all') ? (Number((state.coop.partners.find(p=>p.id===pid)||{}).share)||0)/100 : 0)),
-      rate: reductionRateFor(b.bizType, b.bizSize, b.bizRegion, long) }));
-    let layout, sumVals = null;
-    if (!coop){
-      layout = xlBuildTax(wsTax, ctx, { title:'①·②·③안 비교', share:null, get: id=> num(id), other: domOtherSrc(), pv: prevYearCol(), nol: num('nol'), subs: subsFor(null), pick: x=> x.s });
-    } else {
-      const sheets = [], results = [];
-      state.coop.partners.forEach((p,i)=>{
-        const lay = xlBuildTax(partnerWs[i], ctx, { title:`${p.name||'구성원'+(i+1)} (지분 ${p.share}%)`, share:(Number(p.share)||0)/100, get: id=> partnerVal(p,id),
-          other: partnerOtherSrc(p), pv: partnerPrevYear(p), nol: partnerVal(p,'nolP'), subs: subsFor(p.id), pick: x=> x.s.partners[i] });
-        if (!layout) layout = lay;
-        sheets.push({ name: p.name||('구성원'+(i+1)), share:(Number(p.share)||0)/100, sheet: partnerWs[i].name });
-        results.push(sc.map(x=> x.s.partners[i]));
-      });
-      xlBuildTaxSum(wsTax, ctx, layout, sheets, results);   // results[구성원][시나리오]
-      sumVals = { mainBiz: sc.map((x,j)=> results.reduce((a,rs)=> a + rs[j].mainBizIncome, 0)) };
-    }
-    xlBuildCompare(wsCmp, ctx, wsTax.name, layout, sumVals);
-    const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = reportFileBase() + '.xlsx';
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  } catch(e){
-    console.error(e);
-    alert('엑셀 파일을 만드는 중 오류가 발생했습니다: ' + e.message);
-  }
-}
-</script>
-
 </body>
 </html>
