@@ -267,6 +267,9 @@ table.income-matrix input.money-input:disabled{background:#F5F6F4;color:var(--in
 .badge-diligent.yes{background:var(--red-bg);color:var(--red);}
 .badge-diligent.no{background:var(--green-bg);color:var(--green);}
 
+.labor-chk{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--sub);white-space:nowrap;cursor:pointer;}
+.labor-chk input{width:auto;margin:0;}
+
 /* ---------- printable report ---------- */
 #report{
   background:#fff;border:1px solid var(--line);border-radius:var(--radius);
@@ -1589,7 +1592,8 @@ renderExtraBizList();
 ============================================================ */
 const ADJ_SECTIONS = ["Ⅰ. 매출액","Ⅱ. 매출원가","Ⅳ. 판매비와 관리비","Ⅵ. 영업외수익","Ⅶ. 영업외비용"];
 const ASIS_SGA_KEYWORDS = ['상여','잡급','감가상각','무형자산상각','무형고정자산상각'];
-const LABOR_KEYWORDS = ['직원급여','임원급여','급여','상여금','잡급','일용급여','사업소득급여','사업소득인건비','퇴직급여','퇴직금','인건비'];
+const LABOR_KEYWORDS = ['직원급여','임원급여','급여','상여금','잡급','일용급여','사업소득급여','사업소득인건비','사업소득','퇴직급여','퇴직금','인건비'];
+const LABOR_PATTERN = /(급여|인건비|퇴직금|상여금?|사업소득|도우미|프리랜서|외주용역비|용역비)/;
 const INSURANCE_KEYWORDS = ['4대보험','사대보험','사회보험','국민연금','건강보험','장기요양','고용보험','산재보험','고용산재'];
 
 function esc(s){
@@ -1750,6 +1754,7 @@ function renderAdjRow(N, section, it, i, mult){
         oninput="updateAdjItem(${N},'${section}',${i},'delta',unfmtMoney(this.value),true)" ${moneyInputAttrs()}
         onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); deferRender();"></td>
     <td class="num" style="font-weight:700;color:var(--navy);">${won(final)}</td>
+    <td>${section==='Ⅳ. 판매비와 관리비' ? `<label class="labor-chk" title="체크하면 보고서의 인건비 합계에 포함됩니다 (3.3% 사업소득 지급분·외주 인건비 등)"><input type="checkbox" data-k="${section}|${i}|labor" ${(typeof it.labor==='boolean' ? it.labor : isLaborByName(it.name)) ? 'checked' : ''} onchange="updateAdjItem(${N},'${section}',${i},'labor',this.checked)"> 인건비</label>` : ''}</td>
     <td><input type="text" data-k="${section}|${i}|memo" value="${esc(it.memo||'')}" placeholder="비고"
         oninput="updateAdjItem(${N},'${section}',${i},'memo',this.value,true)"></td>
     <td>${it._custom ? `<button type="button" class="small-btn ghost" style="padding:4px 8px;" onclick="removeAdjItem(${N},'${section}',${i})">🗑</button>` : ''}</td>
@@ -1796,10 +1801,10 @@ function renderAdjPanel(){
       <td><button type="button" class="small-btn ghost" style="padding:3px 10px;font-size:11.5px;" onclick="addAdjItem('${section}')">+ 과목 추가</button></td>
       <td class="num">${won(sectionDelta(N, section, mult))}</td>
       <td class="num">${won(sectionTotal(N, section, mult))}</td>
-      <td></td><td></td></tr>`;
+      <td></td><td></td><td></td></tr>`;
   const calcRow = (label, a, f)=> `<tr class="calc">
       <td>${label}</td><td class="num">${won(a)}</td><td></td>
-      <td class="num">${won(f-a)}</td><td class="num">${won(f)}</td><td></td><td></td></tr>`;
+      <td class="num">${won(f-a)}</td><td class="num">${won(f)}</td><td></td><td></td><td></td></tr>`;
   const itemRows = (section)=> adjItems(N, section).map((it,i)=> renderAdjRow(N, section, it, i, mult)).join('');
   const needStock = adjItems(N,'Ⅱ. 매출원가').some(it=> !it._custom && it.mode==='override' && it.sign<0 && !hasOverride(it));
   const needSales = adjItems(N,'Ⅰ. 매출액').some(it=> !it._custom && it.mode==='override' && !hasOverride(it));
@@ -1822,7 +1827,7 @@ function renderAdjPanel(){
     ${warn}
     <div style="overflow-x:auto;">
     <table class="adj-table">
-      <tr><th style="text-align:left;">과목</th><th>실적 (1~${baseMonths}월)</th><th>추정방식</th><th>수정·가감 (±)</th><th>연간 추정 (1~12월)</th><th>비고</th><th></th></tr>
+      <tr><th style="text-align:left;">과목</th><th>실적 (1~${baseMonths}월)</th><th>추정방식</th><th>수정·가감 (±)</th><th>연간 추정 (1~12월)</th><th>인건비</th><th>비고</th><th></th></tr>
       ${secRow('Ⅰ. 매출액')}${itemRows('Ⅰ. 매출액')}
       ${secRow('Ⅱ. 매출원가')}${itemRows('Ⅱ. 매출원가')}
       ${calcRow('Ⅲ. 매출총이익', sum.actual.gross, sum.final.gross)}
@@ -2770,7 +2775,14 @@ function chartConfigScenario(sc){
    보고서 표 1: 과목별 손익 비교 (사무소 엑셀 "보고서" 시트 양식)
    열: N-2 · N-1 확정 / N 실적(기준월) / N ①·②·③ 추정, 각 열 옆에 매출 대비 비율, 맨 끝 비고
 ============================================================ */
-function isLaborItem(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || /(급여|인건비|퇴직금|상여금?)$/.test(n); }
+/* 인건비 판정: 워크시트에서 체크한 값이 있으면 그 값, 없으면 과목명 키워드로 추정 */
+function isLaborByName(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || LABOR_PATTERN.test(n); }
+function isLaborItem(name){
+  const {N} = getYears();
+  const it = (state.adj[N] && state.adj[N]['Ⅳ. 판매비와 관리비'] || []).find(x=> normLabel(x.name)===normLabel(name));
+  if (it && typeof it.labor==='boolean') return it.labor;
+  return isLaborByName(name);
+}
 function isInsuranceItem(name){ const n = normLabel(name); return INSURANCE_KEYWORDS.some(k=> n.includes(k)); }
 
 function buildPLCompare(sc){
