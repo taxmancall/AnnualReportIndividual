@@ -598,6 +598,9 @@ table.rep-table.loan td.num{text-align:right;}
 #toTopBtn.show{opacity:.9;visibility:visible}
 #toTopBtn:hover{opacity:1}
 @media print{#toTopBtn{display:none!important}}
+.lab-kind{margin-top:3px;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.lab-kind select{font-size:10.5px;padding:1px 4px;width:auto;max-width:150px;color:var(--sub);background:#fff!important;border-color:var(--line)!important;}
+.lab-kind .lab-man{font-size:10px;color:#b45309;}
 </style>
 </head>
 <body>
@@ -1162,6 +1165,7 @@ const state = {
   adj: {},         // 연간 추정 워크시트 {year: {섹션명:[{name,cur,mode,sign,blankAs,override,delta,memo}]}}
   confirmed: {},   // {year: {at: Date}} - "연간 추정 확정" 눌렀는지 여부(계산에는 영향 없는 확인용 표식)
   incEstimateDetail: true,  // 보고서에 "연간 추정 손익 산출 내역" 표 포함 여부
+  laborMap: {},             // 판관비 과목별 인건비 구분 수동 지정 {정규화 과목명: wage|daily|biz|retire|ins|none}
   showPct: true             // 보고서 손익 비교표에 매출 대비 비율 열 표시 여부
 };
 let extraBizSeq = 0;
@@ -1746,15 +1750,21 @@ function renderAdjRow(N, section, it, i, mult){
         <option value="override" ${it.mode==='override'?'selected':''}>직접입력 (연간 예상액)</option>
       </select>${overrideField}`;
   }
+  let laborSel = '';
+  if (section === 'Ⅳ. 판매비와 관리비' && it.name){
+    const cur = laborKind(it.name), auto = laborKindAuto(it.name);
+    laborSel = `<div class="lab-kind"><select title="인건비 구분 — 보고서 인건비 합계·검토 항목·증빙(근로/사업/일용) 자동 채우기에 사용" onchange="setLaborKind(${JSON.stringify(it.name).replace(/"/g,'&quot;')}, this.value)">
+      ${Object.entries(LABOR_KIND_LABEL).map(([k,l])=> `<option value="${k}" ${k===cur?'selected':''}>${k===auto?'자동: ':''}${l}</option>`).join('')}
+    </select>${cur!==auto?' <span class="lab-man">수동</span>':''}</div>`;
+  }
   return `<tr>
-    <td style="padding-left:18px;">${nameCell}${signTag}</td>
+    <td style="padding-left:18px;">${nameCell}${signTag}${laborSel}</td>
     <td class="num">${won(it.cur)}</td>
     <td>${modeCell}</td>
     <td><input type="text" inputmode="decimal" class="money-input" data-k="${section}|${i}|delta" value="${(Number(it.delta)||0)!==0?fmtMoney(it.delta):''}" placeholder="0"
         oninput="updateAdjItem(${N},'${section}',${i},'delta',unfmtMoney(this.value),true)" ${moneyInputAttrs()}
         onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); deferRender();"></td>
     <td class="num" style="font-weight:700;color:var(--navy);">${won(final)}</td>
-    <td>${section==='Ⅳ. 판매비와 관리비' ? `<label class="labor-chk" title="체크하면 보고서의 인건비 합계에 포함됩니다 (3.3% 사업소득 지급분·외주 인건비 등)"><input type="checkbox" data-k="${section}|${i}|labor" ${(typeof it.labor==='boolean' ? it.labor : isLaborByName(it.name)) ? 'checked' : ''} onchange="updateAdjItem(${N},'${section}',${i},'labor',this.checked)"> 인건비</label>` : ''}</td>
     <td><input type="text" data-k="${section}|${i}|memo" value="${esc(it.memo||'')}" placeholder="비고"
         oninput="updateAdjItem(${N},'${section}',${i},'memo',this.value,true)"></td>
     <td>${it._custom ? `<button type="button" class="small-btn ghost" style="padding:4px 8px;" onclick="removeAdjItem(${N},'${section}',${i})">🗑</button>` : ''}</td>
@@ -1801,10 +1811,10 @@ function renderAdjPanel(){
       <td><button type="button" class="small-btn ghost" style="padding:3px 10px;font-size:11.5px;" onclick="addAdjItem('${section}')">+ 과목 추가</button></td>
       <td class="num">${won(sectionDelta(N, section, mult))}</td>
       <td class="num">${won(sectionTotal(N, section, mult))}</td>
-      <td></td><td></td><td></td></tr>`;
+      <td></td><td></td></tr>`;
   const calcRow = (label, a, f)=> `<tr class="calc">
       <td>${label}</td><td class="num">${won(a)}</td><td></td>
-      <td class="num">${won(f-a)}</td><td class="num">${won(f)}</td><td></td><td></td><td></td></tr>`;
+      <td class="num">${won(f-a)}</td><td class="num">${won(f)}</td><td></td><td></td></tr>`;
   const itemRows = (section)=> adjItems(N, section).map((it,i)=> renderAdjRow(N, section, it, i, mult)).join('');
   const needStock = adjItems(N,'Ⅱ. 매출원가').some(it=> !it._custom && it.mode==='override' && it.sign<0 && !hasOverride(it));
   const needSales = adjItems(N,'Ⅰ. 매출액').some(it=> !it._custom && it.mode==='override' && !hasOverride(it));
@@ -1827,7 +1837,7 @@ function renderAdjPanel(){
     ${warn}
     <div style="overflow-x:auto;">
     <table class="adj-table">
-      <tr><th style="text-align:left;">과목</th><th>실적 (1~${baseMonths}월)</th><th>추정방식</th><th>수정·가감 (±)</th><th>연간 추정 (1~12월)</th><th>인건비</th><th>비고</th><th></th></tr>
+      <tr><th style="text-align:left;">과목</th><th>실적 (1~${baseMonths}월)</th><th>추정방식</th><th>수정·가감 (±)</th><th>연간 추정 (1~12월)</th><th>비고</th><th></th></tr>
       ${secRow('Ⅰ. 매출액')}${itemRows('Ⅰ. 매출액')}
       ${secRow('Ⅱ. 매출원가')}${itemRows('Ⅱ. 매출원가')}
       ${calcRow('Ⅲ. 매출총이익', sum.actual.gross, sum.final.gross)}
@@ -2775,15 +2785,38 @@ function chartConfigScenario(sc){
    보고서 표 1: 과목별 손익 비교 (사무소 엑셀 "보고서" 시트 양식)
    열: N-2 · N-1 확정 / N 실적(기준월) / N ①·②·③ 추정, 각 열 옆에 매출 대비 비율, 맨 끝 비고
 ============================================================ */
-/* 인건비 판정: 워크시트에서 체크한 값이 있으면 그 값, 없으면 과목명 키워드로 추정 */
-function isLaborByName(name){ const n = normLabel(name); return LABOR_KEYWORDS.some(k=> n===normLabel(k)) || LABOR_PATTERN.test(n); }
-function isLaborItem(name){
-  const {N} = getYears();
-  const it = (state.adj[N] && state.adj[N]['Ⅳ. 판매비와 관리비'] || []).find(x=> normLabel(x.name)===normLabel(name));
-  if (it && typeof it.labor==='boolean') return it.labor;
-  return isLaborByName(name);
+/* 판관비 과목의 인건비 구분: wage(급여·상여) · daily(잡급·일용) · biz(사업소득 3.3% 지급) · retire(퇴직급여) · ins(4대보험 회사부담) · none
+   과목명이 업체마다 달라(사업소득인건비·사업소득·산모도우미수수료·강사료 등) 기본은 과목명으로 자동 판단하고, 워크시트에서 과목별로 바꿀 수 있다(state.laborMap) */
+const LABOR_KIND_LABEL = { wage:'급여·상여', daily:'잡급(일용)', biz:'사업소득(3.3%)', retire:'퇴직급여', ins:'4대보험 회사부담', none:'인건비 아님' };
+const BIZ_PAY_KEYWORDS = ['사업소득','프리랜서','외주','용역비','도우미','강사료','강사비','3.3','원천징수'];
+function laborKindAuto(name){
+  const n = normLabel(name);
+  if (INSURANCE_KEYWORDS.some(k=> n.includes(k))) return 'ins';
+  if (n.includes('퇴직')) return 'retire';
+  if (n.includes('잡급') || n.includes('일용')) return 'daily';
+  if (BIZ_PAY_KEYWORDS.some(k=> n.includes(normLabel(k)))) return 'biz';
+  if (n.includes('연구개발')) return 'wage';   // 경상연구개발비: 연구원 인건비로 분류(사업소득 지급이면 워크시트에서 변경)
+  if (LABOR_KEYWORDS.some(k=> n===normLabel(k)) || /(급여|인건비|퇴직금|상여금?)$/.test(n)) return 'wage';
+  return 'none';
 }
-function isInsuranceItem(name){ const n = normLabel(name); return INSURANCE_KEYWORDS.some(k=> n.includes(k)); }
+function laborKind(name){
+  const k = normLabel(name), m = state.laborMap || {};
+  if (m[k] && LABOR_KIND_LABEL[m[k]]) return m[k];
+  const auto = laborKindAuto(name);
+  // 이전 버전의 '인건비' 체크(it.labor) 값이 저장된 작업파일 호환
+  try { const {N} = getYears(); const it = ((state.adj[N]||{})['Ⅳ. 판매비와 관리비']||[]).find(x=> normLabel(x.name)===k);
+    if (it && typeof it.labor==='boolean'){ if (!it.labor) return 'none'; if (auto==='none') return 'biz'; } } catch(e){}
+  return auto;
+}
+function setLaborKind(name, kind){
+  state.laborMap = state.laborMap || {};
+  const k = normLabel(name);
+  if (!kind || kind===laborKindAuto(name)) delete state.laborMap[k]; else state.laborMap[k] = kind;
+  if (typeof fillLaborFromPL === 'function') fillLaborFromPL(false);
+  renderAll();
+}
+function isLaborItem(name){ return ['wage','daily','biz','retire'].includes(laborKind(name)); }
+function isInsuranceItem(name){ return laborKind(name)==='ins'; }
 
 function buildPLCompare(sc){
   const {N,N1,N2} = getYears();
@@ -3349,9 +3382,10 @@ function laborFromPL(){
   adjItems(N, 'Ⅳ. 판매비와 관리비').forEach(it=>{
     const n = normLabel(it.name), v = (Number(it.cur)||0) * (it.sign||1);
     if (!v) return;
-    if (n.includes('잡급') || n.includes('일용')) r.daily += v;
-    else if (n.includes('사업소득') || n.includes('프리랜서') || n.includes('외주') || n.includes('용역비')) r.biz += v;
-    else if (isLaborItem(n) && !n.includes('퇴직')) r.wage += v;
+    const kd = laborKind(it.name);
+    if (kd==='daily') r.daily += v;
+    else if (kd==='biz') r.biz += v;
+    else if (kd==='wage') r.wage += v;
   });
   return r;
 }
@@ -3460,10 +3494,10 @@ function renderPLReview(sc){
   const nm = (it, ks)=> ks.some(k=> normLabel(it.name).includes(normLabel(k)));
 
   // 1. 인건비
-  const salary = sum(it=> isLaborItem(it.name) && !normLabel(it.name).includes('퇴직') && !normLabel(it.name).includes('잡급'));
-  const retire = sum(it=> normLabel(it.name).includes('퇴직'));
-  const daily = sum(it=> nm(it, ['잡급','일용']));
-  const free = sum(it=> nm(it, ['프리랜서','외주','용역','사업소득지급','사업소득급여']));
+  const salary = sum(it=> laborKind(it.name)==='wage');
+  const retire = sum(it=> laborKind(it.name)==='retire');
+  const daily = sum(it=> laborKind(it.name)==='daily');
+  const free = sum(it=> laborKind(it.name)==='biz');
   const welfareRaw = sum(it=> nm(it, ['복리후생']));
   const welfareIns = Math.min(num('evWelfareIns'), welfareRaw);   // 복리후생비 계정에 분개된 4대보험료 → 보험료로 재분류
   const welfare = welfareRaw - welfareIns;
@@ -3829,7 +3863,7 @@ function saveWork(){
     app:'AnnualReportIndividual', version:WORK_VERSION, savedAt:new Date().toISOString(),
     fields, touched, extraBizSeq,
     state:{ years:state.years, extraBiz:state.extraBiz, rawDetail:state.rawDetail, adj:state.adj,
-            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct, coop:state.coop }
+            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct, coop:state.coop, laborMap:state.laborMap }
   };
   const safe = s=> String(s||'').replace(/[\\/:*?"<>|]/g,'').trim();
   const name = reportFileBase() + '_작업파일.json';
@@ -3862,6 +3896,7 @@ function loadWork(data){
   state.confirmed = st.confirmed || {};
   state.incEstimateDetail = st.incEstimateDetail !== false;
   state.showPct = st.showPct !== false;
+  state.laborMap = st.laborMap || {};
   state.coop = st.coop && Array.isArray(st.coop.partners) ? { on:!!st.coop.on, active:0, partners: st.coop.partners } : { on:false, active:0, partners:[] };
   partnerSeq = Math.max(partnerSeq, ...state.coop.partners.map(p=> parseInt(String(p.id).replace(/\D/g,''),10)||0), 0);
   extraBizSeq = Math.max(parseInt(data.extraBizSeq,10)||0, ...state.extraBiz.map(b=> parseInt(String(b.id).replace(/\D/g,''),10)||0), 0);
