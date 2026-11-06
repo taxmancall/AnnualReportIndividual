@@ -250,6 +250,8 @@ table.income-matrix thead th{background:#F1ECDD;color:var(--navy);text-align:cen
 table.income-matrix tbody th{background:#F1ECDD;color:var(--navy);text-align:left;width:112px;font-weight:700;}
 table.income-matrix td.auto{background:#F5F6F4;color:var(--ink);}
 table.income-matrix td.dim{color:var(--sub);text-align:center;}
+table.income-matrix textarea.exp-memo{width:100%;min-height:62px;box-sizing:border-box;resize:vertical;font:inherit;font-size:11.5px;line-height:1.5;padding:5px 6px;margin:0;text-align:left;border:1px solid #E3D39A;border-radius:6px;background:#FFFBE6;}
+table.income-matrix textarea.exp-memo:focus{outline:none;background:#FFF6CC;border-color:var(--brass);}
 table.income-matrix input.money-input{width:100%;box-sizing:border-box;text-align:right;font-size:12.5px;padding:6px 7px;margin:0;}
 table.income-matrix tr.im-total th,table.income-matrix tr.im-total td{background:#E8EEF4;color:var(--navy);font-weight:700;}
 .im-rate{margin-top:4px;font-size:11px;color:var(--sub);text-align:right;}
@@ -829,6 +831,10 @@ table.rep-table.loan td.num{text-align:right;}
           <td class="auto" id="imPenExp">0</td>
           <td><input type="text" inputmode="decimal" class="money-input" id="otherIncomeExpense" value="0" disabled><label class="im-rate"><input type="checkbox" id="otherExpAuto" checked> 필요경비율 <input type="number" id="otherIncomeExpenseRate" value="60" min="0" max="100">% 적용 <span class="im-sub">(해제 시 금액 직접입력)</span></label></td>
           <td class="auto dim">-</td></tr>
+        <tr id="imRowMemo"><th>경비 메모<br><small>(서브·타소득 경비 내역)</small></th>
+          <td class="auto dim">-</td>
+          <td><textarea class="exp-memo" id="rentalExpenseMemo" placeholder="예) 재산세·수선비·관리비·대출이자 등 경비 내역, 증빙 상태"></textarea></td>
+          <td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
         <tr id="imRowInc"><th>소득금액</th>
           <td class="auto" id="imBizInc">0</td>
           <td class="auto" id="imRentInc">0</td>
@@ -1607,6 +1613,7 @@ function renderExtraBizList(){
     imRowHead: list.map((b,i)=> `<th class="sub-col">사업소득<br>(서브${i+1})<div class="im-subhead"><input type="text" class="im-name" value="${escAttr(b.name)}" placeholder="상호" oninput="updateExtraBiz('${b.id}','name',this.value,true)"><button type="button" class="im-x" onclick="removeExtraBiz('${b.id}')" title="이 사업소득 삭제">×</button></div></th>`),
     imRowRev: list.map(b=> `<td class="sub-col">${money(b.id,'sales',b.sales)}</td>`),
     imRowExp: list.map(b=> `<td class="sub-col">${money(b.id,'expense',b.expense)}</td>`),
+    imRowMemo: list.map(b=> `<td class="sub-col"><textarea class="exp-memo" placeholder="경비 내역·특이사항" onchange="updateExtraBiz('${b.id}','memo',this.value)">${esc(b.memo||'')}</textarea></td>`),
     imRowInc: list.map(b=> `<td class="sub-col auto" id="xbInc_${b.id}">${won(b.income)}</td>`),
     imRowSum: list.map(b=> `<td class="sub-col" id="xbSum_${b.id}">${won(b.income)}</td>`),
     imRowDil: list.map(b=> `<td class="sub-col im-set"><select onchange="updateExtraBiz('${b.id}','dilCat',Number(this.value))"><option value="1500000000" ${b.dilCat===1500000000?'selected':''}>1호 · 15억원</option><option value="750000000" ${b.dilCat===750000000?'selected':''}>2호 · 7.5억원</option><option value="500000000" ${b.dilCat===500000000?'selected':''}>3호 · 5억원</option></select></td>`),
@@ -1618,6 +1625,7 @@ function renderExtraBizList(){
   });
 }
 renderExtraBizList();
+document.getElementById('rentalExpenseMemo').addEventListener('change', ()=> renderAll());
 
 /* ============================================================
    4-1. 연간 추정 워크시트 (실적 → 수정·가감 → 연간 추정)
@@ -3709,9 +3717,9 @@ function renderReport(sc){
   document.getElementById('incomeTable').innerHTML = `
     <tr><th>소득 구분</th><th>금액</th><th>비고</th></tr>
     <tr><td>사업소득금액(메인 사업장)</td><td>${won(s1.mainBizIncome)}</td><td>연간 추정 손익 + 세무조정 - 이월결손금</td></tr>
-    <tr><td>사업소득금액(추가 사업장 ${state.extraBiz.length}곳)</td><td>${won(s1.extraBizIncomeTotal)}</td><td>직접입력</td></tr>
+    <tr><td>사업소득금액(추가 사업장 ${state.extraBiz.length}곳)</td><td>${won(s1.extraBizIncomeTotal)}</td><td>직접입력${state.extraBiz.filter(b=> (b.memo||'').trim()).map(b=> '<br><span style="white-space:pre-wrap">'+esc((b.name||'서브 사업장')+' 경비 메모: '+b.memo.trim())+'</span>').join('')}</td></tr>
     <tr class="strong"><td>사업소득금액 합계</td><td>${won(s1.bizIncomeTotal)}</td><td></td></tr>
-    ${s1.rentalGross||s1.rentalExpense ? `<tr><td>임대소득금액</td><td>${won(s1.rentalIncome)}</td><td>총수입 ${won(s1.rentalGross)}원 - 필요경비 ${won(s1.rentalExpense)}원${s1.rentalIncomeRaw<0?' (결손금은 통산 불가, 0원 합산)':''}</td></tr>` : ''}
+    ${s1.rentalGross||s1.rentalExpense ? `<tr><td>임대소득금액</td><td>${won(s1.rentalIncome)}</td><td>총수입 ${won(s1.rentalGross)}원 - 필요경비 ${won(s1.rentalExpense)}원${s1.rentalIncomeRaw<0?' (결손금은 통산 불가, 0원 합산)':''}${(document.getElementById('rentalExpenseMemo').value||'').trim() ? '<br><span style="white-space:pre-wrap">경비 메모: '+esc(document.getElementById('rentalExpenseMemo').value.trim())+'</span>' : ''}</td></tr>` : ''}
     <tr><td>근로소득금액</td><td>${won(s1.wageIncome)}</td><td>총급여 ${won(s1.wageGross)}원 - 근로소득공제 ${won(s1.wageDeduction)}원</td></tr>
     <tr><td>연금소득금액</td><td>${won(s1.pensionIncome)}</td><td>총연금액 ${won(s1.pensionGross)}원 - 연금소득공제 ${won(s1.pensionDeductionAmt)}원</td></tr>
     <tr><td>기타소득금액(종합과세분)</td><td>${won(s1.otherIncomeIncluded)}</td><td>${s1.otherIncomeAmt>s1.otherIncomeIncluded?'분리과세 선택(300만원 이하)':'-'}</td></tr>
