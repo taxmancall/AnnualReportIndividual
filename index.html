@@ -638,6 +638,20 @@ table.rep-table.loan td.num{text-align:right;}
 .scenario-box input[type=text]{background:#fff!important;border:1.5px solid #2660A0!important;font-weight:700;font-size:14px;}
 .scenario-box input[type=text]:focus{box-shadow:0 0 0 3px rgba(38,96,160,.2)!important;}
 .rep-table th .thsub{display:inline-block;font-size:11px;font-weight:400;opacity:.85;white-space:nowrap;}
+.sub-extra-title{font-weight:700;color:#1B4A80;font-size:12.5px;margin:12px 0 6px;}
+.sub-extra-tbl{border-collapse:collapse;width:100%;font-size:12.5px;}
+.sub-extra-tbl th,.sub-extra-tbl td{border:1px solid #C9D9EC;padding:5px 8px;}
+.sub-extra-tbl th{background:#D6E5F5;color:#1B4A80;}
+.sub-extra-tbl input{width:100%;box-sizing:border-box;text-align:right;}
+table.site-rate tr.site-head td{background:#E8EEF4;color:var(--navy);font-weight:700;text-align:left!important;}
+table.site-rate tr.site-total td{background:#F1ECDD;}
+table.site-rate td.ev-over{color:#9E3B33;font-weight:700;background:#F7EAE8;}
+table.site-rate td.ev-ok{color:#2E6B4F;}
+table.site-rate .ev-flag{font-size:10.5px;font-weight:700;}
+table.site-rate .ev-flag.dimf{font-weight:400;color:var(--sub);}
+table.site-rate.compact{font-size:12px;background:#fff;}
+table.site-rate td.dim{color:var(--sub);font-size:11px;}
+#repSiteRate table.site-rate{break-inside:auto;}
 </style>
 </head>
 <body>
@@ -859,6 +873,8 @@ table.rep-table.loan td.num{text-align:right;}
           <td><textarea class="exp-memo" id="pensionMemo" placeholder="연금소득 메모"></textarea></td>
           <td><textarea class="exp-memo" id="otherIncomeMemo" placeholder="기타소득 메모 (소득 종류·필요경비 근거)"></textarea></td>
           <td><textarea class="exp-memo" id="finIncomeMemo" placeholder="금융소득 메모 (이자·배당 출처 등)"></textarea></td></tr>
+        <tr id="imRowEv"><th>적격증빙 합계<br><small>(연간 · 증빙불요 경비 포함)</small></th>
+          <td class="auto" id="imBizEv" title="STEP 2-1 증빙 집계(기준일까지)를 연환산">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td><td class="dim">-</td></tr>
         <tr id="imRowInc"><th>소득금액</th>
           <td class="auto" id="imBizInc">0</td>
           <td class="auto" id="imRentInc">0</td>
@@ -975,7 +991,9 @@ table.rep-table.loan td.num{text-align:right;}
         <div class="field"><label>②안 경비 조정액 (+ 추가 집행 / − 감축)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense" value="0"></div>
         <div class="field"><label>③안 경비 조정액 (0이면 ③안 생략)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense3" value="0"></div>
       </div>
+      <div id="subExtraWrap"></div>
       <div style="font-size:12px;color:var(--sub);margin-top:6px;">①안은 워크시트의 연간 추정 손익 그대로입니다. 경비가 과다해 줄여 신고할 계획이면 음수(예: -40,000,000)로 넣으세요. 예) 설비 추가 구입, 인건비 추가 지급, 광고비 집행 등 연말까지 추가로 쓸 계획인 총 금액</div>
+      <div id="siteRateLive" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -1081,6 +1099,8 @@ table.rep-table.loan td.num{text-align:right;}
       <h2 class="c-teal"><span class="h2-badge">🧾</span>2. <span class="yN">N</span>년 소득금액 구성</h2>
       <table class="rep-table" id="incomeTable"></table>
     </div>
+
+    <div class="rep-section" id="repSiteRate"></div>
 
     <div class="rep-section">
       <h2 class="c-amber"><span class="h2-badge">🧮</span>3. <span class="yN">N</span>년 예상 종합소득세 - ①안(연간 추정) vs ②·③안(부족경비 반영)</h2>
@@ -1641,6 +1661,7 @@ function renderExtraBizList(){
     imRowRev: list.map(b=> `<td class="sub-col">${money(b.id,'sales',b.sales)}</td>`),
     imRowExp: list.map(b=> `<td class="sub-col">${money(b.id,'expense',b.expense)}</td>`),
     imRowMemo: list.map(b=> `<td class="sub-col"><textarea class="exp-memo" placeholder="경비 내역·특이사항" onchange="updateExtraBiz('${b.id}','memo',this.value)">${esc(b.memo||'')}</textarea></td>`),
+    imRowEv: list.map(b=> `<td class="sub-col"><input type="text" inputmode="decimal" class="money-input" value="${b.evQual?fmtMoney(b.evQual):''}" placeholder="세금계산서·카드·인건비 등" oninput="updateExtraBiz('${b.id}','evQual',unfmtMoney(this.value),true)" onfocus="xbFocus(this)" onblur="xbBlur(this); renderAll();"></td>`),
     imRowInc: list.map(b=> `<td class="sub-col auto" id="xbInc_${b.id}">${won(b.income)}</td>`),
     imRowSum: list.map(b=> `<td class="sub-col" id="xbSum_${b.id}">${won(b.income)}</td>`),
     imRowDil: list.map(b=> `<td class="sub-col im-set"><select onchange="updateExtraBiz('${b.id}','dilCat',Number(this.value))"><option value="1500000000" ${b.dilCat===1500000000?'selected':''}>1호 · 15억원</option><option value="750000000" ${b.dilCat===750000000?'selected':''}>2호 · 7.5억원</option><option value="500000000" ${b.dilCat===500000000?'selected':''}>3호 · 5억원</option></select></td>`),
@@ -1650,6 +1671,17 @@ function renderExtraBizList(){
     const row = document.getElementById(rid);
     if (row && row.cells[1]) row.cells[1].insertAdjacentHTML('afterend', cells[rid].join(''));
   });
+  renderSubExtraInputs();
+}
+/* 경비 조정 시나리오 박스: 서브 사업장별 ②·③안 추가경비 입력 */
+function renderSubExtraInputs(){
+  const w = document.getElementById('subExtraWrap'); if (!w) return;
+  const list = state.extraBiz;
+  if (!list.length){ w.innerHTML = ''; return; }
+  const inp = (b,k)=> `<input type="text" inputmode="decimal" class="money-input" value="${b['extra'+k]?fmtMoney(b['extra'+k]):'0'}" oninput="updateExtraBiz('${b.id}','extra${k}',unfmtMoney(this.value),true)" onfocus="xbFocus(this)" onblur="xbBlur(this); renderAll();">`;
+  w.innerHTML = `<div class="sub-extra-title">서브 사업장 경비 조정 (사업장별 · + 추가 집행 / − 감축)</div>
+    <table class="sub-extra-tbl"><tr><th>사업장</th><th>②안 경비 조정액</th><th>③안 경비 조정액</th></tr>
+    ${list.map((b,i)=> `<tr><td>서브${i+1} ${escAttr(b.name||'')}</td><td>${inp(b,2)}</td><td>${inp(b,3)}</td></tr>`).join('')}</table>`;
 }
 renderExtraBizList();
 ['bizMainMemo','rentalExpenseMemo','wageMemo','pensionMemo','otherIncomeMemo','finIncomeMemo'].forEach(id=> document.getElementById(id).addEventListener('change', ()=> renderAll()));
@@ -2113,7 +2145,8 @@ function computeIncome(extraExpense, opts){
 
   // 추가 사업장(서브): 단독이면 전부, 공동이면 opts.extraBizFilter로 지정된 것만
   const ebFilter = opts.extraBizFilter || (()=> true);
-  const extraBizIncomes = state.extraBiz.map(b=> ebFilter(b) ? (Number(b.income)||0) : 0);
+  // 서브 사업장: 시나리오(②·③안)별 추가경비를 사업장마다 반영 (CUR_SCN: 1=①, 2=②, 3=③)
+  const extraBizIncomes = state.extraBiz.map(b=> ebFilter(b) ? (Number(b.income)||0) - subExtra(b, CUR_SCN) : 0);
   const extraBizIncomeTotal = extraBizIncomes.reduce((s,v)=> s+v, 0);
   const extraBizSalesTotal = state.extraBiz.reduce((s,b)=> s + (ebFilter(b) ? (Number(b.sales)||0) : 0), 0);
   const bizIncomeTotal = mainBizIncome + extraBizIncomeTotal;
@@ -2474,13 +2507,20 @@ function extraHead(extra){ return extra===0 ? '' : (extra<0 ? ` (경비 감축 $
 /* 표 머리글용: 안 번호 아래 줄에 작은 글씨로 경비 조정액 */
 function extraHeadHtml(extra){ return extra===0 ? '' : `<br><span class="thsub">${extra<0 ? '경비 감축 '+won(-extra) : '부족경비 '+won(extra)}</span>`; }
 /* 시나리오 목록: ① 연간 추정 그대로 / ② 경비 조정 반영 / ③ 경비 조정 반영(금액이 있을 때만) — 음수면 경비 감축 */
+/* 서브 사업장 시나리오 추가경비 (②·③안, + 추가 집행 / − 감축) */
+let CUR_SCN = 1;
+function subExtra(b, k){ return k>1 ? (Number(b['extra'+k])||0) : 0; }
+function subExtraTotal(k){ return state.extraBiz.reduce((a,b)=> a + subExtra(b,k), 0); }
+function scnAt(k, fn){ const prev = CUR_SCN; CUR_SCN = k; try { return fn(); } finally { CUR_SCN = prev; } }
 function buildScenarios(){
   const e2 = num('extraExpense'), e3 = num('extraExpense3');
+  // 안별 경비 조정액(표시용) = 메인 + 서브 사업장 합계
+  const t2 = e2 + subExtraTotal(2), t3 = e3 + subExtraTotal(3);
   const list = [
-    { key:'①', cls:'s1', extra:0, title:'①안 · 연간 추정 그대로', desc:'워크시트의 연간 추정 손익 기준', s: computeScenario(0) },
-    { key:'②', cls:'s2', extra:e2, title:`②안 · ${extraLabel(e2)} 반영`, desc:extraDesc(e2), s: computeScenario(e2) }
+    { key:'①', cls:'s1', extra:0, title:'①안 · 연간 추정 그대로', desc:'워크시트의 연간 추정 손익 기준', s: scnAt(1, ()=> computeScenario(0)) },
+    { key:'②', cls:'s2', extra:t2, mainExtra:e2, title:`②안 · ${extraLabel(t2)} 반영`, desc:extraDesc(t2), s: scnAt(2, ()=> computeScenario(e2)) }
   ];
-  if (e3!==0) list.push({ key:'③', cls:'s3', extra:e3, title:`③안 · ${extraLabel(e3)} 반영`, desc:extraDesc(e3), s: computeScenario(e3) });
+  if (e3!==0 || state.extraBiz.some(b=> subExtra(b,3)!==0)) list.push({ key:'③', cls:'s3', extra:t3, mainExtra:e3, title:`③안 · ${extraLabel(t3)} 반영`, desc:extraDesc(t3), s: scnAt(3, ()=> computeScenario(e3)) });
   return list;
 }
 
@@ -2542,10 +2582,76 @@ function renderAll(){
     renderSavings(sc);
     renderCharts(sc);
     renderReport(sc);
+    renderSiteRate(sc);
     renderMemoReport();
   } catch(e){
     console.warn('renderAll 중 오류(입력값 처리에는 영향 없음):', e);
   }
+}
+
+
+/* ============================================================
+   사업장별 소득률 · 증빙 없는 경비 점검 (메인 + 서브, 안별 + 합계)
+   - 소득률 = 소득금액(매출 − 경비) ÷ 매출, 경비에는 안별 경비 조정액 포함
+   - 증빙 없는 경비 = 신고 경비 − (적격증빙 + 증빙불요 경비). 메인은 STEP 2-1 집계(기준일까지)를 연환산,
+     서브는 STEP 3 '적격증빙 합계(연간)' 입력값. 추가 집행(+)은 증빙을 갖춰 쓴다고 보고, 감축(−)은 증빙 없는 경비에서 뺀다
+   - 개인 종합소득세 신고 시 중점 점검: 증빙 없는 경비 5천만원 미만
+============================================================ */
+const EV_GAP_LIMIT = 50000000;
+function siteRateData(sc){
+  const mult = adjMult();
+  let e = null; try { e = evidenceStats(); } catch(err){}
+  const mainGapBase = (e && e.entered) ? Math.max(e.other, 0) * mult : null;
+  const mainQual = (e && e.entered) ? (e.qualified + e.nonEv) * mult : null;
+  const sites = [];
+  sites.push({ name: `메인 사업장${document.getElementById('bizName').value ? ' · '+document.getElementById('bizName').value : ''}`, main:true, qual: mainQual,
+    cols: sc.map((x,i)=>{ const ex = i===0 ? 0 : (x.mainExtra!=null ? x.mainExtra : x.extra); const sales = x.s.sales, inc = x.s.pretax, exp = sales - inc;
+      return { sales, extra: ex, exp, inc, rate: sales>0 ? inc/sales : null, gap: mainGapBase==null ? null : Math.max(mainGapBase + Math.min(ex,0), 0) }; }) });
+  state.extraBiz.forEach((b,bi)=>{
+    const q = Number(b.evQual)||0;
+    sites.push({ name: `서브${bi+1}${b.name ? ' · '+b.name : ''}`, qual: q || null,
+      cols: sc.map((x,i)=>{ const k = i===0 ? 1 : (x.key==='②' ? 2 : 3); const ex = subExtra(b,k); const sales = Number(b.sales)||0, exp = (Number(b.expense)||0) + ex, inc = (Number(b.income)||0) - ex;
+        return { sales, extra: ex, exp, inc, rate: sales>0 ? inc/sales : null, gap: q ? Math.max((Number(b.expense)||0) - q + Math.min(ex,0), 0) : null }; }) });
+  });
+  const total = { name:'합계 (전 사업장)', total:true, cols: sc.map((x,i)=>{
+    const c = sites.map(st=> st.cols[i]); const sales = c.reduce((a,v)=> a+v.sales,0), inc = c.reduce((a,v)=> a+v.inc,0);
+    const gaps = c.filter(v=> v.gap!=null);
+    return { sales, extra: c.reduce((a,v)=> a+v.extra,0), exp: c.reduce((a,v)=> a+v.exp,0), inc, rate: sales>0 ? inc/sales : null, gap: gaps.length ? gaps.reduce((a,v)=> a+v.gap,0) : null, gapPartial: gaps.length < c.length }; }) };
+  return { sites, total };
+}
+function siteRateTable(sc, compact){
+  const d = siteRateData(sc);
+  const pct = v=> v==null ? '-' : (v*100).toFixed(1)+'%';
+  const gapCell = (v, partial)=> v==null ? '<td class="dim">증빙 미입력</td>' : `<td class="${v>=EV_GAP_LIMIT?'ev-over':'ev-ok'}">${won(v)}${v>=EV_GAP_LIMIT?'<br><span class="ev-flag">⚠ 5천만원 이상</span>':''}${partial?'<br><span class="ev-flag dimf">(입력된 사업장만)</span>':''}</td>`;
+  const head = `<thead><tr><th>구분</th>${sc.map(x=> `<th>${x.key}안</th>`).join('')}${compact?'':'<th style="text-align:left;">비고</th>'}</tr></thead>`;
+  const block = (st)=>{
+    const rows = [
+      ['매출', c=> won(c.sales), ''],
+      ['경비 조정액 (+추가 / −감축)', c=> c.extra ? (c.extra>0?'+':'')+won(c.extra) : '-', '안별 추가 집행 또는 감축 계획'],
+      ['경비', c=> won(c.exp), st.total ? '전 사업장 합계' : st.main ? '매출원가 + 판관비 − 영업외손익 (연간 추정)' : '필요경비 (조정액 포함)'],
+      ['소득금액', c=> won(c.inc), st.total ? '전 사업장 합계' : st.main ? '당기순이익 (세무조정 전)' : '총수입 − 필요경비'],
+    ];
+    let h = `<tr class="site-head${st.total?' site-total':''}"><td colspan="${sc.length+(compact?1:2)}">${esc(st.name)}</td></tr>`;
+    h += rows.map(([l,f,n])=> `<tr><td>${l}</td>${st.cols.map(c=> `<td>${f(c)}</td>`).join('')}${compact?'':`<td class="memo">${n}</td>`}</tr>`).join('');
+    h += `<tr class="strong"><td>소득률 (소득금액 ÷ 매출)</td>${st.cols.map(c=> `<td>${pct(c.rate)}</td>`).join('')}${compact?'':`<td class="memo">${st.total?'합산 소득률 — 신고 시 업종 평균과 비교되는 기준':'사업장별 소득률'}</td>`}</tr>`;
+    h += `<tr><td>증빙 없는 경비</td>${st.cols.map(c=> gapCell(c.gap, c.gapPartial)).join('')}${compact?'':`<td class="memo">${st.total ? '전 사업장 합계 · 5천만원 미만 관리' : st.main ? '신고 경비 − 적격증빙 − 증빙불요 (STEP 2-1 연환산)' : '필요경비 − 적격증빙 합계 (STEP 3 입력)'}</td>`}</tr>`;
+    return h;
+  };
+  return `<table class="rep-table site-rate${compact?' compact':''}">${head}<tbody>${d.sites.map(block).join('')}${d.sites.length>1 ? block(d.total) : ''}</tbody></table>`;
+}
+function renderSiteRate(sc){
+  const live = document.getElementById('siteRateLive');
+  const multi = state.extraBiz.length > 0;
+  if (live) live.innerHTML = `<div class="sub-extra-title">사업장별 소득률 · 증빙 없는 경비 (실시간)</div>` + siteRateTable(sc, true);
+  const sec = document.getElementById('repSiteRate'); if (!sec) return;
+  const {N} = getYears();
+  const d = siteRateData(sc);
+  const t1 = d.total.cols[0];
+  const coopNote = coopOn() ? ` 공동사업(${state.coop.partners.map(p=> `${p.name||'-'} ${p.share}%`).join(' · ')})은 사업장 전체 금액 기준이며, 구성원별 소득은 지분율로 나뉩니다.` : '';
+  sec.innerHTML = `<h2 class="c-teal"><span class="h2-badge">📏</span>2-1. ${multi ? '사업장별 소득률과 합계' : '소득률'} · 증빙 없는 경비 점검</h2>
+    ${siteRateTable(sc, false)}
+    <div class="rep-narrative">${multi ? `사업장을 합친 소득률은 ①안 <b>${t1.rate==null?'-':(t1.rate*100).toFixed(1)+'%'}</b>입니다. 사업장마다 경비 구조가 달라 소득률이 차이 나더라도, 신고는 합계 기준으로 업종 평균과 비교되므로 합산 소득률을 함께 관리합니다.` : `①안 소득률은 <b>${t1.rate==null?'-':(t1.rate*100).toFixed(1)+'%'}</b>입니다.`}
+      종합소득세 신고 때는 <b>소득률</b>과 <b>적격증빙으로 확인되지 않는 경비(5천만원 미만 관리)</b>를 중점으로 봅니다. 추가 집행하는 경비는 세금계산서·카드·현금영수증 등 적격증빙으로 받아 주세요.${coopNote}</div>`;
 }
 
 /* STEP 3 (공동): 구성원별 타소득 입력표 — 임대·근로·연금·기타·금융은 지분 안분이 아니라 귀속자 개인 소득 */
@@ -4202,7 +4308,7 @@ function xlBuildPL(ws, sc){
   r += 1;
   xc(ws,'A'+r,'경비 조정 시나리오 (메인 사업장 판관비에 가감)',{b:true}); r++;
   const e2 = num('extraExpense'), e3 = num('extraExpense3');
-  [['①안 (연간 추정 그대로)',0,false],['②안 경비 조정액 (+ 부족경비 / − 감축)',e2,true],['③안 경비 조정액 (+ 부족경비 / − 감축)',e3,true]].forEach(([lab,v,inp],i)=>{
+  [['①안 (연간 추정 그대로)',0,false],['②안 메인 경비 조정액 (+ 부족경비 / − 감축)',e2,true],['③안 메인 경비 조정액 (+ 부족경비 / − 감축)',e3,true]].forEach(([lab,v,inp],i)=>{
     xc(ws,'A'+r,lab,{bd:true}); xc(ws,'B'+r,v, inp ? {k:'in',bd:true} : {bd:true}); rows['extra'+(i+1)] = r++;
   });
   r += 1;
@@ -4247,7 +4353,9 @@ function xlBuildTax(ws, ctx, who){
     xc(ws,'B'+r,b.income,{k:'in',bd:true});
     xc(ws,'C'+r,b.ratio,{k:'in',bd:true,nf:'0.0%'});
     xc(ws,'D'+r,b.rate,{k:'in',bd:true,nf:'0.0%'});
-    xc(ws,'E'+r,'← 사업소득금액(전체) · 귀속비율 · 감면율',{color:XL.sub,size:9});
+    xc(ws,'E'+r,b.extra2||0,{k:'in',bd:true});
+    xc(ws,'F'+r,b.extra3||0,{k:'in',bd:true});
+    xc(ws,'G'+r,'← 사업소득금액(전체) · 귀속비율 · 감면율 · ②안 경비 조정 · ③안 경비 조정',{color:XL.sub,size:9});
     inRow['sub'+i] = r++;
   });
   const subEnd = r - 1;
@@ -4282,13 +4390,15 @@ function xlBuildTax(ws, ctx, who){
   const T  = x=> `IF(${x}<=0,0,${x}*VLOOKUP(${x},${rate.range},2,TRUE)-VLOOKUP(${x},${rate.range},3,TRUE))`;
   const TF = x=> `IF(${I('fin')}>20000000,MAX(${T(x)},2800000+${T(`MAX(${x}-20000000,0)`)}),${T(x)})`;
   const sh = who.share!=null ? `*${I('share')}` : '';
-  const subInc = subs.length ? `SUMPRODUCT($B$${subStart}:$B$${subEnd},$C$${subStart}:$C$${subEnd})` : '0';
-  const subRed = subs.length ? `SUMPRODUCT(($B$${subStart}:$B$${subEnd}*$C$${subStart}:$C$${subEnd}>0)*$B$${subStart}:$B$${subEnd}*$C$${subStart}:$C$${subEnd}*$D$${subStart}:$D$${subEnd})` : '0';
+  // 서브 사업장 소득(안별): ①=B, ②=B−E, ③=B−F (경비 조정 반영) × 귀속비율
+  const subIncCol = i=>{ const x = sc[i]; const ex = (i===0 || !x) ? '' : (x.key==='②' ? 'E' : 'F'); return ex ? `($B$${subStart}:$B$${subEnd}-$${ex}$${subStart}:$${ex}$${subEnd})` : `$B$${subStart}:$B$${subEnd}`; };
+  const subIncF = i=> subs.length ? `SUMPRODUCT(${subIncCol(i)},$C$${subStart}:$C$${subEnd})` : '0';
+  const subRedF = i=> subs.length ? `SUMPRODUCT((${subIncCol(i)}*$C$${subStart}:$C$${subEnd}>0)*${subIncCol(i)}*$C$${subStart}:$C$${subEnd}*$D$${subStart}:$D$${subEnd})` : '0';
   const gw = I('wageGross'), gp = I('pensionGross');
   const pv = who.pv;
   /* 행 정의: k, 라벨, f(c, R) 수식, v(s) 캐시값, 스타일, pvF/pvV(전년 열), note */
   const D = [
-    { k:'extra', label:'경비 조정액 (부족경비 + / 감축 −)', f:(c,R,i)=> `${xlQ(plName)}!$B$${pl['extra'+(i+1)]}`, link:true, v:(s,x)=> x.extra, note:'1.연간추정손익 시트의 시나리오 입력' },
+    { k:'extra', label:'메인 경비 조정액 (부족경비 + / 감축 −)', f:(c,R,i)=> `${xlQ(plName)}!$B$${pl['extra'+(i+1)]}`, link:true, v:(s,x)=> (x.mainExtra!=null ? x.mainExtra : x.extra), note:'메인 사업장 경비 조정 (1.연간추정손익 시트) — 서브 사업장 조정은 위 입력값 E·F열' },
     { k:'sales', label:'매출 (메인 사업장)', f:(c)=> `${L('sales')}${sh}`, link:true, v:s=> s.sales, pv:'in', pvV:pv&&pv.sales, note: who.share!=null?'사업장 매출 × 지분율':'연간 추정 매출' },
     { k:'cogs', label:'매출원가', f:(c)=> `${L('cogs')}${sh}`, link:true, v:s=> s.cogs, detail:true },
     { k:'sga', label:'판매비와 관리비 (경비 조정 포함)', f:(c,R)=> `(${L('sga')}+${R('extra')})${sh}`, v:s=> s.sga, detail:true },
@@ -4296,9 +4406,9 @@ function xlBuildTax(ws, ctx, who){
     { k:'pretax', label:'당기순이익 (메인 사업장)', f:(c,R)=> `${R('sales')}-${R('cogs')}-${R('sga')}+${R('nonop')}`, v:s=> s.pretax, st:'b' },
     { k:'expense', label:'경비 (매출 − 당기순이익)', f:(c,R)=> `${R('sales')}-${R('pretax')}`, v:s=> s.sales - s.pretax, detail:true },
     { k:'adj', label:'세무조정 (가산 − 차감)', f:(c)=> `(${L('adjIn')}-${L('adjOut')})${sh}`, link:true, v:s=> (s.adjIn||0) - (s.adjOut||0) },
-    { k:'nol', label:'이월결손금 공제', f:(c,R)=> who.share!=null ? `MIN(MAX(${I('nol')},0),MAX(${R('pretax')}+${R('adj')}+${subInc},0))` : `${I('nol')}`, v:s=> s.nol||0, pv:'in', pvV:pv&&pv.nol },
+    { k:'nol', label:'이월결손금 공제', f:(c,R,i)=> who.share!=null ? `MIN(MAX(${I('nol')},0),MAX(${R('pretax')}+${R('adj')}+${subIncF(i)},0))` : `${I('nol')}`, v:s=> s.nol||0, pv:'in', pvV:pv&&pv.nol },
     { k:'mainBiz', label:'사업소득금액 (메인)', f:(c,R)=> `${R('pretax')}+${R('adj')}-${R('nol')}`, v:s=> s.mainBizIncome, st:'b', pv:'in', pvV:pv&&pv.biz, note: pv?`${N1}년은 신고서 사업소득금액`:'' },
-    { k:'sub', label:'서브 사업장 소득금액 (귀속분)', f:()=> subInc, v:s=> s.extraBizIncomeTotal },
+    { k:'sub', label:'서브 사업장 소득금액 (귀속분)', f:(c,R,i)=> subIncF(i), v:s=> s.extraBizIncomeTotal },
     { k:'biz', label:'사업소득금액 합계', f:(c,R)=> `${R('mainBiz')}+${R('sub')}`, v:s=> s.bizIncomeTotal, detail:true },
     { k:'rental', label:'임대소득금액', f:()=> `MAX(${I('rentalGross')}-${I('rentalExpense')},0)`, v:s=> s.rentalIncome, detail:true, note:'결손금은 통산 불가(§45②) → 0 하한' },
     { k:'wageDed', label:'근로소득공제', f:()=> `MIN(IF(${gw}<=0,0,IF(${gw}<=5000000,${gw}*0.7,IF(${gw}<=15000000,3500000+(${gw}-5000000)*0.4,IF(${gw}<=45000000,7500000+(${gw}-15000000)*0.15,IF(${gw}<=100000000,12000000+(${gw}-45000000)*0.05,14750000+(${gw}-100000000)*0.02))))),20000000)`, v:s=> s.wageDeduction, detail:true, note:'소득세법 §47 (한도 2천만원)' },
@@ -4320,7 +4430,7 @@ function xlBuildTax(ws, ctx, who){
     { k:'rate', label:'(×) 세율', f:(c,R)=> `IF(${R('taxBase')}<=0,0,VLOOKUP(${R('taxBase')},${rate.range},2,TRUE))`, v:s=> s.rate, nf:'0%', pv:'f', pvF:(R)=> `IF(${R('taxBase')}<=0,0,VLOOKUP(${R('taxBase')},${rate.range},2,TRUE))`, note:'소득세법 §55 (세율표 시트)' },
     { k:'calcTax', label:'산출세액', f:(c,R)=> TF(R('taxBase')), v:s=> s.calcTax, st:'tot', pv:'f', pvF:(R)=> T(R('taxBase')), note:'금융소득 2천만원 초과 시 비교과세' },
     { k:'denom', label:'감면 안분 기준 소득', f:(c,R)=> `MAX(${R('biz')},0)+${R('otherSum')}+IF(${I('fin')}>20000000,${I('fin')}-20000000,0)`, detail:true },
-    { k:'redRaw', label:'중소기업특별세액감면 (한도 전)', f:(c,R)=> `IF(${R('denom')}>0,${R('calcTax')}*(MAX(${R('mainBiz')},0)*${I('rateMain')}+${subRed})/${R('denom')},0)`, detail:true, note:'산출세액 × 사업장별 소득비율 × 감면율' },
+    { k:'redRaw', label:'중소기업특별세액감면 (한도 전)', f:(c,R,i)=> `IF(${R('denom')}>0,${R('calcTax')}*(MAX(${R('mainBiz')},0)*${I('rateMain')}+${subRedF(i)})/${R('denom')},0)`, detail:true, note:'산출세액 × 사업장별 소득비율 × 감면율' },
     { k:'redGross', label:'감면 (한도 적용)', f:(c,R)=> `MIN(${R('redRaw')},MAX(100000000-${I('decreasedEmp')}*5000000,0))`, v:s=> s.reductionGross, detail:true },
     { k:'carryPool', label:'통합고용·사회보험료 세액공제 계', f:()=> `${I('empCredit')}+${I('empCreditCarry')}+${I('crSocial')}`, v:s=> s.empTotal + s.socialCredit, detail:true },
     { k:'bizShare', label:'사업소득 비율 (최저한세용)', f:(c,R)=> `IF(${R('denom')}>0,MIN(MAX(${R('biz')},0)/${R('denom')},1),0)`, nf:'0.00%', detail:true },
@@ -4499,7 +4609,7 @@ async function exportExcel(){
     const long = bizLongOn();
     const subsFor = (pid)=> state.extraBiz.map(b=> ({ name: b.name || '서브 사업장', income: Number(b.income)||0,
       ratio: pid==null ? 1 : (b.owner===pid ? 1 : ((!b.owner || b.owner==='all') ? (Number((state.coop.partners.find(p=>p.id===pid)||{}).share)||0)/100 : 0)),
-      rate: reductionRateFor(b.bizType, b.bizSize, b.bizRegion, long) }));
+      rate: reductionRateFor(b.bizType, b.bizSize, b.bizRegion, long), extra2: subExtra(b,2), extra3: subExtra(b,3) }));
     let layout, sumVals = null;
     if (!coop){
       layout = xlBuildTax(wsTax, ctx, { title:'①·②·③안 비교', share:null, get: id=> num(id), other: domOtherSrc(), pv: prevYearCol(), nol: num('nol'), subs: subsFor(null), pick: x=> x.s });
