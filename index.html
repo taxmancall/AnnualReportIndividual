@@ -632,6 +632,11 @@ table.rep-table.loan td.num{text-align:right;}
 #repBSSec details.bs-full{margin-top:8px;}
 @media print{ .closing-warn{display:none!important;} #repBSSec details.bs-full{display:none;} }
 .adj-pct{font-size:10.5px;font-weight:400;color:var(--sub);line-height:1.2;margin-top:1px;}
+.scenario-box{margin-top:18px;padding:16px 18px;background:#E8F1FB;border:2px solid #2660A0;border-left-width:8px;border-radius:10px;box-shadow:0 2px 8px rgba(38,96,160,.12);}
+.scenario-box-title{color:#1B4A80;font-weight:800;font-size:14px;margin-bottom:10px;}
+.scenario-box label{color:#1B4A80!important;font-weight:600;}
+.scenario-box input[type=text]{background:#fff!important;border:1.5px solid #2660A0!important;font-weight:700;font-size:14px;}
+.scenario-box input[type=text]:focus{box-shadow:0 0 0 3px rgba(38,96,160,.2)!important;}
 </style>
 </head>
 <body>
@@ -963,8 +968,8 @@ table.rep-table.loan td.num{text-align:right;}
       <input type="checkbox" id="minTaxOn" style="width:auto;" checked> 최저한세 적용 (조특법 §132② - 중소기업특별세액감면·통합고용세액공제·사회보험료 세액공제·노란우산공제 대상. 성실신고 확인비용 등 그 밖의 세액공제는 대상 아님. 배제된 통합고용·사회보험료 공제는 다음 연도로 이월)
     </label>
 
-    <div style="margin-top:16px;padding:14px;background:var(--brass-light);border-radius:9px;">
-      <div style="color:var(--navy);font-weight:600;font-size:13px;margin-bottom:8px;">경비 조정 시나리오 (메인 사업장): 부족경비는 <b>+</b>, 경비가 남아 줄일 금액은 <b>−</b>(마이너스)로 입력</div>
+    <div id="scenarioBox" class="scenario-box">
+      <div class="scenario-box-title">🎯 경비 조정 시나리오 (메인 사업장): 부족경비는 <b>+</b>, 경비가 남아 줄일 금액은 <b>−</b>(마이너스)로 입력</div>
       <div class="grid cols-2">
         <div class="field"><label>②안 경비 조정액 (+ 추가 집행 / − 감축)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense" value="0"></div>
         <div class="field"><label>③안 경비 조정액 (0이면 ③안 생략)</label><input type="text" inputmode="decimal" class="money-input" id="extraExpense3" value="0"></div>
@@ -4664,7 +4669,7 @@ function closingInit(){
   const dt = document.querySelector('.rep-doc-title'); if (dt) dt.innerHTML = '<span class="yN">N</span>년 귀속 종합소득세 신고 보고서';
 
   // 연간 추정 전용 입력(남은 기간 경비 조정 ②·③안) 숨김
-  const ex = document.getElementById('extraExpense'); const exBox = ex && ex.closest('div[style*="brass-light"]'); if (exBox) exBox.style.display = 'none';
+  const exBox = document.getElementById('scenarioBox'); if (exBox) exBox.style.display = 'none';
   ['extraExpense','extraExpense3'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value = '0'; });
   const bm = document.getElementById('baseMonths'); if (bm && !state.years[getYears().N]) bm.value = 12;
 
