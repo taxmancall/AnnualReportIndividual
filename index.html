@@ -2691,12 +2691,14 @@ function renderSavings(sc){
   }).join('');
 }
 
+function pastSalesInput(k){ const el = document.getElementById('pastSales'+k); return (el && el.value!=='') ? unfmtMoney(el.value) : null; }
 function buildTrendData(s1){
   const {N,N1,N2} = getYears();
   const yP1 = state.years[N1]||{}; const yP2 = state.years[N2]||{};
   return {
     labels: [`${N2}(확정)`, `${N1}(확정)`, `${N}(추정)`],
-    sales: [yP2['Ⅰ. 매출액']||0, yP1['Ⅰ. 매출액']||0, s1.sales],
+    // 과거 매출: STEP 1 '과거 2개년 신고 결과'에 입력한 매출이 있으면 그 값(3개년 비교표와 일치), 없으면 업로드한 손익계산서
+    sales: [pastSalesInput(2) ?? (yP2['Ⅰ. 매출액']||0), pastSalesInput(1) ?? (yP1['Ⅰ. 매출액']||0), s1.sales],
     op: [yP2['Ⅴ. 영업이익']||0, yP1['Ⅴ. 영업이익']||0, s1.opIncome]
   };
 }
