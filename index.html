@@ -652,6 +652,12 @@ table.site-rate .ev-flag.dimf{font-weight:400;color:var(--sub);}
 table.site-rate.compact{font-size:12px;background:#fff;}
 table.site-rate td.dim{color:var(--sub);font-size:11px;}
 #repSiteRate table.site-rate{break-inside:auto;}
+table.emp-table{font-size:11.5px;}
+table.emp-table th,table.emp-table td{padding:6px 5px;text-align:center!important;}
+table.emp-table td:first-child{text-align:center!important;font-weight:700;color:var(--navy);}
+table.emp-table td.dim{color:#bbb;}
+.emp-up{color:#2E6B4F;font-weight:700;} .emp-dn{color:#9E3B33;font-weight:700;}
+#repEmp table{break-inside:avoid;}
 </style>
 </head>
 <body>
@@ -1101,6 +1107,8 @@ table.site-rate td.dim{color:var(--sub);font-size:11px;}
     </div>
 
     <div class="rep-section" id="repSiteRate"></div>
+
+    <div class="rep-section" id="repEmp"></div>
 
     <div class="rep-section">
       <h2 class="c-amber"><span class="h2-badge">🧮</span>3. <span class="yN">N</span>년 예상 종합소득세 - ①안(연간 추정) vs ②·③안(부족경비 반영)</h2>
@@ -2583,6 +2591,7 @@ function renderAll(){
     renderCharts(sc);
     renderReport(sc);
     renderSiteRate(sc);
+    renderEmpReport();
     renderMemoReport();
   } catch(e){
     console.warn('renderAll 중 오류(입력값 처리에는 영향 없음):', e);
@@ -2653,6 +2662,92 @@ function renderSiteRate(sc){
     <div class="rep-narrative">${multi ? `사업장을 합친 소득률은 ①안 <b>${t1.rate==null?'-':(t1.rate*100).toFixed(1)+'%'}</b>입니다. 사업장마다 경비 구조가 달라 소득률이 차이 나더라도, 신고는 합계 기준으로 업종 평균과 비교되므로 합산 소득률을 함께 관리합니다.` : `①안 소득률은 <b>${t1.rate==null?'-':(t1.rate*100).toFixed(1)+'%'}</b>입니다.`}
       종합소득세 신고 때는 <b>소득률</b>과 <b>적격증빙으로 확인되지 않는 경비(5천만원 미만 관리)</b>를 중점으로 봅니다. 추가 집행하는 경비는 세금계산서·카드·현금영수증 등 적격증빙으로 받아 주세요.${coopNote}</div>`;
 }
+
+
+/* ============================================================
+   상시근로자 현황 — 위하고 「근로자고용현황(공제세액계산용)」 엑셀 업로드
+   연도별 매월 말 상시근로자 수 · 합계 · 평균 · 총지급액 → 보고서 표 (통합고용세액공제 판단 참고)
+============================================================ */
+state.emp = state.emp || null;   // { rows:[{year, months[12], sum, avg, pay}] }
+function parseEmpRows(rows){
+  let hi = -1, c1 = -1;
+  for (let r=0; r<Math.min(rows.length, 8); r++){ const i = (rows[r]||[]).findIndex(c=> c!=null && normLabel(c)==='1월'); if (i>=0){ hi=r; c1=i; break; } }
+  if (hi<0) return null;
+  const hdr = rows[hi].map(c=> c==null ? '' : normLabel(c));
+  const iSum = hdr.indexOf('합계'), iAvg = hdr.indexOf('평균');
+  const iPay = (()=>{ const i = hdr.findIndex((h,k)=> k>c1+11 && /총지급액|총지급/.test(h)); if (i>=0) return i; const sub = (rows[hi+1]||[]).map(c=> c==null?'':normLabel(c)); return sub.indexOf('전체'); })();
+  const out = [];
+  rows.forEach(row=>{
+    const y = cellNum(row && row[0]);
+    if (!y || y<2000 || y>2100) return;
+    const months = Array.from({length:12}, (_,m)=> cellNum(row[c1+m]) || 0);
+    const sum = iSum>=0 && cellNum(row[iSum])!=null ? cellNum(row[iSum]) : months.reduce((a,v)=> a+v, 0);
+    const avg = iAvg>=0 && cellNum(row[iAvg])!=null ? cellNum(row[iAvg]) : Math.floor(sum/12*100)/100;
+    const pay = iPay>=0 ? (cellNum(row[iPay]) || 0) : 0;
+    out.push({ year:Math.round(y), months, sum, avg, pay });
+  });
+  out.sort((a,b)=> b.year-a.year);
+  return out.length ? { rows: out } : null;
+}
+function handleEmpFile(file){
+  if (!file) return;
+  if (typeof XLSX === 'undefined'){ alert('엑셀 라이브러리를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.'); return; }
+  const r = new FileReader();
+  r.onload = ev=>{
+    try {
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, defval:null });
+      const parsed = parseEmpRows(rows);
+      if (!parsed){ alert('근로자고용현황 양식에서 "1월~12월" 머리글과 연도 행을 찾지 못했습니다.'); return; }
+      state.emp = parsed; renderEmpSlot(); renderAll();
+    } catch(e){ alert('근로자고용현황 파일을 읽지 못했습니다: ' + e.message); }
+  };
+  r.readAsArrayBuffer(file);
+}
+function renderEmpSlot(){
+  const slot = document.getElementById('empSlot'); if (!slot) return;
+  if (!state.emp){ slot.innerHTML = ''; return; }
+  slot.innerHTML = `<div class="filepill">✔ 상시근로자 현황 ${state.emp.rows.length}개 연도 (${state.emp.rows.map(r=> r.year).join('·')})</div> <button type="button" class="small-btn ghost" style="padding:3px 10px;" onclick="state.emp=null; renderEmpSlot(); renderAll();">지우기</button>`;
+}
+function empCardInit(){
+  const step2 = document.getElementById('uploadYearHint') && document.getElementById('uploadYearHint').closest('.card');
+  if (!step2 || document.getElementById('empFile')) return;
+  const card = document.createElement('div'); card.className = 'card';
+  card.innerHTML = `<h2><span class="step-no">👥</span>상시근로자 현황 (선택)</h2>
+    <p class="hint">위하고 <b>근로자고용현황(공제세액계산용)</b> 화면에서 엑셀로 내려받은 파일을 올리면, 연도별 매월 말 상시근로자 수·평균·총지급액이 보고서에 표로 들어갑니다. 통합고용세액공제(조특법 §29의8)는 상시근로자 연평균 증감으로 판단하니 공제 금액 확인에 참고하세요.</p>
+    <input type="file" id="empFile" accept=".xlsx,.xls" style="width:auto;"> <span id="empSlot"></span>`;
+  step2.parentNode.insertBefore(card, step2.nextSibling);
+  document.getElementById('empFile').addEventListener('change', e=>{ handleEmpFile(e.target.files[0]); e.target.value=''; });
+  renderEmpSlot();
+}
+function renderEmpReport(){
+  const sec = document.getElementById('repEmp'); if (!sec) return;
+  if (!state.emp || !state.emp.rows.length){ sec.style.display='none'; sec.innerHTML=''; return; }
+  sec.style.display='';
+  const {N} = getYears();
+  const rows = state.emp.rows.slice(0, 5);
+  const base = Math.min(Math.max(num('baseMonths')||12, 1), 12);
+  const cur = rows.find(r=> r.year===N), prev = rows.find(r=> r.year===N-1);
+  // 당해: 기준월까지 입력된 달 + 남은 달은 마지막 달 인원 유지 가정
+  let proj = null;
+  if (cur){
+    const filled = cur.months.slice(0, base); const last = [...filled].reverse().find(v=> v>0) || 0;
+    proj = Math.floor((filled.reduce((a,v)=> a+v,0) + last*(12-base)) / 12 * 100) / 100;
+  }
+  const f2 = v=> v==null ? '-' : Number(v).toFixed(2);
+  const diff = (a,b)=> (a==null||b==null) ? '' : `<span class="${a-b>0?'emp-up':a-b<0?'emp-dn':''}">${a-b>0?'+':''}${(a-b).toFixed(2)}</span>`;
+  const body = rows.map((r,i)=>{
+    const p = rows[i+1];
+    const isCur = r.year===N && base<12;
+    return `<tr class="${r.year===N?'strong':''}"><td>${r.year}${isCur?`<br><span class="thsub">${base}월까지</span>`:''}</td>${r.months.map((m,k)=> `<td class="${isCur && k>=base?'dim':''}">${isCur && k>=base ? '-' : m}</td>`).join('')}
+      <td>${isCur ? `${f2(proj)}<br><span class="thsub">연말 추정</span>` : f2(r.avg)}</td><td>${p ? diff(isCur ? proj : r.avg, p.avg) : '-'}</td><td>${won(r.pay)}</td><td>${r.sum>0 && r.pay ? won(r.pay / r.sum * 12) : '-'}</td></tr>`;
+  }).join('');
+  sec.innerHTML = `<h2 class="c-teal"><span class="h2-badge">👥</span>상시근로자 현황 (매월 말 기준)</h2><div class="rep-unit">(단위: 명, 원)</div>
+    <table class="rep-table emp-table"><thead><tr><th>연도</th>${Array.from({length:12},(_,i)=> `<th>${i+1}월</th>`).join('')}<th>연평균</th><th>전년 대비</th><th>총지급액</th><th>1인당 연 급여<br><span class="thsub">총지급액 ÷ 인원·월 × 12</span></th></tr></thead><tbody>${body}</tbody></table>
+    <div class="rep-narrative">${cur ? `${N}년은 ${base}월까지 월평균 <b>${(cur.months.slice(0,base).reduce((a,v)=> a+v,0)/base).toFixed(1)}명</b>이며, 남은 달도 ${base}월 말 인원을 유지하면 연평균은 약 <b>${f2(proj)}명</b>${prev ? `으로 전년(${f2(prev.avg)}명) 대비 <b>${proj-prev.avg>=0?'+':''}${(proj-prev.avg).toFixed(2)}명</b>입니다. ${proj-prev.avg<0 ? '연평균 인원이 줄면 통합고용세액공제를 새로 받기 어렵고, 이전에 공제받은 연도의 사후관리(2년간 인원 유지) 대상인지 확인이 필요합니다.' : '연평균 인원이 늘면 통합고용세액공제 대상이 될 수 있으니 청년·장애인 등 구분별 인원과 함께 확인합니다.'}` : '입니다.'}` : '상시근로자 수는 매월 말 기준이며, 연평균 = 12개월 합계 ÷ 12입니다.'}
+      (위하고 근로자고용현황 기준 · 조특법 §29의8 통합고용세액공제, 같은 법 시행령 §26의8의 상시근로자 계산)</div>`;
+}
+empCardInit();
 
 /* STEP 3 (공동): 구성원별 타소득 입력표 — 임대·근로·연금·기타·금융은 지분 안분이 아니라 귀속자 개인 소득 */
 const OTHER_INPUT_IDS = ['rentalGross','rentalExpense','wageGross','pensionGross','otherIncomeGross','otherIncomeExpense','otherIncomeExpenseRate','finIncomeGross'];
@@ -4085,7 +4180,7 @@ function saveWork(){
     closing: (typeof closingSaveExtra === 'function') ? closingSaveExtra() : null,
     fields, touched, extraBizSeq,
     state:{ years:state.years, extraBiz:state.extraBiz, rawDetail:state.rawDetail, adj:state.adj,
-            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct, coop:state.coop, laborMap:state.laborMap }
+            confirmed:state.confirmed, incEstimateDetail:state.incEstimateDetail, showPct:state.showPct, coop:state.coop, laborMap:state.laborMap, emp:state.emp }
   };
   const safe = s=> String(s||'').replace(/[\\/:*?"<>|]/g,'').trim();
   const name = reportFileBase() + '_작업파일.json';
@@ -4119,6 +4214,7 @@ function loadWork(data){
   state.incEstimateDetail = st.incEstimateDetail !== false;
   state.showPct = st.showPct !== false;
   state.laborMap = st.laborMap || {};
+  state.emp = st.emp || null; if (typeof renderEmpSlot==='function') renderEmpSlot();
   state.coop = st.coop && Array.isArray(st.coop.partners) ? { on:!!st.coop.on, active:0, partners: st.coop.partners } : { on:false, active:0, partners:[] };
   partnerSeq = Math.max(partnerSeq, ...state.coop.partners.map(p=> parseInt(String(p.id).replace(/\D/g,''),10)||0), 0);
   extraBizSeq = Math.max(parseInt(data.extraBizSeq,10)||0, ...state.extraBiz.map(b=> parseInt(String(b.id).replace(/\D/g,''),10)||0), 0);
