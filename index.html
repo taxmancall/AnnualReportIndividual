@@ -4195,12 +4195,26 @@ function reportFileBase(){
   const biz = safe(document.getElementById('bizName').value) || safe(document.getElementById('ownerName').value) || '개인사업자';
   return `${biz}_${getYears().N}년도_연간추정보고서`;
 }
+/* PDF 파일명: 크롬 'PDF로 저장'은 document.title을 파일명으로 쓰므로 인쇄 직전에 항상 맞춰 둔다(Ctrl+P 포함).
+   윈도우 'Microsoft Print to PDF' 프린터는 제목을 받지 않아 파일명이 빈칸 → 클립보드에 복사해 Ctrl+V로 붙여넣게 한다. */
+let _titleBeforePrint = null;
+window.addEventListener('beforeprint', ()=>{ if (_titleBeforePrint===null){ _titleBeforePrint = document.title; } document.title = reportFileBase(); });
+window.addEventListener('afterprint', ()=>{ if (_titleBeforePrint!==null){ document.title = _titleBeforePrint; _titleBeforePrint = null; } });
+function pdfNameToast(name){
+  let t = document.getElementById('pdfNameToast');
+  if (!t){ t = document.createElement('div'); t.id='pdfNameToast'; t.className='no-print';
+    t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#1F3B57;color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90vw;line-height:1.5;';
+    document.body.appendChild(t); }
+  t.innerHTML = `📋 파일명 <b>${esc(name)}</b> 을(를) 복사했습니다.<br><span style="opacity:.85;font-size:12.5px;">저장 창에서 파일명이 비어 있으면 <b>Ctrl+V</b>로 붙여넣으세요. (대상 프린터를 <b>‘PDF로 저장’</b>으로 고르면 자동으로 들어갑니다)</span>`;
+  t.style.display='block'; clearTimeout(t._h); t._h = setTimeout(()=> t.style.display='none', 9000);
+}
 function printWithWork(){
   try{ saveWork(); }catch(e){ console.warn('작업 파일 저장 실패', e); }
-  const prev = document.title;
-  document.title = reportFileBase();            // PDF 저장 시 기본 파일명 = 상호_N년도_연간추정보고서
-  const restore = ()=>{ document.title = prev; window.removeEventListener('afterprint', restore); };
-  window.addEventListener('afterprint', restore);
+  const name = reportFileBase();
+  _titleBeforePrint = document.title;
+  document.title = name;                        // PDF 저장 시 기본 파일명 = 상호_N년도_연간추정보고서
+  try{ navigator.clipboard && navigator.clipboard.writeText(name).catch(()=>{}); }catch(e){}
+  pdfNameToast(name);
   setTimeout(()=> window.print(), 600);
 }
 function loadWork(data){
