@@ -631,6 +631,7 @@ table.rep-table.loan td.num{text-align:right;}
 @media (max-width:760px){ .ratio-grid{grid-template-columns:1fr;} }
 #repBSSec details.bs-full{margin-top:8px;}
 @media print{ .closing-warn{display:none!important;} #repBSSec details.bs-full{display:none;} }
+.adj-pct{font-size:10.5px;font-weight:400;color:var(--sub);line-height:1.2;margin-top:1px;}
 </style>
 </head>
 <body>
@@ -1824,12 +1825,12 @@ function renderAdjRow(N, section, it, i, mult){
   }
   return `<tr>
     <td style="padding-left:18px;">${nameCell}${signTag}${laborSel}</td>
-    <td class="num">${won(it.cur)}</td>
+    <td class="num">${won(it.cur)}${adjPct((Number(it.cur)||0)*(it.sign||1), sectionActual(N,'Ⅰ. 매출액'))}</td>
     <td>${modeCell}</td>
     <td><input type="text" inputmode="decimal" class="money-input" data-k="${section}|${i}|delta" value="${(Number(it.delta)||0)!==0?fmtMoney(it.delta):''}" placeholder="0"
         oninput="updateAdjItem(${N},'${section}',${i},'delta',unfmtMoney(this.value),true)" ${moneyInputAttrs()}
         onblur="this.value = this.value.trim()==='' ? '' : fmtMoney(unfmtMoney(this.value)); deferRender();"></td>
-    <td class="num" style="font-weight:700;color:var(--navy);">${won(final)}</td>
+    <td class="num" style="font-weight:700;color:var(--navy);">${won(final)}${adjPct(final*(it.sign||1), sectionTotal(N,'Ⅰ. 매출액',mult))}</td>
     <td><input type="text" data-k="${section}|${i}|memo" value="${esc(it.memo||'')}" placeholder="비고"
         oninput="updateAdjItem(${N},'${section}',${i},'memo',this.value,true)"></td>
     <td>${it._custom ? `<button type="button" class="small-btn ghost" style="padding:4px 8px;" onclick="removeAdjItem(${N},'${section}',${i})">🗑</button>` : ''}</td>
@@ -1852,6 +1853,8 @@ function adjSummary(year){
 function hasAdjDetail(year){
   return !!(state.rawDetail[year] && ADJ_SECTIONS.some(s=> (state.rawDetail[year][s]||[]).length>0));
 }
+/* 워크시트 금액 아래 매출 대비 비율 */
+function adjPct(v, base){ return (base>0 && isFinite(v)) ? `<div class="adj-pct">${(v/base*100).toFixed(1)}%</div>` : ''; }
 function renderAdjPanel(){
   const wrap = document.getElementById('adjPanelWrap');
   if (!wrap) return;
@@ -1872,14 +1875,14 @@ function renderAdjPanel(){
   const sum = adjSummary(N);
   const secRow = (section)=> `<tr class="sec">
       <td>${section}</td>
-      <td class="num">${won(sectionActual(N, section))}</td>
+      <td class="num">${won(sectionActual(N, section))}${adjPct(sectionActual(N, section), sectionActual(N,'Ⅰ. 매출액'))}</td>
       <td><button type="button" class="small-btn ghost" style="padding:3px 10px;font-size:11.5px;" onclick="addAdjItem('${section}')">+ 과목 추가</button></td>
       <td class="num">${won(sectionDelta(N, section, mult))}</td>
-      <td class="num">${won(sectionTotal(N, section, mult))}</td>
+      <td class="num">${won(sectionTotal(N, section, mult))}${adjPct(sectionTotal(N, section, mult), sectionTotal(N,'Ⅰ. 매출액',mult))}</td>
       <td></td><td></td></tr>`;
   const calcRow = (label, a, f)=> `<tr class="calc">
-      <td>${label}</td><td class="num">${won(a)}</td><td></td>
-      <td class="num">${won(f-a)}</td><td class="num">${won(f)}</td><td></td><td></td></tr>`;
+      <td>${label}</td><td class="num">${won(a)}${adjPct(a, sectionActual(N,'Ⅰ. 매출액'))}</td><td></td>
+      <td class="num">${won(f-a)}</td><td class="num">${won(f)}${adjPct(f, sectionTotal(N,'Ⅰ. 매출액',mult))}</td><td></td><td></td></tr>`;
   const itemRows = (section)=> adjItems(N, section).map((it,i)=> renderAdjRow(N, section, it, i, mult)).join('');
   const needStock = adjItems(N,'Ⅱ. 매출원가').some(it=> !it._custom && it.mode==='override' && it.sign<0 && !hasOverride(it));
   const needSales = adjItems(N,'Ⅰ. 매출액').some(it=> !it._custom && it.mode==='override' && !hasOverride(it));
@@ -1902,7 +1905,7 @@ function renderAdjPanel(){
     ${warn}
     <div style="overflow-x:auto;">
     <table class="adj-table">
-      <tr><th style="text-align:left;">과목</th><th>실적 (1~${baseMonths}월)</th><th>추정방식</th><th>수정·가감 (±)</th><th>연간 추정 (1~12월)</th><th>비고</th><th></th></tr>
+      <tr><th style="text-align:left;">과목</th><th>실적 (1~${baseMonths}월)<br><span style="font-weight:400;font-size:10.5px;color:var(--sub);">아래 % = 매출 대비</span></th><th>추정방식</th><th>수정·가감 (±)</th><th>연간 추정 (1~12월)</th><th>비고</th><th></th></tr>
       ${secRow('Ⅰ. 매출액')}${itemRows('Ⅰ. 매출액')}
       ${secRow('Ⅱ. 매출원가')}${itemRows('Ⅱ. 매출원가')}
       ${calcRow('Ⅲ. 매출총이익', sum.actual.gross, sum.final.gross)}
